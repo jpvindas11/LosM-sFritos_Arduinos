@@ -1,3 +1,8 @@
+# Misc.
+*.log
+*.tmp
+.vscode
+
 # Prerequisites
 *.d
 
