@@ -8,6 +8,8 @@
 
 class ClientManager {
   private:
+
+    /// @brief Stores a list of scenes, containing elements for a menu
     std::vector<Scene> scenes;
   public:
     ClientManager();
