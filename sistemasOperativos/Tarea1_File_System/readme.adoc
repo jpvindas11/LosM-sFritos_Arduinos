@@ -1,0 +1,60 @@
+= Tarea01: File System
+:experimental:
+:nofooter:
+:source-highlighter: pygments
+:sectnums:
+:stem: latexmath
+:xrefstyle: short
+
+Axel Rojas Retana C36944
+
+Dario Gomez Bernal C33243
+
+Juan Pablo Vindas C38554
+
+Luis Eduardo Valverde Soza C18128
+
+== Conteste las siguientes preguntas:
+
+
+=== Cuáles serían los metadatos del filesystem?
+<- Esos serían atributos del file system
+
+=== Cuáles serían los metadatos de un archivo?
+<-Esos serían los atributos del archivo, quizás almacenados en un nodo índice
+
+=== Quiero poder direccionar bloques de datos directamente?
+<- Entonces el nodo del índice qué tendría para esto?
+
+=== Quiero poder hacer que los archivos sean más grandes
+<- Entonces el nodo del índice qué tendría para esto? Cómo se hace para que un archivo pueda ser más grande?
+
+=== Cómo se implementan los folders?
+<- Donde se guarda el hecho de que un folder es un folder?
+
+=== Cómo se mantiene el control de permisos de acceso a archivos?
+
+=== Cómo se controla que no haya errores en el funcionamiento general del file system?
+
+=== Cómo se pueden modificar los metadatos de un archivo?
+
+=== Cómo se puede conocer el tamaño de un archivo?
+
+=== Qué estructuras de datos son indispensables?
+
+
+== Diseño
+Haga un diseño de un sistema de archivos de tipo indexado que incorpore las respuestas a estas preguntas junto con la especificación del funcionamiento, las operaciones primordiales sobre archivos, los metadatos de archivos, los componentes principales, la interacción entre ellos, la especificación de lo qué son y lo que hacen y la definición de lo mínimo requerido para la implementación.
+
+== Código
+Programe el sistema de archivos los componentes principales, la interacción entre ellos, la especificación de lo qué son y lo que hacen y la definición de lo mínimo requerido para la implementación, en un repositorio de REPL.IT, compartido con el docente, para almacenar datos de dibujos ascii según las especificaciones del proyecto de PI. Por ej:
+
+* int buscarArchivo() // devuelve el bloque inicial del archivo, -1 en caso de fallo
+* char[] Leer(archivo, int nbytes) // devuelve msj de error en caso de fallo
+* bool Escribir(archivo, char [] datos) // devuelve falso en caso de fallo
+* bool Renombrar(archivo, nombreNuevo) // devuelve falso en caso de fallo
+
+== Defina la manera en la que se puede probar la funcionalidad del sistema de archivos.
+
+== Demostración
+Prepare un video con la demostración del sistema de archivos incluyendo su funcionalidad, sus componentes dificultades encontradas y deficiencias aún existentes en la entrega.
