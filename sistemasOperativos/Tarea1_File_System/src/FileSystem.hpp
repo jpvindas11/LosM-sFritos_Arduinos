@@ -18,7 +18,8 @@ class FileSystem {
 
  // Metadatos(?)
  protected:
-  std::array<uintptr_t, 100> index;
+
+  array<uintptr_t, 100> index;
 
  // Funciones
  public:
@@ -26,6 +27,26 @@ class FileSystem {
   FileSystem();
 
   ~FileSystem();
+  
+  int buscar(string archivo);
+  
+  int escribir(string archivo, int cursor, size_t tamaño);
+  
+  int leer(string archivo, int cursor, size_t tamaño);
+
+  int renombrar(string archivo, string nombre_nuevo);
+  
+  int eliminar(string archivo);
+  
+  private:
+  
+  int abrir(string archivo);
+  
+  int cerrar(string archivo);
+
+  int existe(string archivo);
+
+  int estaAbierto(string archivo);
 };
 
 #endif  // FILE_SYSTEM_2025B
