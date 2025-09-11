@@ -11,7 +11,19 @@
 using namespace std;
 
 // Recuerdo que había un struct...
-struct foo {};
+struct file {
+  // Permisos para usuarios
+  uint8_t user;
+  uint8_t group;
+  uint8_t all;
+  // Metadatos
+  string autor;
+  string name;
+  string path;
+  size_t size;
+
+  char data;
+};
 
 /// @brief ...
 class FileSystem {
@@ -28,25 +40,27 @@ class FileSystem {
 
   ~FileSystem();
   
-  int buscar(string archivo);
+  int search(string file);
   
-  int escribir(string archivo, int cursor, size_t tamaño);
+  int read(string file, int cursor, size_t size);
   
-  int leer(string archivo, int cursor, size_t tamaño);
+  int write(string file, int cursor, size_t size);
 
-  int renombrar(string archivo, string nombre_nuevo);
-  
-  int eliminar(string archivo);
+  int rename(string file, string name);
+
+  int createFile(string name);
+
+  int deleteFile(string file);
   
   private:
   
-  int abrir(string archivo);
+  int open(string file);
   
-  int cerrar(string archivo);
+  int close(string file);
 
-  int existe(string archivo);
+  int exist(string file);
 
-  int estaAbierto(string archivo);
+  int isOpen(string file);
 };
 
 #endif  // FILE_SYSTEM_2025B
