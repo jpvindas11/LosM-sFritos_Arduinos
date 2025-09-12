@@ -1,9 +1,8 @@
 #include <button.hpp>
-#include <SDL2/SDL.h>
+#include "element.hpp"
 
 
-
-void Button::createButton(SDL_Renderer *renderer, int x, int y, int w, int h, int r, int g, int b, int a, const char* msg, TTF_Font* font){
+/*void Button::createButton(SDL_Renderer *renderer, int x, int y, int w, int h, int r, int g, int b, int a, const char* msg, TTF_Font* font){
     button = { x, y, w, h };
     SDL_SetRenderDrawColor(renderer, r, g, b, a);
     SDL_RenderFillRect(renderer, &button);
@@ -26,9 +25,9 @@ void Button::createButton(SDL_Renderer *renderer, int x, int y, int w, int h, in
     SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
     SDL_FreeSurface(surface);
     SDL_DestroyTexture(textTexture);
-}
+}*/
 
-bool Button::isPressed(SDL_Event& e) {
+/* bool Button::isPressed(SDL_Event& e) {
     if (e.type == SDL_MOUSEBUTTONDOWN) {
         int mousex = e.button.x;
         int mousey = e.button.y;
@@ -40,4 +39,31 @@ bool Button::isPressed(SDL_Event& e) {
     }
     return false;
 }
+*/
 
+Button::Button(float visible_x, float hide_x, float visible_y, float hide_y, int w, int h) 
+: element(visible_x, hide_x, visible_y, hide_y, w, h) {
+    this->clicked = false;
+    this->hovered = false;
+}
+
+Button::~Button() {}
+
+bool Button::isPressed() {
+    return this->clicked;
+}
+
+bool Button::setClickedState(bool mouse_button_state) {
+    this->clicked = mouse_button_state;
+    return this->clicked;
+}
+
+bool Button::checkIfHovered(float mouse_x, float mouse_y) {
+    if (mouse_x >= element.getX() && mouse_x <= element.getX() + element.getW() &&
+        mouse_y >= element.getY() && mouse_y <= element.getY() + element.getH()) {
+        this->hovered = true;
+        return true;
+    }
+    this->hovered = false;
+    return false;
+}

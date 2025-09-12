@@ -5,8 +5,8 @@
 
 #include <vector>
 #include "../Definitions/colors_def.hpp"
-#include "button.hpp"
 #include "element.hpp"
+#include "button.hpp"
 
 typedef enum SCENE_NAME {
     SCENE_STARTUP,
@@ -32,6 +32,14 @@ class Scene {
 
     void add_element(Element element);
     void add_button(Button button);
+
+    void tick_elements();
+    void tick_buttons(bool mouse_button_state, float mouse_x, float mouse_y);
+
+    SCENE_NAME get_name() { return name; }
+    COLOR get_background_color() { return background_color; }
+    std::vector<Element>& get_elements() { return elements; }
+    std::vector<Button>& get_buttons() { return buttons; }
 };
 
 #endif
