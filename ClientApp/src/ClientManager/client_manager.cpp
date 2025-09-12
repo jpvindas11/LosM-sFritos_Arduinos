@@ -6,6 +6,8 @@ ClientManager::ClientManager()
     : current_scene_index(0), renderer("Frituinos", 800, 600) {
     // Example of adding a scene
     Scene mainMenu = Scene(SCENE_STARTUP, COLOR_BLUE);
+
+    // Button
     mainMenu.add_button(Button(100.0f, -200.0f, 100.0f, -100.0f, 150, 50));
     scenes.push_back(mainMenu);
 
@@ -26,5 +28,7 @@ void ClientManager::run() {
 
         current_scene->tick_elements();
         current_scene->tick_buttons(false, 0.0f, 0.0f);
+
+        renderer.draw();
     }
 }

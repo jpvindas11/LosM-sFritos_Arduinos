@@ -2,6 +2,8 @@
 
 #include "renderer.hpp"
 
+// Cambiar a QT
+
 Renderer::Renderer(const char* title, int width, int height) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
@@ -39,6 +41,6 @@ void Renderer::draw() {
     SDL_RenderClear(this->renderer);
 
 
-    
+
     SDL_RenderPresent(this->renderer);
 }
