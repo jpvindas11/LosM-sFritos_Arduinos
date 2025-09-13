@@ -10,6 +10,18 @@
 
 using namespace std;
 
+struct 
+{
+  /* data */
+};
+
+struct Directory
+{
+  int block;
+  int size;
+  time_t date;
+};
+
 // Recuerdo que había un struct...
 struct file {
   // Permisos para usuarios
@@ -27,6 +39,15 @@ struct file {
 
 /// @brief ...
 class FileSystem {
+
+ private:
+
+  char* unit;
+  Directory* directory;
+  int *fat;
+  int n;
+  int TDirectory;
+  int TUnit;
 
  // Metadatos(?)
  protected:
@@ -51,6 +72,10 @@ class FileSystem {
   int createFile(string name);
 
   int deleteFile(string file);
+
+  void printDirectory();
+
+  void printUnidad();
   
   private:
   
@@ -61,6 +86,7 @@ class FileSystem {
   int exist(string file);
 
   int isOpen(string file);
+
 };
 
 #endif  // FILE_SYSTEM_2025B
