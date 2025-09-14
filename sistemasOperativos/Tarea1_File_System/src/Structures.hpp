@@ -1,6 +1,7 @@
 /// @copyright Los Más Fritos - 2025
 
 #include <cstdint>
+#include <limits.h>
 #include <string>
 
 #define DISK_SIZE 2097152  // 2MB
@@ -15,69 +16,76 @@
 // intentando de no desperdiciar espacio
 
 #if TOTAL_I_NODES <= UINT8_MAX
-    typedef uint8_t iNodeNum;
+    typedef uint8_t inode_size_t;
 #elif TOTAL_I_NODES <= UINT16_MAX
-    typedef uint16_t iNodeNum;
+    typedef uint16_t inode_size_t;
 #else
-    typedef uint32_t iNodeNum;
+    typedef uint32_t inode_size_t;
 #endif
 
 #if BLOCK_TOTAL <= UINT8_MAX
-    typedef uint8_t blockIndex;
+    typedef uint8_t blockNum_size_t;
 #elif BLOCK_TOTAL <= UINT16_MAX
-    typedef uint16_t blockIndex;
+    typedef uint16_t blockNum_size_t;
 #else
-    typedef uint32_t blockIndex;
+    typedef uint32_t blockNum_size_t;
 #endif
 
 #if BLOCK_SIZE <= UINT8_MAX
-    typedef uint8_t offset;
+    typedef uint8_t block_size_t;
 #elif BLOCK_SIZE <= UINT16_MAX
-    typedef uint16_t offset;
+    typedef uint16_t block_size_t;
 #else
-    typedef uint32_t offset;
+    typedef uint32_t block_size_t;
 #endif
 
 /// @brief 
 typedef struct dataBlock {
   bool isUsed;
-  offset lastUsedByte;
-  char* data[BLOCK_SIZE];
+  block_size_t offset;
+  char data[BLOCK_SIZE];
 } dataBlock_t;
 
 /// @brief ... 
-typedef struct fileIndex {
+typedef struct singleFileIndex {
   bool isUsed;
-  void* dataPtr[TOTAL_POINTERS];
-  uint32_t usedPtr;
-} fileIndex_t;
+  block_size_t dataPtr[TOTAL_POINTERS];
+  block_size_t usedDataPtr;
+} singleFileIndex_t;
+
+/// @brief ... 
+typedef struct doubleFileIndex {
+  bool isUsed;
+  singleFileIndex_t dataIndex[TOTAL_POINTERS];
+  block_size_t usedIndex;
+} doubleFileIndex_t;
 
 /// @brief ... 
 typedef struct iNode {
   uint32_t user;
   uint32_t groupId;
-  std::string path;
+  char path[PATH_MAX];
   time_t creationTime;
   uint16_t permissions;
   uint32_t size;
   bool isUsed;
-  dataBlock_t* directBlocks [TOTAL_POINTERS];
-  blockIndex lastUsedBlock;
-  fileIndex_t* singleIndirect;
-  fileIndex_t* doubleIndirect;
+  block_size_t directBlocks [TOTAL_POINTERS];
+  blockNum_size_t lastUsedBlock;
+  singleFileIndex_t singleIndirect;
+  doubleFileIndex_t doubleIndirect;
 } iNode_t;
 
 /// @brief ... 
 typedef struct fileEntry {
-  std::string fileName;
-  iNodeNum iNodeIndex;
+  char fileName[NAME_MAX];
+  inode_size_t iNodeIndex;
   bool isUsed;
 } fileEntry_t;
 
 /// @brief ... 
 typedef struct directory {
-  std::string dirName;
+  char dirName[NAME_MAX];
   time_t creationTime;
   fileEntry files[TOTAL_I_NODES];
-  iNodeNum usedInodes;
+  inode_size_t usedInodes;
 } directory_t;
