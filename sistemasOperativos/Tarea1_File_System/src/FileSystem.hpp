@@ -3,27 +3,14 @@
 #ifndef FILE_SYSTEM_2025B
 #define FILE_SYSTEM_2025B
 
-#define BLOCK_SIZE 256 // Bytes
-#define MEMORY_SIZE 1024 * 1024 // 1MB
-
 #include <array>
 #include <cstdlib>
 #include <iostream>
 #include <string>
 
+#include "Structures.hpp"
+
 using namespace std;
-
-struct 
-{
-  /* data */
-};
-
-struct Directory
-{
-  int block;
-  int size;
-  time_t date;
-};
 
 // Recuerdo que había un struct...
 struct file {
@@ -36,7 +23,7 @@ struct file {
   string name;
   string path;
   size_t size;
-
+  // Datos
   char* data;
 };
 
@@ -45,7 +32,7 @@ class FileSystem {
 
  private:
   char* unit;
-  Directory* directory;
+  directory* directory;
   int *fat;
   int n;
   int TDirectory;
