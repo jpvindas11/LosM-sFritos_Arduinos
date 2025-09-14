@@ -1,7 +1,10 @@
-/// @copyright ...
+/// @copyright Los Más Fritos - 2025
 
 #ifndef FILE_SYSTEM_2025B
 #define FILE_SYSTEM_2025B
+
+#define BLOCK_SIZE 256 // Bytes
+#define MEMORY_SIZE 1024 * 1024 // 1MB
 
 #include <array>
 #include <cstdlib>
@@ -34,14 +37,13 @@ struct file {
   string path;
   size_t size;
 
-  char data;
+  char* data;
 };
 
 /// @brief ...
 class FileSystem {
 
  private:
-
   char* unit;
   Directory* directory;
   int *fat;
@@ -51,12 +53,10 @@ class FileSystem {
 
  // Metadatos(?)
  protected:
-
-  array<uintptr_t, 100> index;
+  array<uintptr_t, BLOCK_SIZE> index;
 
  // Funciones
  public:
-
   FileSystem();
 
   ~FileSystem();
@@ -77,8 +77,7 @@ class FileSystem {
 
   void printUnidad();
   
-  private:
-  
+ private:  
   int open(string file);
   
   int close(string file);
