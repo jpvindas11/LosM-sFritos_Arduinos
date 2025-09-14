@@ -20,7 +20,12 @@ int FileSystem::createFile(string name) {
   return EXIT_SUCCESS;
 }
 
-int FileSystem::search(string file) {
-  return EXIT_SUCCESS;
+int FileSystem::search(string filename) {
+  for (size_t i = 0; i < directory->usedInodes; ++i) {
+    if (directory->files[i].isUsed &&
+        filename == string(directory->files[i].fileName)) {
+      return i;
+    }
+  }
+  return EXIT_FAILURE;
 }
-

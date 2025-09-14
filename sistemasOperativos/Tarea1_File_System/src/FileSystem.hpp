@@ -12,8 +12,7 @@
 
 using namespace std;
 
-// Recuerdo que había un struct...
-struct file {
+typedef struct file {
   // Permisos para usuarios
   uint8_t user;
   uint8_t group;
@@ -25,7 +24,7 @@ struct file {
   size_t size;
   // Datos
   char* data;
-};
+} file_t;
 
 /// @brief ...
 class FileSystem {
@@ -48,7 +47,7 @@ class FileSystem {
 
   ~FileSystem();
   
-  int search(string file);
+  int search(string filename);
   
   int read(string file, int cursor, size_t size);
   
