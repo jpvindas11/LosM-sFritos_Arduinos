@@ -70,7 +70,7 @@ typedef struct iNode {
 /// @brief ... 
 typedef struct fileEntry {
   std::string fileName;
-  iNodeNum inodeIndex;
+  iNodeNum iNodeIndex;
   bool isUsed;
 } fileEntry_t;
 
