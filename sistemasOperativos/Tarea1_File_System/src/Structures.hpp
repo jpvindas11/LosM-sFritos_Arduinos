@@ -72,11 +72,12 @@ typedef struct doubleFileIndex {
 typedef struct iNode {
   uint32_t user;
   uint32_t groupId;
-  char path[PATH_MAX];
+  char path[NAME_MAX];
   time_t creationTime;
   uint16_t permissions;
   uint32_t size;
   bool isUsed;
+  // creo que tiene ser blockNum_size_t
   block_size_t directBlocks [TOTAL_POINTERS];
   blockNum_size_t lastUsedBlock;
   singleFileIndex_t singleIndirect;

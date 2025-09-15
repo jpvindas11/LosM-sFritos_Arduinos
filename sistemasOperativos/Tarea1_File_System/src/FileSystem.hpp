@@ -39,6 +39,20 @@ class FileSystem {
   int TDirectory;
   int TUnit;
 
+  /*
+  inode_size_t totalInodes;
+  blockNum_size_t totalDataBlocks;
+  size_t leftoverSpace;
+  bool* inodeBitMap;
+  inode_size_t freeInodes;
+  bool* dataBlocksBitMap;
+  blockNum_size_t freeDataBlocks;
+
+  uint8_t* unit;
+  iNode_t* firstInode;
+  directory_t* rootDir;
+  dataBlock_t* firstDataBlock;*/
+
  // Metadatos(?)
  protected:
   array<uintptr_t, BLOCK_SIZE> index;
@@ -63,6 +77,7 @@ class FileSystem {
   void changeUserID(int newID);
   
  private:  
+  //int allocateStructures();
   int open(string file);
   int close(string file);
   int exist(string file);
