@@ -4,6 +4,8 @@
 #include <cstring>
 
 FileSystem::FileSystem() {
+  // ID de usuario por defecto
+  this->userID = 1000;
   this->n = 0;
   this->TUnit = DISK_SIZE;
   this->unit = new char[TUnit]; 
@@ -37,16 +39,14 @@ FileSystem::~FileSystem() {
 }
 
 int FileSystem::createFile(string name) {
-  // Buscar el índice de un inodo libre
-  int freeInodeIndex = NO_INDEX_FOUND;
-
-  for (int i = 0; i < TOTAL_I_NODES; ++i) {
-    if (!this->inodes[i].isUsed) {
-      freeInodeIndex = i;
-      break;
-    }
+  // Se asegura que no exista un archivo con el mismo nombre
+  if (exist(name)) {
+    cout << "Error: Este archivo ya existe" << endl;
+    return OCCUPIED_FILENAME; 
   }
 
+  // Buscar el índice de un inodo libre
+  int freeInodeIndex = searchEmptyNode();
   // Dar error si no hay espacio
   if (freeInodeIndex == NO_INDEX_FOUND) { 
     cout << "Error: No hay inodos libres disponibles" << endl;
@@ -54,27 +54,18 @@ int FileSystem::createFile(string name) {
   }
 
   // Buscar bloque libre
-  int freeBlockIndex = NO_INDEX_FOUND;
-
-  for (int i = 0; i < BLOCK_TOTAL; ++i) {
-    if (this->fat[i] == FREE_BLOCK) {
-      freeBlockIndex = i;
-      break;
-    }
-  }
-
+  int freeBlockIndex = searchFreeBlock();
   // Dar error si no hay espacio
   if (freeBlockIndex == NO_INDEX_FOUND) { 
     cout << "Error: No hay bloques libres disponibles" << endl;
     return NO_INDEX_FOUND; 
   }
 
-
   // Crear archivo si hay inodos y bloques disponibles
   iNode_t* inodo = &this->inodes[freeInodeIndex];
   inodo->isUsed = true;
   inodo->creationTime = time(0);
-  inodo->user = 1000;
+  inodo->user = this->userID;
   inodo->groupId = 1000;
   inodo->permissions = 0644; // rw- r-- r--
   inodo->size = 0;
@@ -88,14 +79,14 @@ int FileSystem::createFile(string name) {
 
   inodo->directBlocks[0] = freeBlockIndex; // Primer bloque
 
-  // Indirección 
+  // Indirección
   // Solo se usa al necesitar más bloques fuera de los directos
   inodo->singleIndirect.isUsed = false;
   inodo->singleIndirect.usedDataPtr = 0;
   inodo->doubleIndirect.isUsed = false;
   inodo->doubleIndirect.usedIndex = 0;
 
-  this->fat[freeBlockIndex] = OCUPIED_BLOCK;
+  this->fat[freeBlockIndex] = OCCUPIED_BLOCK;
 
   // Agregar entrada al directorio 
   fileEntry_t* newEntry = &this->dir->files[this->dir->usedInodes];
@@ -113,15 +104,56 @@ int FileSystem::createFile(string name) {
   return EXIT_SUCCESS;
 }
 
+int FileSystem::deleteFile(string file) {}
+
 int FileSystem::search(string filename) {
   for (size_t i = 0; i < dir->usedInodes; ++i) {
     if (dir->files[i].isUsed &&
-        filename == string(dir->files[i].fileName)) {
+        filename == dir->files[i].fileName) {
       return i;
     }
   }
-  return EXIT_FAILURE;
+  return NO_INDEX_FOUND;
 }
+
+  
+int FileSystem::search(string filename) {}
+int FileSystem::read(string file, int cursor, size_t size) {}
+int FileSystem::write(string file, int cursor, size_t size) {}
+int FileSystem::rename(string file, string name) {}
 
 void FileSystem::printDirectory() {}
 void FileSystem::printUnidad() {}
+
+void FileSystem::changeUserID(int newID) {
+  this->userID = newID;
+}
+
+// Private
+
+int FileSystem::open(string file) {}
+int FileSystem::close(string file) {}
+
+int FileSystem::exist(string file) {
+  return (search(file) != NO_INDEX_FOUND);
+}
+
+int FileSystem::isOpen(string file) {}
+
+int FileSystem::searchEmptyNode(){
+  for (size_t index = 0; index < TOTAL_I_NODES; ++index) {
+    if (!this->inodes[index].isUsed) {
+      return index;
+    }
+  }
+  return NO_INDEX_FOUND;
+}
+
+int FileSystem::searchFreeBlock(){
+  for (size_t index = 0; index < BLOCK_TOTAL; ++index) {
+    if (!this->fat[index] == FREE_BLOCK) {
+      return index;
+    }
+  }
+  return NO_INDEX_FOUND;
+}

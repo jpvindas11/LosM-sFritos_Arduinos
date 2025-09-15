@@ -10,9 +10,13 @@
 #define TOTAL_POINTERS 12
 #define BLOCK_TOTAL (DISK_SIZE / BLOCK_SIZE)
 
-#define FREE_BLOCK -1
-#define OCUPIED_BLOCK -2
-#define NO_INDEX_FOUND -3
+enum macros {
+    FREE_BLOCK = -1,
+    OCCUPIED_BLOCK,
+    OCCUPIED_FILENAME,
+    NO_INDEX_FOUND
+};
+
 
 // Se asume que por cada 4KB se utilizará un i-nodo (convención ext2/ext3)
 
@@ -20,27 +24,27 @@
 // intentando de no desperdiciar espacio
 
 #if TOTAL_I_NODES <= UINT8_MAX
-    typedef uint8_t inode_size_t;
+  typedef uint8_t inode_size_t;
 #elif TOTAL_I_NODES <= UINT16_MAX
-    typedef uint16_t inode_size_t;
+  typedef uint16_t inode_size_t;
 #else
-    typedef uint32_t inode_size_t;
+  typedef uint32_t inode_size_t;
 #endif
 
 #if BLOCK_TOTAL <= UINT8_MAX
-    typedef uint8_t blockNum_size_t;
+  typedef uint8_t blockNum_size_t;
 #elif BLOCK_TOTAL <= UINT16_MAX
-    typedef uint16_t blockNum_size_t;
+  typedef uint16_t blockNum_size_t;
 #else
-    typedef uint32_t blockNum_size_t;
+  typedef uint32_t blockNum_size_t;
 #endif
 
 #if BLOCK_SIZE <= UINT8_MAX
-    typedef uint8_t block_size_t;
+  typedef uint8_t block_size_t;
 #elif BLOCK_SIZE <= UINT16_MAX
-    typedef uint16_t block_size_t;
+  typedef uint16_t block_size_t;
 #else
-    typedef uint32_t block_size_t;
+  typedef uint32_t block_size_t;
 #endif
 
 /// @brief 

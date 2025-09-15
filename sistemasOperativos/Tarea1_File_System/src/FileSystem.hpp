@@ -30,6 +30,7 @@ typedef struct file {
 class FileSystem {
 
  private:
+  int userID;
   char* unit;
   directory* dir;
   iNode_t* inodes;
@@ -47,32 +48,28 @@ class FileSystem {
   FileSystem();
 
   ~FileSystem();
-  
-  int search(string filename);
-  
-  int read(string file, int cursor, size_t size);
-  
-  int write(string file, int cursor, size_t size);
-
-  int rename(string file, string name);
 
   int createFile(string name);
-
   int deleteFile(string file);
+  
+  int search(string filename);
+  int read(string file, int cursor, size_t size);
+  int write(string file, int cursor, size_t size);
+  int rename(string file, string name);
 
   void printDirectory();
-
   void printUnidad();
+
+  void changeUserID(int newID);
   
  private:  
   int open(string file);
-  
   int close(string file);
-
   int exist(string file);
-
   int isOpen(string file);
 
+  int searchEmptyNode();
+  int searchFreeBlock();
 };
 
 #endif  // FILE_SYSTEM_2025B
