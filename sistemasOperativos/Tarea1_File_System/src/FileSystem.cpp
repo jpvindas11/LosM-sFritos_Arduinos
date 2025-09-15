@@ -129,7 +129,65 @@ int FileSystem::search(string filename) {
   return NO_INDEX_FOUND;
 }
 
-int FileSystem::read(string file, int cursor, size_t size) {}
+int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
+    int fileIndex = search(file);
+    if (fileIndex == NO_INDEX_FOUND) {
+        cerr << "Error: El archivo no existe" << endl;
+        return NO_INDEX_FOUND;
+    }
+
+    iNode_t* inode = &this->inodes[fileIndex];
+    if (!inode->isUsed) {
+        cerr << "Error: El i nodo no está en uso" << endl;
+        return NO_FILE_FOUND;
+    }
+
+    if (cursor > (int)inode->size) {
+        cerr << "Error: El cursor se encuentra fuera del rango del archivo" << endl;
+        return -1;
+    }
+
+    size_t bytesToRead = std::min(size, static_cast<size_t>(inode->size - cursor));
+    buffer = new char[bytesToRead];
+    size_t bytesRead = 0;
+
+    const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS + TOTAL_POINTERS * TOTAL_POINTERS;
+
+    while (bytesRead < bytesToRead) {
+        int blockIndex = (cursor + bytesRead) / BLOCK_SIZE;
+        int blockOffset = (cursor + bytesRead) % BLOCK_SIZE;
+
+        block_size_t dataBlockNum = 0;
+
+        if (blockIndex >= maxBlocks) {
+          cerr << "Error: El archivo es demasiado grande para leer" << endl;
+          break;
+        }
+
+        if (blockIndex < TOTAL_POINTERS) {
+            dataBlockNum = inode->directBlocks[blockIndex];
+        } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
+            int idx = blockIndex - TOTAL_POINTERS;
+            dataBlockNum = inode->singleIndirect.dataPtr[idx];
+        } else {
+            int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
+            int outer = idx / TOTAL_POINTERS;
+            int inner = idx % TOTAL_POINTERS;
+            dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
+        }
+
+        if (dataBlockNum == FREE_BLOCK) {
+            break;
+        }
+
+        dataBlock_t* block = (dataBlock_t*)&unit[dataBlockNum * sizeof(dataBlock_t)];
+        size_t canRead = min(bytesToRead - bytesRead, (size_t)BLOCK_SIZE - blockOffset);
+        memcpy(buffer + bytesRead, block->data + blockOffset, canRead);
+
+        bytesRead += canRead;
+    }
+    return bytesRead;
+}
 int FileSystem::write(string file, int cursor, size_t size) {}
 
 int FileSystem::rename(string filename, string newname) {
@@ -158,7 +216,6 @@ int FileSystem::exist(string file) {
   return (search(file) != NO_INDEX_FOUND);
 }
 
-int FileSystem::isOpen(string file) {}
 
 int FileSystem::searchEmptyNode(){
   for (size_t index = 0; index < TOTAL_I_NODES; ++index) {
@@ -171,7 +228,7 @@ int FileSystem::searchEmptyNode(){
 
 int FileSystem::searchFreeBlock(){
   for (size_t index = 0; index < BLOCK_TOTAL; ++index) {
-    if (!this->fat[index] == FREE_BLOCK) {
+    if (this->fat[index] == FREE_BLOCK) {
       return index;
     }
   }
