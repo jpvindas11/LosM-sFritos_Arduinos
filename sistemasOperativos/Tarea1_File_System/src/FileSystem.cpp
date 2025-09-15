@@ -104,7 +104,20 @@ int FileSystem::createFile(string name) {
   return EXIT_SUCCESS;
 }
 
-int FileSystem::deleteFile(string file) {}
+int FileSystem::deleteFile(string file) {
+  if (exist(file)) {
+    fileEntry* target = &this->dir->files[search(file)];
+    // marca el nodo como libre
+    this->inodes[target->iNodeIndex].isUsed = false;
+    target->iNodeIndex = FREE_INDEX;
+    // marca el espacio del directorio como libre
+    target->isUsed = false;
+    // Elimina todos los datos del archivo(?)
+    // clearFileEntry(target)
+    return EXIT_SUCCESS;
+  }
+  return NO_FILE_FOUND;
+}
 
 int FileSystem::search(string filename) {
   for (size_t i = 0; i < dir->usedInodes; ++i) {
@@ -116,11 +129,18 @@ int FileSystem::search(string filename) {
   return NO_INDEX_FOUND;
 }
 
-  
-int FileSystem::search(string filename) {}
 int FileSystem::read(string file, int cursor, size_t size) {}
 int FileSystem::write(string file, int cursor, size_t size) {}
-int FileSystem::rename(string file, string name) {}
+
+int FileSystem::rename(string filename, string newname) {
+  if (exist(filename) && !exist(newname)) {
+    fileEntry* target = &this->dir->files[search(filename)];
+    strncpy(target->fileName, newname.c_str(), NAME_MAX - 1);
+    target->fileName[NAME_MAX - 1] = '\0';
+    return EXIT_SUCCESS;
+  }
+  return NO_FILE_FOUND;
+}
 
 void FileSystem::printDirectory() {}
 void FileSystem::printUnidad() {}

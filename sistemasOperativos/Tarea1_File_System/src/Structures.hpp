@@ -12,11 +12,12 @@
 
 enum macros {
     FREE_BLOCK = -1,
+    FREE_INDEX,
     OCCUPIED_BLOCK,
     OCCUPIED_FILENAME,
-    NO_INDEX_FOUND
+    NO_INDEX_FOUND,
+    NO_FILE_FOUND
 };
-
 
 // Se asume que por cada 4KB se utilizará un i-nodo (convención ext2/ext3)
 
