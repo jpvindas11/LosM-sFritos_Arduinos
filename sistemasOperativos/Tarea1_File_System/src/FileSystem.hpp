@@ -31,7 +31,7 @@ class FileSystem {
 
  private:
   char* unit;
-  directory* directory;
+  directory* dir;
   int* fat;
   int n;
   int TDirectory;
