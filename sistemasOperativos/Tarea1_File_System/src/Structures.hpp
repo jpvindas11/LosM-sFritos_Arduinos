@@ -10,6 +10,10 @@
 #define TOTAL_POINTERS 12
 #define BLOCK_TOTAL (DISK_SIZE / BLOCK_SIZE)
 
+#define FREE_BLOCK -1
+#define OCUPIED_BLOCK -2
+#define NO_INDEX_FOUND -3
+
 // Se asume que por cada 4KB se utilizará un i-nodo (convención ext2/ext3)
 
 // Esas macros es para elegir tamaños que rastreen los posibles indices o cantidad de cada tipo

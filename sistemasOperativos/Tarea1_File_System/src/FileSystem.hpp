@@ -32,6 +32,7 @@ class FileSystem {
  private:
   char* unit;
   directory* dir;
+  iNode_t* inodes;
   int* fat;
   int n;
   int TDirectory;
