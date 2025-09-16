@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 
+#include "FileSysError.hpp"
 #include "Structures.hpp"
 
 using namespace std;
@@ -53,8 +54,8 @@ class FileSystem {
   int deleteFile(string file);
   
   int search(string filename);
-  int read(string file, int cursor, size_t size);
-  int write(string file, int cursor, size_t size);
+  int read(string file, int cursor, size_t size, char* buffer);
+  int write(string file, int cursor, size_t size, char* buffer);
   int rename(string file, string name);
 
   void printDirectory();

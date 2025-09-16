@@ -9,15 +9,8 @@
 #define BLOCK_SIZE 256
 #define TOTAL_POINTERS 12
 #define BLOCK_TOTAL (DISK_SIZE / BLOCK_SIZE)
-
-enum macros {
-    FREE_BLOCK = -1,
-    FREE_INDEX,
-    OCCUPIED_BLOCK,
-    OCCUPIED_FILENAME,
-    NO_INDEX_FOUND,
-    NO_FILE_FOUND
-};
+#define FREE_BLOCK -1
+#define FREE_INDEX -1
 
 // Se asume que por cada 4KB se utilizará un i-nodo (convención ext2/ext3)
 

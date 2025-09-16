@@ -39,84 +39,76 @@ FileSystem::~FileSystem() {
 }
 
 int FileSystem::createFile(string name) {
-  // Se asegura que no exista un archivo con el mismo nombre
-  if (exist(name)) {
-    cout << "Error: Este archivo ya existe" << endl;
-    return OCCUPIED_FILENAME; 
-  }
-
-  // Buscar el índice de un inodo libre
-  int freeInodeIndex = searchEmptyNode();
-  // Dar error si no hay espacio
-  if (freeInodeIndex == NO_INDEX_FOUND) { 
-    cout << "Error: No hay inodos libres disponibles" << endl;
-    return NO_INDEX_FOUND; 
-  }
-
-  // Buscar bloque libre
-  int freeBlockIndex = searchFreeBlock();
-  // Dar error si no hay espacio
-  if (freeBlockIndex == NO_INDEX_FOUND) { 
-    cout << "Error: No hay bloques libres disponibles" << endl;
-    return NO_INDEX_FOUND; 
-  }
-
-  // Crear archivo si hay inodos y bloques disponibles
-  iNode_t* inodo = &this->inodes[freeInodeIndex];
-  inodo->isUsed = true;
-  inodo->creationTime = time(0);
-  inodo->user = this->userID;
-  inodo->groupId = 1000;
-  inodo->permissions = 0644; // rw- r-- r--
-  inodo->size = 0;
-  inodo->lastUsedBlock = 0;
-  strcpy(inodo->path, "/");
-
-  // Bloques directos
-  for (int i = 0; i < TOTAL_POINTERS; ++i) {
-    inodo->directBlocks[i] = 0;
-  }
-
-  inodo->directBlocks[0] = freeBlockIndex; // Primer bloque
-
-  // Indirección
-  // Solo se usa al necesitar más bloques fuera de los directos
-  inodo->singleIndirect.isUsed = false;
-  inodo->singleIndirect.usedDataPtr = 0;
-  inodo->doubleIndirect.isUsed = false;
-  inodo->doubleIndirect.usedIndex = 0;
-
-  this->fat[freeBlockIndex] = OCCUPIED_BLOCK;
-
-  // Agregar entrada al directorio 
-  fileEntry_t* newEntry = &this->dir->files[this->dir->usedInodes];
-  strncpy(newEntry->fileName, name.c_str(), NAME_MAX - 1);
-  newEntry->fileName[NAME_MAX - 1] = '\0';
-  newEntry->iNodeIndex = freeInodeIndex;
-  newEntry->isUsed = true;
+  try {
+    // Se asegura que no exista un archivo con el mismo nombre
+    if (!exist(name)) {
+      int freeInodeIndex = searchEmptyNode();
+      int freeBlockIndex = searchFreeBlock();
+      // Crear archivo si hay inodos y bloques disponibles
+      iNode_t* inodo = &this->inodes[freeInodeIndex];
+      inodo->isUsed = true;
+      inodo->creationTime = time(0);
+      inodo->user = this->userID;
+      inodo->groupId = 1000;
+      inodo->permissions = 0644; // rw- r-- r--
+      inodo->size = 0;
+      inodo->lastUsedBlock = 0;
+      strcpy(inodo->path, "/");
+    
+      // Bloques directos
+      for (int i = 0; i < TOTAL_POINTERS; ++i) {
+        inodo->directBlocks[i] = 0;
+      }
   
-  this->dir->usedInodes++; // Inodos totales
+      inodo->directBlocks[0] = freeBlockIndex; // Primer bloque
   
-  cout << "Archivo '" << name << "' creado correctamente" << endl;
-  cout << "Inodo asignado: " << freeInodeIndex << endl;
-  cout << "Bloque asignado: " << freeBlockIndex << endl;
+      // Indirección
+      // Solo se usa al necesitar más bloques fuera de los directos
+      inodo->singleIndirect.isUsed = false;
+      inodo->singleIndirect.usedDataPtr = 0;
+      inodo->doubleIndirect.isUsed = false;
+      inodo->doubleIndirect.usedIndex = 0;
   
-  return EXIT_SUCCESS;
+      this->fat[freeBlockIndex] = ERR_OCCUPIED_BLOCK;
+  
+      // Agregar entrada al directorio 
+      fileEntry_t* newEntry = &this->dir->files[this->dir->usedInodes];
+      strncpy(newEntry->fileName, name.c_str(), NAME_MAX - 1);
+      newEntry->fileName[NAME_MAX - 1] = '\0';
+      newEntry->iNodeIndex = freeInodeIndex;
+      newEntry->isUsed = true;
+  
+      this->dir->usedInodes++; // Inodos totales
+  
+      cout << "Archivo '" << name << "' creado correctamente" << endl;
+      cout << "Inodo asignado: " << freeInodeIndex << endl;
+      cout << "Bloque asignado: " << freeBlockIndex << endl;
+    
+      return EXIT_SUCCESS;
+    }
+  } catch (const FileSysError& err) {
+    cerr << "Error al crear archivo: " << err.what() << endl;
+    return err.code();
+  }
 }
 
 int FileSystem::deleteFile(string file) {
-  if (exist(file)) {
-    fileEntry* target = &this->dir->files[search(file)];
-    // marca el nodo como libre
-    this->inodes[target->iNodeIndex].isUsed = false;
-    target->iNodeIndex = FREE_INDEX;
-    // marca el espacio del directorio como libre
-    target->isUsed = false;
-    // Elimina todos los datos del archivo(?)
-    // clearFileEntry(target)
-    return EXIT_SUCCESS;
+  try {
+    if (exist(file)) {
+      fileEntry* target = &this->dir->files[search(file)];
+      // marca el nodo como libre
+      this->inodes[target->iNodeIndex].isUsed = false;
+      target->iNodeIndex = FREE_INDEX;
+      // marca el espacio del directorio como libre
+      target->isUsed = false;
+      // Elimina todos los datos del archivo(?)
+      // clearFileEntry(target)
+      return EXIT_SUCCESS;
+    }
+  } catch (const FileSysError& err) {
+    cerr << "Error al eliminar archivo: " << err.what() << endl;
+    return err.code();
   }
-  return NO_FILE_FOUND;
 }
 
 int FileSystem::search(string filename) {
@@ -126,78 +118,101 @@ int FileSystem::search(string filename) {
       return i;
     }
   }
-  return NO_INDEX_FOUND;
+  throw FileSysError(ERR_NO_FILE_FOUND,
+    "No se encontró el archivo llamado " + filename);
+  return ERR_NO_FILE_FOUND;
 }
 
 int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
-    int fileIndex = search(file);
-    if (fileIndex == NO_INDEX_FOUND) {
-        cerr << "Error: El archivo no existe" << endl;
-        return NO_INDEX_FOUND;
+  int fileIndex = search(file);
+  if (fileIndex == ERR_NO_INDEX_FOUND) {
+    cerr << "Error: El archivo no existe" << endl;
+    return ERR_NO_INDEX_FOUND;
+  }
+
+  iNode_t* inode = &this->inodes[fileIndex];
+  if (!inode->isUsed) {
+    cerr << "Error: El i nodo no está en uso" << endl;
+    return ERR_NO_FILE_FOUND;
+  }
+
+  if (cursor > (int)inode->size) {
+    cerr << "Error: El cursor se encuentra fuera del rango del archivo" << endl;
+    return -1;
+  }
+
+  size_t bytesToRead = min(size, static_cast<size_t>(inode->size - cursor));
+  buffer = new char[bytesToRead];
+  size_t bytesRead = 0;
+
+  const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS + TOTAL_POINTERS * TOTAL_POINTERS;
+
+  while (bytesRead < bytesToRead) {
+    int blockIndex = (cursor + bytesRead) / BLOCK_SIZE;
+    int blockOffset = (cursor + bytesRead) % BLOCK_SIZE;
+
+    block_size_t dataBlockNum = 0;
+
+    if (blockIndex >= maxBlocks) {
+      cerr << "Error: El archivo es demasiado grande para leer" << endl;
+      break;
     }
 
-    iNode_t* inode = &this->inodes[fileIndex];
-    if (!inode->isUsed) {
-        cerr << "Error: El i nodo no está en uso" << endl;
-        return NO_FILE_FOUND;
+    if (blockIndex < TOTAL_POINTERS) {
+      dataBlockNum = inode->directBlocks[blockIndex];
+    } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
+      int idx = blockIndex - TOTAL_POINTERS;
+      dataBlockNum = inode->singleIndirect.dataPtr[idx];
+    } else {
+      int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
+      int outer = idx / TOTAL_POINTERS;
+      int inner = idx % TOTAL_POINTERS;
+      dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
     }
 
-    if (cursor > (int)inode->size) {
-        cerr << "Error: El cursor se encuentra fuera del rango del archivo" << endl;
-        return -1;
+    if (dataBlockNum == FREE_BLOCK) {
+      break;
     }
 
-    size_t bytesToRead = std::min(size, static_cast<size_t>(inode->size - cursor));
-    buffer = new char[bytesToRead];
-    size_t bytesRead = 0;
+    dataBlock_t* block = (dataBlock_t*)&unit[dataBlockNum * sizeof(dataBlock_t)];
+    size_t canRead = min(bytesToRead - bytesRead, (size_t)BLOCK_SIZE - blockOffset);
+    memcpy(buffer + bytesRead, block->data + blockOffset, canRead);
 
-    const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS + TOTAL_POINTERS * TOTAL_POINTERS;
-
-    while (bytesRead < bytesToRead) {
-        int blockIndex = (cursor + bytesRead) / BLOCK_SIZE;
-        int blockOffset = (cursor + bytesRead) % BLOCK_SIZE;
-
-        block_size_t dataBlockNum = 0;
-
-        if (blockIndex >= maxBlocks) {
-          cerr << "Error: El archivo es demasiado grande para leer" << endl;
-          break;
-        }
-
-        if (blockIndex < TOTAL_POINTERS) {
-            dataBlockNum = inode->directBlocks[blockIndex];
-        } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
-            int idx = blockIndex - TOTAL_POINTERS;
-            dataBlockNum = inode->singleIndirect.dataPtr[idx];
-        } else {
-            int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
-            int outer = idx / TOTAL_POINTERS;
-            int inner = idx % TOTAL_POINTERS;
-            dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
-        }
-
-        if (dataBlockNum == FREE_BLOCK) {
-            break;
-        }
-
-        dataBlock_t* block = (dataBlock_t*)&unit[dataBlockNum * sizeof(dataBlock_t)];
-        size_t canRead = min(bytesToRead - bytesRead, (size_t)BLOCK_SIZE - blockOffset);
-        memcpy(buffer + bytesRead, block->data + blockOffset, canRead);
-
-        bytesRead += canRead;
-    }
-    return bytesRead;
+    bytesRead += canRead;
+  }
+  return bytesRead;
 }
-int FileSystem::write(string file, int cursor, size_t size) {}
+
+int FileSystem::write(string file, int cursor, size_t size, char* buffer) {
+  try {
+    if (exist(file)) {
+      iNode_t* inode = &this->inodes[search(file)];
+      if (!inode->isUsed) {
+        throw FileSysError(ERR_EMPTY_INODE, "El inodo no esta en uso");
+      }
+      if (cursor > (int)inode->size) {
+        throw FileSysError(ERR_OUT_OF_RANGE,
+          "El cursor se encuentra fuera del rango del archivo");
+      }
+    }
+  } catch (const FileSysError& err) {
+    cerr << "Error al escribir archivo: " << err.what() << endl;
+    return err.code();
+  }
+}
 
 int FileSystem::rename(string filename, string newname) {
-  if (exist(filename) && !exist(newname)) {
-    fileEntry* target = &this->dir->files[search(filename)];
-    strncpy(target->fileName, newname.c_str(), NAME_MAX - 1);
-    target->fileName[NAME_MAX - 1] = '\0';
-    return EXIT_SUCCESS;
+  try {
+    if (exist(filename) && !exist(newname)) {
+      fileEntry* target = &this->dir->files[search(filename)];
+      strncpy(target->fileName, newname.c_str(), NAME_MAX - 1);
+      target->fileName[NAME_MAX - 1] = '\0';
+      return EXIT_SUCCESS;
+    }
+  } catch (const FileSysError& err) {
+    cerr << "Error al renombrar archivo: " << err.what() << endl;
+    return err.code();
   }
-  return NO_FILE_FOUND;
 }
 
 void FileSystem::printDirectory() {}
@@ -212,8 +227,12 @@ void FileSystem::changeUserID(int newID) {
 int FileSystem::open(string file) {}
 int FileSystem::close(string file) {}
 
-int FileSystem::exist(string file) {
-  return (search(file) != NO_INDEX_FOUND);
+int FileSystem::exist(string filename) {
+  if (search(filename) == ERR_NO_INDEX_FOUND) {
+    return EXIT_SUCCESS;
+  }
+  throw FileSysError(ERR_OCCUPIED_FILENAME,
+    "Ya existe un archivo llamado " + filename);
 }
 
 
@@ -223,7 +242,7 @@ int FileSystem::searchEmptyNode(){
       return index;
     }
   }
-  return NO_INDEX_FOUND;
+  throw FileSysError(ERR_NO_FREE_INODES, "No hay inodos libres disponibles");
 }
 
 int FileSystem::searchFreeBlock(){
@@ -232,5 +251,5 @@ int FileSystem::searchFreeBlock(){
       return index;
     }
   }
-  return NO_INDEX_FOUND;
+  throw FileSysError(ERR_NO_FREE_BLOCKS, "No hay bloques libres disponibles");
 }
