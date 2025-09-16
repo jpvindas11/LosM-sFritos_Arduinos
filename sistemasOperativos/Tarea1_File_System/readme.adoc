@@ -21,26 +21,29 @@ Luis Eduardo Valverde Soza C18128
 <- Esos serían atributos del file system
 
 === Cuáles serían los metadatos de un archivo?
-<-Esos serían los atributos del archivo, quizás almacenados en un nodo índice
+Nombre del archivo, tamaño, permisos, fecha, propietario, ubicación del bloque inicial, timestamps (creación, modificación, último acceso), tipo, identificador.
 
 === Quiero poder direccionar bloques de datos directamente?
-<- Entonces el nodo del índice qué tendría para esto?
+Sí, el indice debe tener el tamaño suficiente para direccionar todos los bloques de datos del archivo, es rápido.
 
 === Quiero poder hacer que los archivos sean más grandes
 <- Entonces el nodo del índice qué tendría para esto? Cómo se hace para que un archivo pueda ser más grande?
 
 === Cómo se implementan los folders?
-<- Donde se guarda el hecho de que un folder es un folder?
+Se implementa una estructura de datos que contenga los metadatos del folder y un índice con los bloques que contienen los archivos y subfolders dentro del folder.
 
 === Cómo se mantiene el control de permisos de acceso a archivos?
+Se mantiene un sistema de permisos basado en el usuario y grupo propietario del archivo, con permisos de lectura, escritura.
 
 === Cómo se controla que no haya errores en el funcionamiento general del file system?
+Se implementan estructuras como bitmaps para llevar el control de bloques libres y ocupados, se realiza journaling para mantener la integridad de los datos.
 
 === Cómo se pueden modificar los metadatos de un archivo?
 
 === Cómo se puede conocer el tamaño de un archivo?
 
 === Qué estructuras de datos son indispensables?
+Una estructura para el directorio raíz, una estructura para los metadatos de archivos y folders,  una estructura de nodos índice, una estructura para los bloques de datos.
 
 
 == Diseño
