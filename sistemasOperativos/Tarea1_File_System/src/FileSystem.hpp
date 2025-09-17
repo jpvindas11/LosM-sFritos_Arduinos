@@ -66,7 +66,7 @@ class FileSystem {
  private:  
   int open(string file);
   int close(string file);
-  int exist(string file);
+  bool exist(string file);
   int isOpen(string file);
 
   int searchEmptyNode();

@@ -61,6 +61,7 @@ int FileSystem::createFile(string name) {
       }
   
       inodo->directBlocks[0] = freeBlockIndex; // Primer bloque
+      inodo->directBlocks[1] = freeBlockIndex; // Primer bloque
   
       // Indirección
       // Solo se usa al necesitar más bloques fuera de los directos
@@ -112,15 +113,22 @@ int FileSystem::deleteFile(string file) {
 }
 
 int FileSystem::search(string filename) {
+  // Revisa si el archivo (inodo) está en uso
+  // Y si el nombre es igual
   for (size_t i = 0; i < dir->usedInodes; ++i) {
     if (dir->files[i].isUsed &&
         filename == dir->files[i].fileName) {
       return i;
     }
   }
+
+  std::cout << "El archivo " << filename << "no existe" << std::endl;
+  return ERR_NO_INDEX_FOUND;
+  /*
   throw FileSysError(ERR_NO_FILE_FOUND,
     "No se encontró el archivo llamado " + filename);
   return ERR_NO_FILE_FOUND;
+  */
 }
 
 int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
@@ -227,12 +235,15 @@ void FileSystem::changeUserID(int newID) {
 int FileSystem::open(string file) {}
 int FileSystem::close(string file) {}
 
-int FileSystem::exist(string filename) {
+bool FileSystem::exist(string filename) {
   if (search(filename) == ERR_NO_INDEX_FOUND) {
-    return EXIT_SUCCESS;
+    return false;
   }
-  throw FileSysError(ERR_OCCUPIED_FILENAME,
-    "Ya existe un archivo llamado " + filename);
+  /*throw FileSysError(ERR_OCCUPIED_FILENAME,
+    "Ya existe un archivo llamado " + filename);*/
+  
+  std::cout << "Ya existe un archivo llamado" << filename << std::endl;
+  return true;
 }
 
 
