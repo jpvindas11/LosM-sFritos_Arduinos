@@ -64,17 +64,23 @@ typedef struct doubleFileIndex {
 
 /// @brief ... 
 typedef struct iNode {
-  uint32_t user;
-  uint32_t groupId;
-  char path[PATH_MAX];
-  time_t creationTime;
-  uint16_t permissions;
-  uint32_t size;
-  bool isUsed;
-  block_size_t directBlocks [TOTAL_POINTERS];
-  blockNum_size_t lastUsedBlock;
-  singleFileIndex_t singleIndirect;
-  doubleFileIndex_t doubleIndirect;
+  uint32_t user;  // 32 bits
+  uint32_t groupId;   // 32 bits
+  char path[PATH_MAX]; // 256 bytes -> 2048 bits
+  time_t creationTime;  // long -> 64 bits
+  uint16_t permissions;   // 16 bits
+  uint32_t size; // 32 bits
+  bool isUsed; // 8 bits
+  block_size_t directBlocks [TOTAL_POINTERS]; // block_size_t bits * 12 indices = 192 bits
+  blockNum_size_t lastUsedBlock; // 16 bits
+  singleFileIndex_t singleIndirect; // 16 bits
+  doubleFileIndex_t doubleIndirect; // 16 bits
+
+  // 2472 bits
+  // 309 bytes
+
+  // Necesitamos 618 bloques para almacenar la info de los 512 inodos
+  // Alrededor de %7.5 de bloques totales
 } iNode_t;
 
 /// @brief ... 
@@ -91,3 +97,6 @@ typedef struct directory {
   fileEntry files[TOTAL_I_NODES];
   inode_size_t usedInodes;
 } directory_t;
+
+// Como podriamos acomodar la unidad
+// 
