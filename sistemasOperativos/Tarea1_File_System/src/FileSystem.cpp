@@ -154,48 +154,56 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
     return -1;
   }
 
-  size_t bytesToRead = min(size, static_cast<size_t>(inode->size - cursor));
-  buffer = new char[bytesToRead];
-  size_t bytesRead = 0;
-
-  const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS + TOTAL_POINTERS * TOTAL_POINTERS;
-
-  while (bytesRead < bytesToRead) {
-    int blockIndex = (cursor + bytesRead) / BLOCK_SIZE;
-    int blockOffset = (cursor + bytesRead) % BLOCK_SIZE;
-
-    block_size_t dataBlockNum = 0;
-
-    if (blockIndex >= maxBlocks) {
-      cerr << "Error: El archivo es demasiado grande para leer" << endl;
-      break;
-    }
-
-    if (blockIndex < TOTAL_POINTERS) {
-      dataBlockNum = inode->directBlocks[blockIndex];
-    } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
-      int idx = blockIndex - TOTAL_POINTERS;
-      dataBlockNum = inode->singleIndirect.dataPtr[idx];
-    } else {
-      int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
-      int outer = idx / TOTAL_POINTERS;
-      int inner = idx % TOTAL_POINTERS;
-      dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
-    }
-
-    if (dataBlockNum == FREE_BLOCK) {
-      break;
-    }
-
-    dataBlock_t* block = (dataBlock_t*)&unit[dataBlockNum * sizeof(dataBlock_t)];
-    size_t canRead = min(bytesToRead - bytesRead, (size_t)BLOCK_SIZE - blockOffset);
-    memcpy(buffer + bytesRead, block->data + blockOffset, canRead);
-
-    bytesRead += canRead;
-  }
-
-  cout << "Datos leídos: " << buffer << endl;
   
+  size_t bytesToRead = min(size, static_cast<size_t>(inode->size - cursor));
+  size_t bytesRead = 0;
+  
+  if (open(file)) {
+    const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS + TOTAL_POINTERS * TOTAL_POINTERS;
+  
+    while (bytesRead < bytesToRead) {
+      int blockIndex = (cursor + bytesRead) / BLOCK_SIZE;
+      int blockOffset = (cursor + bytesRead) % BLOCK_SIZE;
+  
+      block_size_t dataBlockNum = 0;
+  
+      if (blockIndex >= maxBlocks) {
+        cerr << "Error: El archivo es demasiado grande para leer" << endl;
+        break;
+      }
+  
+      if (blockIndex < TOTAL_POINTERS) {
+        dataBlockNum = inode->directBlocks[blockIndex];
+      } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
+        int idx = blockIndex - TOTAL_POINTERS;
+        dataBlockNum = inode->singleIndirect.dataPtr[idx];
+      } else {
+        int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
+        int outer = idx / TOTAL_POINTERS;
+        int inner = idx % TOTAL_POINTERS;
+        dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
+      }
+  
+      if (dataBlockNum == FREE_BLOCK) {
+        break;
+      }
+  
+      dataBlock_t* block = (dataBlock_t*)&unit[dataBlockNum * sizeof(dataBlock_t)];
+      size_t canRead = min(bytesToRead - bytesRead, (size_t)BLOCK_SIZE - blockOffset);
+      memcpy(buffer + bytesRead, block->data + blockOffset, canRead);
+  
+      bytesRead += canRead;
+    }
+  
+    if (bytesRead < size) {
+      buffer[bytesRead] = '\0';
+    } else if (size > 0) {
+      buffer[size - 1] = '\0';
+    }
+  
+    cout << "Datos leídos: " << buffer << endl;    
+  }
+  close(file);
   return bytesRead;
 }
 
@@ -220,91 +228,94 @@ int FileSystem::write(string file, int cursor, size_t size, const char* buffer) 
   size_t bytesWritten = 0;
   size_t bytesToWrite = size;
 
-  const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS + TOTAL_POINTERS * TOTAL_POINTERS;
-
-  while (bytesWritten < bytesToWrite) {
-    int blockIndex = (cursor + bytesWritten) / BLOCK_SIZE;
-    int blockOffset = (cursor + bytesWritten) % BLOCK_SIZE;
-
-    if (blockIndex >= (int)maxBlocks) {
-      cerr << "Error: El archivo es demasiado grande para escribir" << endl;
-      break;
-    }
-
-    block_size_t dataBlockNum = FREE_BLOCK;
-
-    if (blockIndex < TOTAL_POINTERS) {
-      dataBlockNum = inode->directBlocks[blockIndex];
-      if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
-        dataBlockNum = searchFreeBlock();
-        inode->directBlocks[blockIndex] = dataBlockNum;
-        this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
+  if (open(file)) {
+    const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS + TOTAL_POINTERS * TOTAL_POINTERS;
+  
+    while (bytesWritten < bytesToWrite) {
+      int blockIndex = (cursor + bytesWritten) / BLOCK_SIZE;
+      int blockOffset = (cursor + bytesWritten) % BLOCK_SIZE;
+  
+      if (blockIndex >= (int)maxBlocks) {
+        cerr << "Error: El archivo es demasiado grande para escribir" << endl;
+        break;
       }
-    } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
-      int idx = blockIndex - TOTAL_POINTERS;
-      if (!inode->singleIndirect.isUsed) {
-        inode->singleIndirect.isUsed = true;
-        inode->singleIndirect.usedDataPtr = 0;
-        for (int i = 0; i < TOTAL_POINTERS; i++) {
-          inode->singleIndirect.dataPtr[i] = FREE_BLOCK;
+  
+      block_size_t dataBlockNum = FREE_BLOCK;
+  
+      if (blockIndex < TOTAL_POINTERS) {
+        dataBlockNum = inode->directBlocks[blockIndex];
+        if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
+          dataBlockNum = searchFreeBlock();
+          inode->directBlocks[blockIndex] = dataBlockNum;
+          this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
         }
-      }
-      dataBlockNum = inode->singleIndirect.dataPtr[idx];
-      if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
-        dataBlockNum = searchFreeBlock();
-        inode->singleIndirect.dataPtr[idx] = dataBlockNum;
-        inode->singleIndirect.usedDataPtr++;
-        this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
-      }
-    } else {
-      int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
-      int outer = idx / TOTAL_POINTERS;
-      int inner = idx % TOTAL_POINTERS;
-
-      if (!inode->doubleIndirect.isUsed) {
-        inode->doubleIndirect.isUsed = true;
-        inode->doubleIndirect.usedIndex = 0;
-        for (int o = 0; o < TOTAL_POINTERS; ++o) {
-          inode->doubleIndirect.dataIndex[o].isUsed = false;
-          inode->doubleIndirect.dataIndex[o].usedDataPtr = 0;
-          for (int k = 0; k < TOTAL_POINTERS; ++k) {
-            inode->doubleIndirect.dataIndex[o].dataPtr[k] = FREE_BLOCK;
+      } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
+        int idx = blockIndex - TOTAL_POINTERS;
+        if (!inode->singleIndirect.isUsed) {
+          inode->singleIndirect.isUsed = true;
+          inode->singleIndirect.usedDataPtr = 0;
+          for (int i = 0; i < TOTAL_POINTERS; i++) {
+            inode->singleIndirect.dataPtr[i] = FREE_BLOCK;
           }
         }
-      }
-
-      if (!inode->doubleIndirect.dataIndex[outer].isUsed) {
-        inode->doubleIndirect.dataIndex[outer].isUsed = true;
-        inode->doubleIndirect.dataIndex[outer].usedDataPtr = 0;
-        for (int k = 0; k < TOTAL_POINTERS; ++k) {
-          inode->doubleIndirect.dataIndex[outer].dataPtr[k] = FREE_BLOCK;
+        dataBlockNum = inode->singleIndirect.dataPtr[idx];
+        if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
+          dataBlockNum = searchFreeBlock();
+          inode->singleIndirect.dataPtr[idx] = dataBlockNum;
+          inode->singleIndirect.usedDataPtr++;
+          this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
         }
-        inode->doubleIndirect.usedIndex++;
+      } else {
+        int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
+        int outer = idx / TOTAL_POINTERS;
+        int inner = idx % TOTAL_POINTERS;
+  
+        if (!inode->doubleIndirect.isUsed) {
+          inode->doubleIndirect.isUsed = true;
+          inode->doubleIndirect.usedIndex = 0;
+          for (int o = 0; o < TOTAL_POINTERS; ++o) {
+            inode->doubleIndirect.dataIndex[o].isUsed = false;
+            inode->doubleIndirect.dataIndex[o].usedDataPtr = 0;
+            for (int k = 0; k < TOTAL_POINTERS; ++k) {
+              inode->doubleIndirect.dataIndex[o].dataPtr[k] = FREE_BLOCK;
+            }
+          }
+        }
+  
+        if (!inode->doubleIndirect.dataIndex[outer].isUsed) {
+          inode->doubleIndirect.dataIndex[outer].isUsed = true;
+          inode->doubleIndirect.dataIndex[outer].usedDataPtr = 0;
+          for (int k = 0; k < TOTAL_POINTERS; ++k) {
+            inode->doubleIndirect.dataIndex[outer].dataPtr[k] = FREE_BLOCK;
+          }
+          inode->doubleIndirect.usedIndex++;
+        }
+  
+        dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
+        if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
+          dataBlockNum = searchFreeBlock();
+          inode->doubleIndirect.dataIndex[outer].dataPtr[inner] = dataBlockNum;
+          inode->doubleIndirect.dataIndex[outer].usedDataPtr++;
+          this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
+        }
       }
-
-      dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
-      if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
-        dataBlockNum = searchFreeBlock();
-        inode->doubleIndirect.dataIndex[outer].dataPtr[inner] = dataBlockNum;
-        inode->doubleIndirect.dataIndex[outer].usedDataPtr++;
-        this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
+  
+      dataBlock_t* block = (dataBlock_t*)&unit[dataBlockNum * sizeof(dataBlock_t)];
+      size_t canWrite = min(bytesToWrite - bytesWritten, (size_t)BLOCK_SIZE - blockOffset);
+      memcpy(block->data + blockOffset, buffer + bytesWritten, canWrite);
+  
+      bytesWritten += canWrite;
+  
+      // Actualizar tamaño del archivo si creció
+      size_t newEnd = (size_t)cursor + bytesWritten;
+      if (newEnd > inode->size) {
+        inode->size = (uint32_t)newEnd;
       }
+  
+      inode->lastUsedBlock = (blockNum_size_t)dataBlockNum;
     }
-
-    dataBlock_t* block = (dataBlock_t*)&unit[dataBlockNum * sizeof(dataBlock_t)];
-    size_t canWrite = min(bytesToWrite - bytesWritten, (size_t)BLOCK_SIZE - blockOffset);
-    memcpy(block->data + blockOffset, buffer + bytesWritten, canWrite);
-
-    bytesWritten += canWrite;
-
-    // Actualizar tamaño del archivo si creció
-    size_t newEnd = (size_t)cursor + bytesWritten;
-    if (newEnd > inode->size) {
-      inode->size = (uint32_t)newEnd;
-    }
-
-    inode->lastUsedBlock = (blockNum_size_t)dataBlockNum;
   }
+  close(file);
   return bytesWritten;
 }
 
@@ -340,8 +351,35 @@ void FileSystem::changeUserID(int newID) {
 
 // Private
 
-int FileSystem::open(string file) {}
-int FileSystem::close(string file) {}
+int FileSystem::open(string filename) {
+  int index = search(filename);
+  if (index == ERR_NO_INDEX_FOUND) {
+    cerr << "Error: El archivo no existe" << endl;
+    return ERR_NO_FILE_FOUND;
+  }
+  fileEntry_t* file = &dir->files[index];
+  if (file->isOpen) {
+    return ERR_FILE_ALREADY_OPEN;
+  } else {
+    file->isOpen = true;
+  }
+  return EXIT_SUCCESS;
+}
+
+int FileSystem::close(string filename) { 
+  int index = search(filename);
+  if (index == ERR_NO_INDEX_FOUND) {
+    cerr << "Error: El archivo no existe" << endl;
+    return ERR_NO_FILE_FOUND;
+  }
+  fileEntry_t* file = &dir->files[index];
+  if (!file->isOpen) {
+    return ERR_FILE_ALREADY_CLOSE;
+  } else {
+    file->isOpen = false;
+  }
+  return EXIT_SUCCESS;
+}
 
 bool FileSystem::exist(string filename) {
   // std::cout << "Ya existe un archivo llamado" << filename << std::endl;

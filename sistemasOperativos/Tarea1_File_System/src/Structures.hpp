@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <limits.h>
 #include <string>
+#include <vector>
+#include <utility>
 
 #define DISK_SIZE 2097152  // 2MB
 #define TOTAL_I_NODES 512
@@ -88,6 +90,9 @@ typedef struct fileEntry {
   char fileName[NAME_MAX];
   inode_size_t iNodeIndex;
   bool isUsed;
+  bool isOpen;
+  /*<- el bool es temporal, podría ser mejor usar una lista
+    de archivos abiertos como std::vector<std::string> openFiles; */
 } fileEntry_t;
 
 /// @brief ... 
