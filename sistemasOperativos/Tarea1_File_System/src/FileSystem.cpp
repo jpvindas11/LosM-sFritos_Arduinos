@@ -38,10 +38,10 @@ FileSystem::~FileSystem() {
   delete[] this->inodes;
 }
 
-int FileSystem::createFile(string name) {
+int FileSystem::createFile(string filename) {
   try {
     // Se asegura que no exista un archivo con el mismo nombre
-    if (!exist(name)) {
+    if (!exist(filename)) {
       int freeInodeIndex = searchEmptyNode();
       int freeBlockIndex = searchFreeBlock();
       // Crear archivo si hay inodos y bloques disponibles
@@ -74,18 +74,21 @@ int FileSystem::createFile(string name) {
   
       // Agregar entrada al directorio 
       fileEntry_t* newEntry = &this->dir->files[this->dir->usedInodes];
-      strncpy(newEntry->fileName, name.c_str(), NAME_MAX - 1);
+      strncpy(newEntry->fileName, filename.c_str(), NAME_MAX - 1);
       newEntry->fileName[NAME_MAX - 1] = '\0';
       newEntry->iNodeIndex = freeInodeIndex;
       newEntry->isUsed = true;
   
       this->dir->usedInodes++; // Inodos totales
   
-      cout << "Archivo '" << name << "' creado correctamente" << endl;
+      cout << "Archivo '" << filename << "' creado correctamente" << endl;
       cout << "Inodo asignado: " << freeInodeIndex << endl;
       cout << "Bloque asignado: " << freeBlockIndex << endl;
     
       return EXIT_SUCCESS;
+    } else {
+      throw FileSysError(ERR_OCCUPIED_FILENAME,
+        "Ya existe un archivo llamado " + filename);
     }
   } catch (const FileSysError& err) {
     cerr << "Error al crear archivo: " << err.what() << endl;
@@ -93,10 +96,10 @@ int FileSystem::createFile(string name) {
   }
 }
 
-int FileSystem::deleteFile(string file) {
+int FileSystem::deleteFile(string filename) {
   try {
-    if (exist(file)) {
-      fileEntry* target = &this->dir->files[search(file)];
+    if (exist(filename)) {
+      fileEntry* target = &this->dir->files[search(filename)];
       // marca el nodo como libre
       this->inodes[target->iNodeIndex].isUsed = false;
       target->iNodeIndex = FREE_INDEX;
@@ -105,6 +108,9 @@ int FileSystem::deleteFile(string file) {
       // Elimina todos los datos del archivo(?)
       // clearFileEntry(target)
       return EXIT_SUCCESS;
+    } else {
+      throw FileSysError(ERR_OCCUPIED_FILENAME,
+        "No existe un archivo llamado " + filename);
     }
   } catch (const FileSysError& err) {
     cerr << "Error al eliminar archivo: " << err.what() << endl;
@@ -191,10 +197,10 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
   return bytesRead;
 }
 
-int FileSystem::write(string file, int cursor, size_t size, char* buffer) {
+int FileSystem::write(string filename, int cursor, size_t size, char* buffer) {
   try {
-    if (exist(file)) {
-      iNode_t* inode = &this->inodes[search(file)];
+    if (exist(filename)) {
+      iNode_t* inode = &this->inodes[search(filename)];
       if (!inode->isUsed) {
         throw FileSysError(ERR_EMPTY_INODE, "El inodo no esta en uso");
       }
@@ -202,6 +208,9 @@ int FileSystem::write(string file, int cursor, size_t size, char* buffer) {
         throw FileSysError(ERR_OUT_OF_RANGE,
           "El cursor se encuentra fuera del rango del archivo");
       }
+    } else {
+      throw FileSysError(ERR_OCCUPIED_FILENAME,
+        "No existe un archivo llamado " + filename);
     }
   } catch (const FileSysError& err) {
     cerr << "Error al escribir archivo: " << err.what() << endl;
@@ -236,16 +245,9 @@ int FileSystem::open(string file) {}
 int FileSystem::close(string file) {}
 
 bool FileSystem::exist(string filename) {
-  if (search(filename) == ERR_NO_INDEX_FOUND) {
-    return false;
-  }
-  /*throw FileSysError(ERR_OCCUPIED_FILENAME,
-    "Ya existe un archivo llamado " + filename);*/
-  
-  std::cout << "Ya existe un archivo llamado" << filename << std::endl;
-  return true;
+  // std::cout << "Ya existe un archivo llamado" << filename << std::endl;
+  return search(filename) != ERR_NO_INDEX_FOUND;
 }
-
 
 int FileSystem::searchEmptyNode(){
   for (size_t index = 0; index < TOTAL_I_NODES; ++index) {
