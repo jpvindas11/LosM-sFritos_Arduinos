@@ -13,20 +13,6 @@
 
 using namespace std;
 
-typedef struct file {
-  // Permisos para usuarios
-  uint8_t user;
-  uint8_t group;
-  uint8_t all;
-  // Metadatos
-  string autor;
-  string name;
-  string path;
-  size_t size;
-  // Datos
-  char* data;
-} file_t;
-
 /// @brief ...
 class FileSystem {
 
@@ -55,7 +41,7 @@ class FileSystem {
   
   int search(string filename);
   int read(string file, int cursor, size_t size, char* buffer);
-  int write(string file, int cursor, size_t size, char* buffer);
+  int write(string file, int cursor, size_t size, const char* buffer);
   int rename(string file, string name);
 
   void printDirectory();

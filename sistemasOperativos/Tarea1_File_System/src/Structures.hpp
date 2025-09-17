@@ -98,5 +98,5 @@ typedef struct directory {
   inode_size_t usedInodes;
 } directory_t;
 
-// Como podriamos acomodar la unidad
+// Como podríamos acomodar la unidad??
 // 

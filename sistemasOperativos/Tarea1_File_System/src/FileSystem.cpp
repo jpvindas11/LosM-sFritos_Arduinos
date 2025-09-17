@@ -127,7 +127,7 @@ int FileSystem::search(string filename) {
     }
   }
 
-  std::cout << "El archivo " << filename << "no existe" << std::endl;
+  std::cout << "El archivo " << filename << " no existe" << std::endl;
   return ERR_NO_INDEX_FOUND;
   /*
   throw FileSysError(ERR_NO_FILE_FOUND,
@@ -199,7 +199,7 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
   return bytesRead;
 }
 
-int FileSystem::write(string file, int cursor, size_t size, char* buffer) {
+int FileSystem::write(string file, int cursor, size_t size, const char* buffer) {
   int fileIndex = search(file);
   if (fileIndex == ERR_NO_INDEX_FOUND) {
     cerr << "Error: El archivo no existe" << endl;
@@ -323,7 +323,15 @@ int FileSystem::rename(string filename, string newname) {
   }
 }
 
-void FileSystem::printDirectory() {}
+void FileSystem::printDirectory() {
+  for (size_t index = 0; index < TOTAL_I_NODES; ++index) {
+    if (this->dir->files[index].isUsed) {
+      cout << this->dir->files[index].iNodeIndex << ")  "
+           << this->dir->files[index].fileName   << endl;
+    }
+  }
+}
+
 void FileSystem::printUnidad() {}
 
 void FileSystem::changeUserID(int newID) {
