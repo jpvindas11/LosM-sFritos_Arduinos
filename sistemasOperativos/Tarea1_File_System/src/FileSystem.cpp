@@ -61,7 +61,6 @@ int FileSystem::createFile(string name) {
       }
   
       inodo->directBlocks[0] = freeBlockIndex; // Primer bloque
-      inodo->directBlocks[1] = freeBlockIndex; // Primer bloque
   
       // Indirección
       // Solo se usa al necesitar más bloques fuera de los directos
@@ -188,26 +187,121 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
 
     bytesRead += canRead;
   }
+
+  cout << "Datos leídos: " << buffer << endl;
+  
   return bytesRead;
 }
 
 int FileSystem::write(string file, int cursor, size_t size, char* buffer) {
-  try {
-    if (exist(file)) {
-      iNode_t* inode = &this->inodes[search(file)];
-      if (!inode->isUsed) {
-        throw FileSysError(ERR_EMPTY_INODE, "El inodo no esta en uso");
+  int fileIndex = search(file);
+  if (fileIndex == ERR_NO_INDEX_FOUND) {
+    cerr << "Error: El archivo no existe" << endl;
+    return ERR_NO_INDEX_FOUND;
+  }
+
+  iNode_t* inode = &this->inodes[this->dir->files[fileIndex].iNodeIndex];
+  if (!inode->isUsed) {
+    cerr << "Error: El i nodo no está en uso" << endl;
+    return ERR_NO_FILE_FOUND;
+  }
+
+  if (cursor > (int)inode->size) {
+    cerr << "Error: El cursor se encuentra fuera del rango del archivo" << endl;
+    return -1;
+  }
+
+  size_t bytesWritten = 0;
+  size_t bytesToWrite = size;
+
+  const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS + TOTAL_POINTERS * TOTAL_POINTERS;
+
+  while (bytesWritten < bytesToWrite) {
+    int blockIndex = (cursor + bytesWritten) / BLOCK_SIZE;
+    int blockOffset = (cursor + bytesWritten) % BLOCK_SIZE;
+
+    if (blockIndex >= (int)maxBlocks) {
+      cerr << "Error: El archivo es demasiado grande para escribir" << endl;
+      break;
+    }
+
+    block_size_t dataBlockNum = FREE_BLOCK;
+
+    if (blockIndex < TOTAL_POINTERS) {
+      dataBlockNum = inode->directBlocks[blockIndex];
+      if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
+        dataBlockNum = searchFreeBlock();
+        inode->directBlocks[blockIndex] = dataBlockNum;
+        this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
       }
-      if (cursor > (int)inode->size) {
-        throw FileSysError(ERR_OUT_OF_RANGE,
-          "El cursor se encuentra fuera del rango del archivo");
+    } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
+      int idx = blockIndex - TOTAL_POINTERS;
+      if (!inode->singleIndirect.isUsed) {
+        inode->singleIndirect.isUsed = true;
+        inode->singleIndirect.usedDataPtr = 0;
+        for (int i = 0; i < TOTAL_POINTERS; i++) {
+          inode->singleIndirect.dataPtr[i] = FREE_BLOCK;
+        }
+      }
+      dataBlockNum = inode->singleIndirect.dataPtr[idx];
+      if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
+        dataBlockNum = searchFreeBlock();
+        inode->singleIndirect.dataPtr[idx] = dataBlockNum;
+        inode->singleIndirect.usedDataPtr++;
+        this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
+      }
+    } else {
+      int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
+      int outer = idx / TOTAL_POINTERS;
+      int inner = idx % TOTAL_POINTERS;
+
+      if (!inode->doubleIndirect.isUsed) {
+        inode->doubleIndirect.isUsed = true;
+        inode->doubleIndirect.usedIndex = 0;
+        for (int o = 0; o < TOTAL_POINTERS; ++o) {
+          inode->doubleIndirect.dataIndex[o].isUsed = false;
+          inode->doubleIndirect.dataIndex[o].usedDataPtr = 0;
+          for (int k = 0; k < TOTAL_POINTERS; ++k) {
+            inode->doubleIndirect.dataIndex[o].dataPtr[k] = FREE_BLOCK;
+          }
+        }
+      }
+
+      if (!inode->doubleIndirect.dataIndex[outer].isUsed) {
+        inode->doubleIndirect.dataIndex[outer].isUsed = true;
+        inode->doubleIndirect.dataIndex[outer].usedDataPtr = 0;
+        for (int k = 0; k < TOTAL_POINTERS; ++k) {
+          inode->doubleIndirect.dataIndex[outer].dataPtr[k] = FREE_BLOCK;
+        }
+        inode->doubleIndirect.usedIndex++;
+      }
+
+      dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
+      if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
+        dataBlockNum = searchFreeBlock();
+        inode->doubleIndirect.dataIndex[outer].dataPtr[inner] = dataBlockNum;
+        inode->doubleIndirect.dataIndex[outer].usedDataPtr++;
+        this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
       }
     }
-  } catch (const FileSysError& err) {
-    cerr << "Error al escribir archivo: " << err.what() << endl;
-    return err.code();
+
+    dataBlock_t* block = (dataBlock_t*)&unit[dataBlockNum * sizeof(dataBlock_t)];
+    size_t canWrite = min(bytesToWrite - bytesWritten, (size_t)BLOCK_SIZE - blockOffset);
+    memcpy(block->data + blockOffset, buffer + bytesWritten, canWrite);
+
+    bytesWritten += canWrite;
+
+    // Actualizar tamaño del archivo si creció
+    size_t newEnd = (size_t)cursor + bytesWritten;
+    if (newEnd > inode->size) {
+      inode->size = (uint32_t)newEnd;
+    }
+
+    inode->lastUsedBlock = (blockNum_size_t)dataBlockNum;
   }
+  return bytesWritten;
 }
+
 
 int FileSystem::rename(string filename, string newname) {
   try {
