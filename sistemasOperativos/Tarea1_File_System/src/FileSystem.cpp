@@ -343,7 +343,15 @@ void FileSystem::printDirectory() {
   }
 }
 
-void FileSystem::printUnidad() {}
+void FileSystem::printUnidad() {
+  for (size_t index = 0; index < BLOCK_TOTAL; ++index) {
+    if (this->fat[index] == ERR_OCCUPIED_BLOCK) {
+      dataBlock_t* block = (dataBlock_t*)&unit[index * sizeof(dataBlock_t)];
+      std::cout<<"Leyendo bloque: " << index <<std::endl;      
+      std::cout<<block->data<<std::endl;
+    }
+  }
+}
 
 void FileSystem::changeUserID(int newID) {
   this->userID = newID;
