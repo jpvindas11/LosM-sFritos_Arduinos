@@ -31,11 +31,14 @@ FileSystem::FileSystem() {
   for (int i = 0; i < TOTAL_I_NODES; i++) {
     this->inodes[i].isUsed = false;
   }
-  // Carga los datos guardados en memoria
-  // LoadFromDisk();
+  // TODO(Todos) Aquí debería tratar de abrir y cargar el archivo .bin
+  // Si no puede abrirlo, debería crear uno
+  // Si lo abre, llama a this->loadFromDisk
 }
 
 FileSystem::~FileSystem() {
+  // Guarda los datos al disco antes de borrar todo(??)
+  this->saveToDisk();
   delete[] this->unit;
   delete this->dir;
   delete[] this->fat;
@@ -100,6 +103,7 @@ int FileSystem::deleteFile(string filename) {
       target->iNodeIndex = FREE_INDEX;
       // marca el espacio del directorio como libre
       target->isUsed = false;
+      // TODO(Todos) Debería de poder borrar directo del disco?
       // Elimina todos los datos del archivo(?)
       // clearFileEntry(target)
       return EXIT_SUCCESS;
@@ -447,17 +451,49 @@ void FileSystem::readBlockFromDisk(int blockIndex) {
   disk.close();
 }
 
-void FileSystem::writeNodeToDisk(int nodeIndex) {}
+void FileSystem::writeNodeToDisk(int nodeIndex) {
+  fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
+  size_t inode_offset = OFFSET_INODES + nodeIndex * sizeof(iNode_t);
+  disk.seekp(inode_offset);
+  disk.write(reinterpret_cast<char*>(&inodes[nodeIndex]), sizeof(iNode_t));
+  disk.close();
+}
 
-void FileSystem::readNodeFromDisk(int nodeIndex) {}
+void FileSystem::readNodeFromDisk(int nodeIndex) {
+  fstream disk(this->memoryDisk, ios::binary);
+  size_t inode_offset = OFFSET_INODES + nodeIndex * sizeof(iNode_t);
+  disk.seekg(inode_offset);
+  disk.read(reinterpret_cast<char*>(&inodes[nodeIndex]), sizeof(iNode_t));
+  disk.close();
+}
 
-void FileSystem::writeDirToDisk() {}
+void FileSystem::writeDirToDisk() {
+  fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
+  disk.seekp(OFFSET_DIR);
+  disk.write(reinterpret_cast<char*>(dir), sizeof(directory_t));
+  disk.close();
+}
 
-void FileSystem::readDirFromDisk() {}
+void FileSystem::readDirFromDisk() {
+  fstream disk(this->memoryDisk, ios::binary);
+  disk.seekg(OFFSET_DIR);
+  disk.read(reinterpret_cast<char*>(dir), sizeof(directory_t));
+  disk.close();
+}
 
-void FileSystem::writeFatToDisk() {}
+void FileSystem::writeFatToDisk() {
+  fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
+  disk.seekp(OFFSET_FAT);
+  disk.write(reinterpret_cast<char*>(fat), sizeof(int) * BLOCK_TOTAL);
+  disk.close();
+}
 
-void FileSystem::readFatFromDisk() {}
+void FileSystem::readFatFromDisk() {
+  fstream disk(this->memoryDisk, ios::binary);
+  disk.seekg(OFFSET_FAT);
+  disk.read(reinterpret_cast<char*>(fat), sizeof(int) * BLOCK_TOTAL);
+  disk.close();
+}
 
 void FileSystem::saveToDisk() {
   // En que orden debería guardar todo?
@@ -468,4 +504,10 @@ void FileSystem::saveToDisk() {
   // this->writeNodeToDisk();
 }
 
-void FileSystem::loadFromDisk() {}
+void FileSystem::loadFromDisk() {
+  this->readDirFromDisk();
+  this->readFatFromDisk();
+  // Debería de recorrer y cargar cada bloque y nodo
+  // this->readBlockFromDisk();
+  // this->readNodeFromDisk();
+}

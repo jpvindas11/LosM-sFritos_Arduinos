@@ -15,6 +15,11 @@
 #define FREE_BLOCK -1
 #define FREE_INDEX -1
 
+// TODO(todos) offsets
+// Estos offset definen el orden de la memoria,
+// que por ahora es directorio-inodos-FAT-unidad
+// Ahorita no están bien ordenados, se deberían cambiar para
+// ordenar correctamente la unidad...
 #define OFFSET_DIR      0
 #define OFFSET_INODES   (OFFSET_DIR + sizeof(directory_t))
 #define OFFSET_FAT      (OFFSET_INODES + sizeof(iNode_t) * TOTAL_I_NODES)
@@ -111,3 +116,4 @@ typedef struct directory {
 } directory_t;
 
 // Como podríamos acomodar la unidad??
+// DIR-NODO-FAT-UNIDAD?
