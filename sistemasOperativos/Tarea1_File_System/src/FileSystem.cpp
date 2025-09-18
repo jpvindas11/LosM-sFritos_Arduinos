@@ -11,7 +11,7 @@
 FileSystem::FileSystem() {
   // ID de usuario por defecto
   this->userID = 1000;
-  this->memoryDisk = "../MemUnit.bin";
+  this->memoryDisk = "MemUnit.bin";
   this->n = 0;
   this->TUnit = DISK_SIZE;
   this->unit = new char[TUnit];
@@ -31,9 +31,7 @@ FileSystem::FileSystem() {
   for (int i = 0; i < TOTAL_I_NODES; i++) {
     this->inodes[i].isUsed = false;
   }
-  // TODO(Todos) Aquí debería tratar de abrir y cargar el archivo .bin
-  // Si no puede abrirlo, debería crear uno
-  // Si lo abre, llama a this->loadFromDisk
+  this->getMemDisk();
 }
 
 FileSystem::~FileSystem() {
@@ -83,6 +81,8 @@ int FileSystem::createFile(string filename) {
       cout << "Archivo '" << filename << "' creado correctamente" << endl;
       cout << "Inodo asignado: " << freeInodeIndex << endl;
       cout << "Bloque asignado: " << freeBlockIndex << endl;
+      this->writeNodeToDisk(freeInodeIndex);
+      this->writeBlockToDisk(freeBlockIndex);
       return EXIT_SUCCESS;
     } else {
       throw FileSysError(ERR_OCCUPIED_FILENAME,
@@ -126,8 +126,6 @@ int FileSystem::search(string filename) {
       return i;
     }
   }
-  throw FileSysError(ERR_NO_FILE_FOUND,
-    "No se encontró el archivo llamado " + filename);
   return ERR_NO_FILE_FOUND;
 }
 
@@ -408,7 +406,7 @@ int FileSystem::close(string filename) {
 }
 
 bool FileSystem::exist(string filename) {
-  return search(filename) != ERR_NO_INDEX_FOUND;
+  return search(filename) == ERR_NO_INDEX_FOUND;
 }
 
 bool FileSystem::isOpen(string filename) {
@@ -500,14 +498,68 @@ void FileSystem::saveToDisk() {
   this->writeDirToDisk();
   this->writeFatToDisk();
   // Debería de recorrer y guardar cada bloque y nodo
-  // this->writeBlockToDisk();
-  // this->writeNodeToDisk();
+  for (size_t index = 0; index < BLOCK_TOTAL; ++index) {
+    if (this->fat[index] == FREE_BLOCK) {
+      this->writeBlockToDisk(index);
+    }
+  }
+  for (size_t index = 0; index < TOTAL_I_NODES; ++index) {
+    if (!this->inodes[index].isUsed) {
+      this->writeNodeToDisk(index);
+    }
+  }
 }
 
 void FileSystem::loadFromDisk() {
   this->readDirFromDisk();
   this->readFatFromDisk();
   // Debería de recorrer y cargar cada bloque y nodo
-  // this->readBlockFromDisk();
-  // this->readNodeFromDisk();
+  for (size_t index = 0; index < BLOCK_TOTAL; ++index) {
+    if (this->fat[index] == FREE_BLOCK) {
+      this->readBlockFromDisk(index);
+    }
+  }
+  for (size_t index = 0; index < TOTAL_I_NODES; ++index) {
+    if (!this->inodes[index].isUsed) {
+      this->readNodeFromDisk(index);
+    }
+  }
+}
+
+int FileSystem::getMemDisk() {
+  ifstream disk;
+  // Trata de abrir la memoria
+  disk.open(this->memoryDisk, ios::in | ios::binary);
+  if (!disk.is_open()) {
+    cout << "Archivo de memoria "
+         << this->memoryDisk
+         << " no encontrado."
+         << endl
+         << "Creando archivo de memoria..."
+         << endl;
+    // Si no hay crea un archivo de memoria
+    ofstream file(this->memoryDisk, ios::binary | ios::trunc);
+    if (!file.is_open()) {
+      cerr << "Error: No se pudo crear el archivo de memoria "
+           << this->memoryDisk
+           << endl;
+      return ERR_MEMORY_DISK_ERROR;
+    }
+    cout << "Archivo de memoria "
+         << this->memoryDisk
+         << " creado."
+         << endl;
+
+    file.seekp(OFFSET_UNIT + DISK_SIZE - 1);
+    char zero = 0;
+    file.write(&zero, 1);
+    file.close();
+  } else {
+    cout << "Cargando archivo de memoria "
+         << this->memoryDisk
+         << endl;
+    this->loadFromDisk();
+    disk.close();
+  }
+  return EXIT_SUCCESS;
 }

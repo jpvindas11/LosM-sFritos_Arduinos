@@ -94,6 +94,8 @@ class FileSystem {
   void saveToDisk();
   /// Carga todos los datos y estructuras en la memoria
   void loadFromDisk();
+  /// Intenta cargar el archivo de memoria, si no hay crea uno
+  int getMemDisk();
 };
 
 #endif  // FILE_SYSTEM_2025B
