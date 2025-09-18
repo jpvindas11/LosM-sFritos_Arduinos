@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <ctime>
 
 #include "FileSysError.hpp"
 #include "Structures.hpp"
@@ -49,6 +51,10 @@ class FileSystem {
 
   void changeUserID(int newID);
   
+  // Métodos para serialización
+  int saveToDisk(const string& filename);
+  int loadFromDisk(const string& filename);
+  
  private:  
   int open(string file);
   int close(string file);
@@ -57,6 +63,12 @@ class FileSystem {
 
   int searchEmptyNode();
   int searchFreeBlock();
+  
+  // Métodos privados para serialización
+  void writeHeader(ofstream& file);
+  void readHeader(ifstream& file);
+  uint32_t calculateUsedBlocks();
+
 };
 
 #endif  // FILE_SYSTEM_2025B

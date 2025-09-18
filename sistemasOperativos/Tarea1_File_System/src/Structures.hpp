@@ -91,7 +91,7 @@ typedef struct fileEntry {
   inode_size_t iNodeIndex;
   bool isUsed;
   bool isOpen;
-  /*<- el bool es temporal, podría ser mejor usar una lista
+  /* <- el bool es temporal, podría ser mejor usar una lista
     de archivos abiertos como std::vector<std::string> openFiles; */
 } fileEntry_t;
 
@@ -105,3 +105,22 @@ typedef struct directory {
 
 // Como podríamos acomodar la unidad??
 // 
+
+typedef struct fsHeader {
+    uint32_t magic;          
+    uint32_t version;        
+    uint32_t totalBlocks;     
+    uint32_t totalInodes;    
+    uint32_t blockSize;      
+    uint32_t usedBlocks;      
+    uint32_t usedInodes;     
+    time_t lastModified;      
+} fsHeader_t;
+
+typedef struct diskLayout {
+    fsHeader_t header;       
+    directory_t directory;   
+    int fat[BLOCK_TOTAL];  
+    iNode_t inodes[TOTAL_I_NODES];
+    char data[DISK_SIZE];
+} diskLayout_t;

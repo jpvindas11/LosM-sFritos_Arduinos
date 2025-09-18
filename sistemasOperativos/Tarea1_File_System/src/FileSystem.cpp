@@ -2,6 +2,8 @@
 
 #include "FileSystem.hpp"
 #include <cstring>
+#include <fstream>
+#include <stdexcept>
 
 FileSystem::FileSystem() {
   // ID de usuario por defecto
@@ -99,9 +101,13 @@ int FileSystem::deleteFile(string filename) {
   try {
     if (exist(filename)) {
       fileEntry* target = &this->dir->files[search(filename)];
+      for (int i = 0; i < TOTAL_POINTERS; ++i) {
+        this->fat[this->inodes[target->iNodeIndex].directBlocks[i]] = FREE_BLOCK; // LIBERA BLOQUES
+      }
       // marca el nodo como libre
       this->inodes[target->iNodeIndex].isUsed = false;
       target->iNodeIndex = FREE_INDEX;
+
       // marca el espacio del directorio como libre
       target->isUsed = false;
       // Elimina todos los datos del archivo(?)
@@ -450,4 +456,92 @@ int FileSystem::searchFreeBlock(){
     }
   }
   throw FileSysError(ERR_NO_FREE_BLOCKS, "No hay bloques libres disponibles");
+}
+
+// Implementación de la serialización
+int FileSystem::saveToDisk(const string& filename) {
+  ofstream file(filename, ios::binary);
+  if (!file.is_open()) {
+    cerr << "Error: No se pudo abrir el archivo " << filename << endl;
+    return -1;
+  }
+  
+  try {
+    fsHeader_t header;
+    header.magic = 42;
+    header.version = 1;
+    header.totalBlocks = BLOCK_TOTAL;
+    header.totalInodes = TOTAL_I_NODES;
+    header.blockSize = BLOCK_SIZE;
+    header.usedBlocks = calculateUsedBlocks();
+    header.usedInodes = this->dir->usedInodes;
+    header.lastModified = time(0);
+    
+    file.write(reinterpret_cast<const char*>(&header), sizeof(fsHeader_t));
+    
+    file.write(reinterpret_cast<const char*>(this->dir), sizeof(directory_t));
+    
+    file.write(reinterpret_cast<const char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
+    
+    file.write(reinterpret_cast<const char*>(this->inodes), sizeof(iNode_t) * TOTAL_I_NODES);
+    
+    file.write(this->unit, DISK_SIZE);
+    
+    file.close();
+    cout << "Sistema de archivos guardado en " << filename << endl;
+    return 0;
+    
+  } catch (const exception& e) {
+    cerr << "Error al guardar: " << e.what() << endl;
+    file.close();
+    return -1;
+  }
+}
+
+int FileSystem::loadFromDisk(const string& filename) {
+  ifstream file(filename, ios::binary);
+  if (!file.is_open()) {
+    cerr << "Error: No se pudo abrir el archivo " << filename << endl;
+    return -1;
+  }
+  
+  try {
+    fsHeader_t header;
+    file.read(reinterpret_cast<char*>(&header), sizeof(fsHeader_t));
+
+    if (header.magic != 42) {
+      throw runtime_error("Archivo no válido - magic number incorrecto");
+    }
+    
+    if (header.totalBlocks != BLOCK_TOTAL || header.totalInodes != TOTAL_I_NODES) {
+      throw runtime_error("Incompatibilidad de configuración del sistema");
+    }
+    
+    file.read(reinterpret_cast<char*>(this->dir), sizeof(directory_t));
+    
+    file.read(reinterpret_cast<char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
+
+    file.read(reinterpret_cast<char*>(this->inodes), sizeof(iNode_t) * TOTAL_I_NODES);
+    
+    file.read(this->unit, DISK_SIZE);
+    
+    file.close();
+    cout << "Sistema de archivos cargado desde " << filename << endl;
+    return 0;
+    
+  } catch (const exception& e) {
+    cerr << "Error al cargar: " << e.what() << endl;
+    file.close();
+    return -1;
+  }
+}
+
+uint32_t FileSystem::calculateUsedBlocks() {
+  uint32_t count = 0;
+  for (int i = 0; i < BLOCK_TOTAL; i++) {
+    if (this->fat[i] == ERR_OCCUPIED_BLOCK) {
+      count++;
+    }
+  }
+  return count;
 }
