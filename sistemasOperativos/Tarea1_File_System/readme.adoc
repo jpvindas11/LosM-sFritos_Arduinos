@@ -39,8 +39,12 @@ Se mantiene un sistema de permisos basado en el usuario y grupo propietario del 
 Se implementan estructuras como bitmaps para llevar el control de bloques libres y ocupados, se realiza journaling para mantener la integridad de los datos.
 
 === Cómo se pueden modificar los metadatos de un archivo?
+Se implementaron funciones para realizar cambios en los inodos. Aspectos como el nombre, permisos y path pueden ser modificados al utilizarlas.
 
 === Cómo se puede conocer el tamaño de un archivo?
+Para esto se tiene una fórmula: 
+
+tamaño = tamaño de un bloque * (cantidad de bloques usados - 1) + numero de bytes utilizados en el ultimo bloque 
 
 === Qué estructuras de datos son indispensables?
 Una estructura para el directorio raíz, una estructura para los metadatos de archivos y folders,  una estructura de nodos índice, una estructura para los bloques de datos.
