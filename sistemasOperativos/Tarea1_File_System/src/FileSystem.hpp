@@ -13,66 +13,86 @@
 
 using namespace std;
 
-/// @brief ...
+/// @brief Sistema de manejo de archivos
 class FileSystem {
-
- private:
+ protected:  // Metadatos del file system
+  /// ID del usuario
   int userID;
+  /// Archivo .bin utilizado como disco de memoria
   string memoryDisk;
+  /// Unidad de memoria
   char* unit;
+  /// Estructura de directorio
   directory* dir;
+  /// Estructura de inodos
   iNode_t* inodes;
+  /// tabla FAT
   int* fat;
+  /// ?
   int n;
+  /// Tamaño del directorio
   int TDirectory;
+  /// Tamaño de la unidad
   int TUnit;
 
- // Metadatos(?)
- protected:
-  array<uintptr_t, BLOCK_SIZE> index;
-
- // Funciones
- public:
+ public:  // Funciones
+  /// Constructor
   FileSystem();
-
+  /// Destructor
   ~FileSystem();
-
-  int createFile(string name);
-  int deleteFile(string file);
-  
+  /// Crea un archivo
+  int createFile(string filename);
+  /// Elimina un archivo
+  int deleteFile(string filename);
+  /// Busca un archivo por su nombre
   int search(string filename);
-  int read(string file, int cursor, size_t size, char* buffer);
-  int write(string file, int cursor, size_t size, const char* buffer);
-  int rename(string file, string name);
-
+  /// Lee un archivo
+  int read(string filename, int cursor, size_t size, char* buffer);
+  /// Escribe en un archivo
+  int write(string filename, int cursor, size_t size, const char* buffer);
+  /// Cambia el nombre de un archivo
+  int rename(string filename, string newname);
+  /// Imprime todos los archivos en el directorio
   void printDirectory();
+  /// Imprime todos los archivos en la unidad
   void printUnidad();
-
+  /// Cambia el ID del usuario
   void changeUserID(int newID);
+  /// Cambia el disco de memoria utilizado
   void changeMemoryDisk(string newDisk);
-  
- private:  
-  int open(string file);
-  int close(string file);
-  bool exist(string file);
-  int isOpen(string file);
 
+ private:  // Funciones privadas
+  /// Abre un archivo
+  int open(string filename);
+  /// @brief Cierra un archivo
+  int close(string filename);
+  /// Devuelve si existe un archivo con cierto nombre
+  bool exist(string filename);
+  /// Devuelve si un archivo esta abierto
+  bool isOpen(string filename);
+  /// Busca un i nodo vació disponible
   int searchEmptyNode();
+  /// Busca un bloque vació disponible
   int searchFreeBlock();
-
+  /// Guarda un bloque directo a memoria
   void writeBlockToDisk(int blockIndex);
+  /// Carga un bloque directo de memoria
   void readBlockFromDisk(int blockIndex);
-
+  /// Guarda un nodo directo a memoria
   void writeNodeToDisk(int nodeIndex);
+  /// Carga un nodo directo de memoria
   void readNodeFromDisk(int nodeIndex);
-
+  /// Guarda el directorio en la memoria
   void writeDirToDisk();
+  /// Carga el directorio de la memoria
   void readDirFromDisk();
-
+  /// Guarda la tabla FAT en la memoria
   void writeFatToDisk();
+  /// Carga la tabla FAT de la memoria
   void readFatFromDisk();
-
+  /// Guarda todos los datos y estructuras en la memoria
   void saveToDisk();
+  /// Carga todos los datos y estructuras en la memoria
   void loadFromDisk();
 };
 
