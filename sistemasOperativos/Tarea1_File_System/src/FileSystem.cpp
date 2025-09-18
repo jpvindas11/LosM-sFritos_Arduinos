@@ -437,7 +437,7 @@ void FileSystem::writeBlockToDisk(int blockIndex) {
   fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
   size_t block_offset = OFFSET_UNIT + blockIndex * BLOCK_SIZE;
   disk.seekp(block_offset);
-  disk.write(unit + blockIndex * BLOCK_SIZE, BLOCK_SIZE);
+  disk.write(this->unit + blockIndex * BLOCK_SIZE, BLOCK_SIZE);
   disk.close();
 }
 
@@ -445,7 +445,7 @@ void FileSystem::readBlockFromDisk(int blockIndex) {
   fstream disk(this->memoryDisk, ios::binary);
   size_t block_offset = OFFSET_UNIT + blockIndex * BLOCK_SIZE;
   disk.seekg(block_offset);
-  disk.read(unit + blockIndex * BLOCK_SIZE, BLOCK_SIZE);
+  disk.read(this->unit + blockIndex * BLOCK_SIZE, BLOCK_SIZE);
   disk.close();
 }
 
@@ -468,28 +468,28 @@ void FileSystem::readNodeFromDisk(int nodeIndex) {
 void FileSystem::writeDirToDisk() {
   fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
   disk.seekp(OFFSET_DIR);
-  disk.write(reinterpret_cast<char*>(dir), sizeof(directory_t));
+  disk.write(reinterpret_cast<char*>(this->dir), sizeof(directory_t));
   disk.close();
 }
 
 void FileSystem::readDirFromDisk() {
   fstream disk(this->memoryDisk, ios::binary);
   disk.seekg(OFFSET_DIR);
-  disk.read(reinterpret_cast<char*>(dir), sizeof(directory_t));
+  disk.read(reinterpret_cast<char*>(this->dir), sizeof(directory_t));
   disk.close();
 }
 
 void FileSystem::writeFatToDisk() {
   fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
   disk.seekp(OFFSET_FAT);
-  disk.write(reinterpret_cast<char*>(fat), sizeof(int) * BLOCK_TOTAL);
+  disk.write(reinterpret_cast<char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
   disk.close();
 }
 
 void FileSystem::readFatFromDisk() {
   fstream disk(this->memoryDisk, ios::binary);
   disk.seekg(OFFSET_FAT);
-  disk.read(reinterpret_cast<char*>(fat), sizeof(int) * BLOCK_TOTAL);
+  disk.read(reinterpret_cast<char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
   disk.close();
 }
 
