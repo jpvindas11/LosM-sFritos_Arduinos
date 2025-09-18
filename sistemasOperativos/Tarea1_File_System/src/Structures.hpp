@@ -14,6 +14,11 @@
 #define FREE_BLOCK -1
 #define FREE_INDEX -1
 
+#define OFFSET_DIR      0
+#define OFFSET_INODES   (OFFSET_DIR + sizeof(directory_t))
+#define OFFSET_FAT      (OFFSET_INODES + sizeof(iNode_t) * TOTAL_I_NODES)
+#define OFFSET_UNIT     (OFFSET_FAT + sizeof(int) * BLOCK_TOTAL)
+
 // Se asume que por cada 4KB se utilizará un i-nodo (convención ext2/ext3)
 
 // Esas macros es para elegir tamaños que rastreen los posibles indices o cantidad de cada tipo
