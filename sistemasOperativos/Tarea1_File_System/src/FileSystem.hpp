@@ -15,55 +15,69 @@
 
 using namespace std;
 
-/// @brief ...
+/// @brief Sistema de manejo de archivos
 class FileSystem {
-
- private:
+ protected:  // Metadatos del file system
+  /// ID del usuario
   int userID;
+  /// Archivo .bin utilizado como disco de memoria
+  string memoryDisk;
+  /// Unidad de memoria
   char* unit;
+  /// Estructura de directorio
   directory* dir;
+  /// Estructura de inodos
   iNode_t* inodes;
+  /// tabla FAT
   int* fat;
+  /// ?
   int n;
+  /// Tamaño del directorio
   int TDirectory;
+  /// Tamaño de la unidad
   int TUnit;
 
- // Metadatos(?)
- protected:
-  array<uintptr_t, BLOCK_SIZE> index;
-
- // Funciones
- public:
+ public:  // Funciones
+  /// Constructor
   FileSystem();
-
+  /// Destructor
   ~FileSystem();
-
-  int createFile(string name);
-  int deleteFile(string file);
-  
+  /// Crea un archivo
+  int createFile(string filename);
+  /// Elimina un archivo
+  int deleteFile(string filename);
+  /// Busca un archivo por su nombre
   int search(string filename);
-  int read(string file, int cursor, size_t size, char* buffer);
-  int write(string file, int cursor, size_t size, const char* buffer);
-  int rename(string file, string name);
-
+  /// Lee un archivo
+  int read(string filename, int cursor, size_t size, char* buffer);
+  /// Escribe en un archivo
+  int write(string filename, int cursor, size_t size, const char* buffer);
+  /// Cambia el nombre de un archivo
+  int rename(string filename, string newname);
+  /// Imprime todos los archivos en el directorio
   void printDirectory();
+  /// Imprime todos los archivos en la unidad
   void printUnidad();
-
+  /// Cambia el ID del usuario
   void changeUserID(int newID);
-  
+  /// Cambia el disco de memoria utilizado
+  void changeMemoryDisk(string newDisk);
   // Métodos para serialización
   int saveToDisk(const string& filename);
   int loadFromDisk(const string& filename);
-  
- private:  
-  int open(string file);
-  int close(string file);
-  bool exist(string file);
-  int isOpen(string file);
-
+ private:  // Funciones privadas
+  /// Abre un archivo
+  int open(string filename);
+  /// @brief Cierra un archivo
+  int close(string filename);
+  /// Devuelve si existe un archivo con cierto nombre
+  bool exist(string filename);
+  /// Devuelve si un archivo esta abierto
+  bool isOpen(string filename);
+  /// Busca un i nodo vació disponible
   int searchEmptyNode();
+  /// Busca un bloque vació disponible
   int searchFreeBlock();
-  
   // Métodos privados para serialización
   void writeHeader(ofstream& file);
   void readHeader(ifstream& file);

@@ -1,8 +1,12 @@
 /// @copyright Los Más Fritos - 2025
 
 #include "FileSystem.hpp"
+
+#include <algorithm>
 #include <cstring>
 #include <fstream>
+#include <iostream>
+#include <string>
 #include <stdexcept>
 
 FileSystem::FileSystem() {

@@ -1,7 +1,8 @@
 /// @copyright Los Más Fritos - 2025
 
-#include <cstdint>
 #include <limits.h>
+
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <utility>
@@ -16,7 +17,8 @@
 
 // Se asume que por cada 4KB se utilizará un i-nodo (convención ext2/ext3)
 
-// Esas macros es para elegir tamaños que rastreen los posibles indices o cantidad de cada tipo
+// Esas macros es para elegir tamaños
+// que rastreen los posibles indices o cantidad de cada tipo
 // intentando de no desperdiciar espacio
 
 #if TOTAL_I_NODES <= UINT8_MAX
@@ -43,40 +45,40 @@
   typedef uint32_t block_size_t;
 #endif
 
-/// @brief 
+/// Estructura de bloque de datos
 typedef struct dataBlock {
   bool isUsed;
   block_size_t offset;
   char data[BLOCK_SIZE];
 } dataBlock_t;
 
-/// @brief ... 
+/// Indice de archivo simple
 typedef struct singleFileIndex {
   bool isUsed;
   block_size_t dataPtr[TOTAL_POINTERS];
   block_size_t usedDataPtr;
 } singleFileIndex_t;
 
-/// @brief ... 
+/// Indice de archivo doble
 typedef struct doubleFileIndex {
   bool isUsed;
   singleFileIndex_t dataIndex[TOTAL_POINTERS];
   block_size_t usedIndex;
 } doubleFileIndex_t;
 
-/// @brief ... 
+/// Estructura de inodo
 typedef struct iNode {
   uint32_t user;  // 32 bits
   uint32_t groupId;   // 32 bits
-  char path[PATH_MAX]; // 256 bytes -> 2048 bits
+  char path[PATH_MAX];  // 256 bytes -> 2048 bits
   time_t creationTime;  // long -> 64 bits
   uint16_t permissions;   // 16 bits
-  uint32_t size; // 32 bits
-  bool isUsed; // 8 bits
-  block_size_t directBlocks [TOTAL_POINTERS]; // block_size_t bits * 12 indices = 192 bits
-  blockNum_size_t lastUsedBlock; // 16 bits
-  singleFileIndex_t singleIndirect; // 16 bits
-  doubleFileIndex_t doubleIndirect; // 16 bits
+  uint32_t size;  // 32 bits
+  bool isUsed;  // 8 bits
+  block_size_t directBlocks[TOTAL_POINTERS];  // block_size_t bits * 12 indices = 192 bits
+  blockNum_size_t lastUsedBlock;  // 16 bits
+  singleFileIndex_t singleIndirect;  // 16 bits
+  doubleFileIndex_t doubleIndirect;  // 16 bits
 
   // 2472 bits
   // 309 bytes
@@ -85,17 +87,17 @@ typedef struct iNode {
   // Alrededor de %7.5 de bloques totales
 } iNode_t;
 
-/// @brief ... 
+/// Estructura de entrada de archivo
 typedef struct fileEntry {
   char fileName[NAME_MAX];
   inode_size_t iNodeIndex;
   bool isUsed;
   bool isOpen;
-  /* <- el bool es temporal, podría ser mejor usar una lista
+  /*<- el bool es temporal, podría ser mejor usar una lista
     de archivos abiertos como std::vector<std::string> openFiles; */
 } fileEntry_t;
 
-/// @brief ... 
+/// Estructura de directorio
 typedef struct directory {
   char dirName[NAME_MAX];
   time_t creationTime;
@@ -104,7 +106,6 @@ typedef struct directory {
 } directory_t;
 
 // Como podríamos acomodar la unidad??
-// 
 
 typedef struct fsHeader {
     uint32_t magic;          

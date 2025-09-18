@@ -22,17 +22,18 @@ enum errors {
 
 /// @brief Clase para manejo de errores locales
 class FileSysError : public std::runtime_error {
+
  private:
   /// Código del error
   errors err_code;
 
  public:
+  /// Constructor
   explicit FileSysError(errors code, const std::string& message)
       : std::runtime_error(message), err_code(code) {
   }
-  /// retorna el código del error asignado
+  /// Retorna el código del error asignado
   errors code() const {
     return err_code;
   }
-
 };
