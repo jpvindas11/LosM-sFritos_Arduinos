@@ -18,6 +18,7 @@ class FileSystem {
 
  private:
   int userID;
+  string memoryDisk;
   char* unit;
   directory* dir;
   iNode_t* inodes;
@@ -48,6 +49,7 @@ class FileSystem {
   void printUnidad();
 
   void changeUserID(int newID);
+  void changeMemoryDisk(string newDisk);
   
  private:  
   int open(string file);
@@ -57,6 +59,21 @@ class FileSystem {
 
   int searchEmptyNode();
   int searchFreeBlock();
+
+  void writeBlockToDisk(int blockIndex);
+  void readBlockFromDisk(int blockIndex);
+
+  void writeNodeToDisk(int nodeIndex);
+  void readNodeFromDisk(int nodeIndex);
+
+  void writeDirToDisk();
+  void readDirFromDisk();
+
+  void writeFatToDisk();
+  void readFatFromDisk();
+
+  void saveToDisk();
+  void loadFromDisk();
 };
 
 #endif  // FILE_SYSTEM_2025B

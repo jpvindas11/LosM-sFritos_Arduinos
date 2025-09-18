@@ -6,6 +6,7 @@
 FileSystem::FileSystem() {
   // ID de usuario por defecto
   this->userID = 1000;
+  this->memoryDisk = "../MemUnit.bin";
   this->n = 0;
   this->TUnit = DISK_SIZE;
   this->unit = new char[TUnit]; 
@@ -395,6 +396,10 @@ void FileSystem::printUnidad() {
 
 void FileSystem::changeUserID(int newID) {
   this->userID = newID;
+}
+
+void FileSystem::changeMemoryDisk(string newDisk) {
+  this->memoryDisk = newDisk;
 }
 
 // Private
