@@ -18,7 +18,7 @@ Luis Eduardo Valverde Soza C18128
 
 
 === Cuáles serían los metadatos del filesystem?
-<- Esos serían atributos del file system
+Tamaño del bloque, cantidad de bloques, bloques libres, bloques ocupados, estructura del directorio raíz, estructura de nodos índice, estructura de bloques de datos, bitmap de bloques libres/ocupados.
 
 === Cuáles serían los metadatos de un archivo?
 Nombre del archivo, tamaño, permisos, fecha, propietario, ubicación del bloque inicial, timestamps (creación, modificación, último acceso), tipo, identificador.
@@ -27,7 +27,7 @@ Nombre del archivo, tamaño, permisos, fecha, propietario, ubicación del bloque
 Sí, el indice debe tener el tamaño suficiente para direccionar todos los bloques de datos del archivo, es rápido.
 
 === Quiero poder hacer que los archivos sean más grandes
-<- Entonces el nodo del índice qué tendría para esto? Cómo se hace para que un archivo pueda ser más grande?
+Sí, se puede implementar un sistema de bloques indirectos para archivos grandes, aunque es más lento.
 
 === Cómo se implementan los folders?
 Se implementa una estructura de datos que contenga los metadatos del folder y un índice con los bloques que contienen los archivos y subfolders dentro del folder.
@@ -51,7 +51,7 @@ Una estructura para el directorio raíz, una estructura para los metadatos de ar
 
 
 == Diseño
-Haga un diseño de un sistema de archivos de tipo indexado que incorpore las respuestas a estas preguntas junto con la especificación del funcionamiento, las operaciones primordiales sobre archivos, los metadatos de archivos, los componentes principales, la interacción entre ellos, la especificación de lo qué son y lo que hacen y la definición de lo mínimo requerido para la implementación.
+image::images/FileSystem.svg[FileSystem, width=700]
 
 == Código
 Programe el sistema de archivos los componentes principales, la interacción entre ellos, la especificación de lo qué son y lo que hacen y la definición de lo mínimo requerido para la implementación, en un repositorio de REPL.IT, compartido con el docente, para almacenar datos de dibujos ascii según las especificaciones del proyecto de PI. Por ej:
@@ -62,6 +62,7 @@ Programe el sistema de archivos los componentes principales, la interacción ent
 * bool Renombrar(archivo, nombreNuevo) // devuelve falso en caso de fallo
 
 == Defina la manera en la que se puede probar la funcionalidad del sistema de archivos.
+Se puede probar mediante el conjunto de instrucciones implementadas en el main, las cuales permiten crear, leer y escribir archivos, así como guardarlos y cargarlos desde un archivo externo. Además, se brindan funciones para ver el directorio y la unidad del sistema, las cuales son printDirectory() y printUnidad().
 
 == Demostración
 Prepare un video con la demostración del sistema de archivos incluyendo su funcionalidad, sus componentes dificultades encontradas y deficiencias aún existentes en la entrega.
