@@ -16,68 +16,49 @@
 using namespace std;
 
 /// @brief Sistema de manejo de archivos
-/// @brief Sistema de manejo de archivos
 class FileSystem {
- protected:  // Metadatos del file system
-  /// ID del usuario
  protected:  // Metadatos del file system
   /// ID del usuario
   int userID;
   /// Archivo .bin utilizado como disco de memoria
   string memoryDisk;
   /// Unidad de memoria
-  /// Archivo .bin utilizado como disco de memoria
-  string memoryDisk;
-  /// Unidad de memoria
   char* unit;
-  /// Estructura de directorio
   /// Estructura de directorio
   directory* dir;
   /// Estructura de inodos
-  /// Estructura de inodos
   iNode_t* inodes;
-  /// tabla FAT
   /// tabla FAT
   int* fat;
   /// ?
-  /// ?
   int n;
   /// Tamaño del directorio
-  /// Tamaño del directorio
   int TDirectory;
-  /// Tamaño de la unidad
   /// Tamaño de la unidad
   int TUnit;
 
  public:  // Funciones
   /// Constructor
- public:  // Funciones
-  /// Constructor
   FileSystem();
-  /// Destructor  /// Destructor
+  /// Destructor
   ~FileSystem();
-  /// Crea un archivo  /// Crea un archivo
+  /// Crea un archivo
   int createFile(string filefilename);
   /// Elimina un archivo
-  /// Elimina un archivo
   int deleteFile(string filenamename);
-  /// Busca un archivo por su nombre/// Busca un archivo por su nombre
+  /// Busca un archivo por su nombre
   int search(string filename);
-  /// Lee un archivo
   /// Lee un archivo
   int read(string filenamename, int cursor, size_t size, char* buffer);
   /// Escribe en un archivo
-  /// Escribe en un archivo
   int write(string filenamename, int cursor, size_t size, const char* buffer);
   /// Cambia el nombre de un archivo
-  /// Cambia el nombre de un archivo
   int rename(string filenamename, string newnewname);
-  /// Imprime todos los archivos en el directorio  /// Imprime todos los archivos en el directorio
+  /// Imprime todos los archivos en el directorio
   void printDirectory();
   /// Imprime todos los archivos en la unidad
-  /// Imprime todos los archivos en la unidad
   void printUnidad();
-  /// Cambia el ID del usuario  /// Cambia el ID del usuario
+  /// Cambia el ID del usuario
   void changeUserID(int newID);
   /// Cambia el disco de memoria utilizado
   void changeMemoryDisk(string newDisk);
