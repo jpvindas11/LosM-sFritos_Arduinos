@@ -3,10 +3,13 @@
 #include "FileSystem.hpp"
 
 #include <algorithm>
+
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <stdexcept>
 
 FileSystem::FileSystem() {
   // ID de usuario por defecto
@@ -98,9 +101,13 @@ int FileSystem::deleteFile(string filename) {
   try {
     if (exist(filename)) {
       fileEntry* target = &this->dir->files[search(filename)];
+      for (int i = 0; i < TOTAL_POINTERS; ++i) {
+        this->fat[this->inodes[target->iNodeIndex].directBlocks[i]] = FREE_BLOCK; // LIBERA BLOQUES
+      }
       // marca el nodo como libre
       this->inodes[target->iNodeIndex].isUsed = false;
       target->iNodeIndex = FREE_INDEX;
+
       // marca el espacio del directorio como libre
       target->isUsed = false;
       // TODO(Todos) Debería de poder borrar directo del disco?
@@ -433,133 +440,90 @@ int FileSystem::searchFreeBlock() {
   throw FileSysError(ERR_NO_FREE_BLOCKS, "No hay bloques libres disponibles");
 }
 
-void FileSystem::writeBlockToDisk(int blockIndex) {
-  fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
-  size_t block_offset = OFFSET_UNIT + blockIndex * BLOCK_SIZE;
-  disk.seekp(block_offset);
-  disk.write(this->unit + blockIndex * BLOCK_SIZE, BLOCK_SIZE);
-  disk.close();
-}
-
-void FileSystem::readBlockFromDisk(int blockIndex) {
-  fstream disk(this->memoryDisk, ios::binary);
-  size_t block_offset = OFFSET_UNIT + blockIndex * BLOCK_SIZE;
-  disk.seekg(block_offset);
-  disk.read(this->unit + blockIndex * BLOCK_SIZE, BLOCK_SIZE);
-  disk.close();
-}
-
-void FileSystem::writeNodeToDisk(int nodeIndex) {
-  fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
-  size_t inode_offset = OFFSET_INODES + nodeIndex * sizeof(iNode_t);
-  disk.seekp(inode_offset);
-  disk.write(reinterpret_cast<char*>(&inodes[nodeIndex]), sizeof(iNode_t));
-  disk.close();
-}
-
-void FileSystem::readNodeFromDisk(int nodeIndex) {
-  fstream disk(this->memoryDisk, ios::binary);
-  size_t inode_offset = OFFSET_INODES + nodeIndex * sizeof(iNode_t);
-  disk.seekg(inode_offset);
-  disk.read(reinterpret_cast<char*>(&inodes[nodeIndex]), sizeof(iNode_t));
-  disk.close();
-}
-
-void FileSystem::writeDirToDisk() {
-  fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
-  disk.seekp(OFFSET_DIR);
-  disk.write(reinterpret_cast<char*>(this->dir), sizeof(directory_t));
-  disk.close();
-}
-
-void FileSystem::readDirFromDisk() {
-  fstream disk(this->memoryDisk, ios::binary);
-  disk.seekg(OFFSET_DIR);
-  disk.read(reinterpret_cast<char*>(this->dir), sizeof(directory_t));
-  disk.close();
-}
-
-void FileSystem::writeFatToDisk() {
-  fstream disk(this->memoryDisk, ios::in | ios::out | ios::binary);
-  disk.seekp(OFFSET_FAT);
-  disk.write(reinterpret_cast<char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
-  disk.close();
-}
-
-void FileSystem::readFatFromDisk() {
-  fstream disk(this->memoryDisk, ios::binary);
-  disk.seekg(OFFSET_FAT);
-  disk.read(reinterpret_cast<char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
-  disk.close();
-}
-
-void FileSystem::saveToDisk() {
-  // En que orden debería guardar todo?
-  this->writeDirToDisk();
-  this->writeFatToDisk();
-  // Debería de recorrer y guardar cada bloque y nodo
-  for (size_t index = 0; index < BLOCK_TOTAL; ++index) {
-    if (this->fat[index] == FREE_BLOCK) {
-      this->writeBlockToDisk(index);
-    }
+// Implementación de la serialización
+int FileSystem::saveToDisk(const string& filename) {
+  ofstream file(filename, ios::binary);
+  if (!file.is_open()) {
+    cerr << "Error: No se pudo abrir el archivo " << filename << endl;
+    return -1;
   }
-  for (size_t index = 0; index < TOTAL_I_NODES; ++index) {
-    if (!this->inodes[index].isUsed) {
-      this->writeNodeToDisk(index);
-    }
-  }
-}
-
-void FileSystem::loadFromDisk() {
-  this->readDirFromDisk();
-  this->readFatFromDisk();
-  // Debería de recorrer y cargar cada bloque y nodo
-  for (size_t index = 0; index < BLOCK_TOTAL; ++index) {
-    if (this->fat[index] == FREE_BLOCK) {
-      this->readBlockFromDisk(index);
-    }
-  }
-  for (size_t index = 0; index < TOTAL_I_NODES; ++index) {
-    if (!this->inodes[index].isUsed) {
-      this->readNodeFromDisk(index);
-    }
-  }
-}
-
-int FileSystem::getMemDisk() {
-  ifstream disk;
-  // Trata de abrir la memoria
-  disk.open(this->memoryDisk, ios::in | ios::binary);
-  if (!disk.is_open()) {
-    cout << "Archivo de memoria "
-         << this->memoryDisk
-         << " no encontrado."
-         << endl
-         << "Creando archivo de memoria..."
-         << endl;
-    // Si no hay crea un archivo de memoria
-    ofstream file(this->memoryDisk, ios::binary | ios::trunc);
-    if (!file.is_open()) {
-      cerr << "Error: No se pudo crear el archivo de memoria "
-           << this->memoryDisk
-           << endl;
-      return ERR_MEMORY_DISK_ERROR;
-    }
-    cout << "Archivo de memoria "
-         << this->memoryDisk
-         << " creado."
-         << endl;
-
-    file.seekp(OFFSET_UNIT + DISK_SIZE - 1);
-    char zero = 0;
-    file.write(&zero, 1);
+  
+  try {
+    fsHeader_t header;
+    header.magic = 42;
+    header.version = 1;
+    header.totalBlocks = BLOCK_TOTAL;
+    header.totalInodes = TOTAL_I_NODES;
+    header.blockSize = BLOCK_SIZE;
+    header.usedBlocks = calculateUsedBlocks();
+    header.usedInodes = this->dir->usedInodes;
+    header.lastModified = time(0);
+    
+    file.write(reinterpret_cast<const char*>(&header), sizeof(fsHeader_t));
+    
+    file.write(reinterpret_cast<const char*>(this->dir), sizeof(directory_t));
+    
+    file.write(reinterpret_cast<const char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
+    
+    file.write(reinterpret_cast<const char*>(this->inodes), sizeof(iNode_t) * TOTAL_I_NODES);
+    
+    file.write(this->unit, DISK_SIZE);
+    
     file.close();
-  } else {
-    cout << "Cargando archivo de memoria "
-         << this->memoryDisk
-         << endl;
-    this->loadFromDisk();
-    disk.close();
+    cout << "Sistema de archivos guardado en " << filename << endl;
+    return 0;
+    
+  } catch (const exception& e) {
+    cerr << "Error al guardar: " << e.what() << endl;
+    file.close();
+    return -1;
   }
-  return EXIT_SUCCESS;
+}
+
+int FileSystem::loadFromDisk(const string& filename) {
+  ifstream file(filename, ios::binary);
+  if (!file.is_open()) {
+    cerr << "Error: No se pudo abrir el archivo " << filename << endl;
+    return -1;
+  }
+  
+  try {
+    fsHeader_t header;
+    file.read(reinterpret_cast<char*>(&header), sizeof(fsHeader_t));
+
+    if (header.magic != 42) {
+      throw runtime_error("Archivo no válido - magic number incorrecto");
+    }
+    
+    if (header.totalBlocks != BLOCK_TOTAL || header.totalInodes != TOTAL_I_NODES) {
+      throw runtime_error("Incompatibilidad de configuración del sistema");
+    }
+    
+    file.read(reinterpret_cast<char*>(this->dir), sizeof(directory_t));
+    
+    file.read(reinterpret_cast<char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
+
+    file.read(reinterpret_cast<char*>(this->inodes), sizeof(iNode_t) * TOTAL_I_NODES);
+    
+    file.read(this->unit, DISK_SIZE);
+    
+    file.close();
+    cout << "Sistema de archivos cargado desde " << filename << endl;
+    return 0;
+    
+  } catch (const exception& e) {
+    cerr << "Error al cargar: " << e.what() << endl;
+    file.close();
+    return -1;
+  }
+}
+
+uint32_t FileSystem::calculateUsedBlocks() {
+  uint32_t count = 0;
+  for (int i = 0; i < BLOCK_TOTAL; i++) {
+    if (this->fat[i] == ERR_OCCUPIED_BLOCK) {
+      count++;
+    }
+  }
+  return count;
 }

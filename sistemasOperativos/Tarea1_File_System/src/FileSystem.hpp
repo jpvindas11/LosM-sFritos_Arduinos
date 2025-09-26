@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <ctime>
 
 #include "FileSysError.hpp"
 #include "Structures.hpp"
@@ -14,49 +16,68 @@
 using namespace std;
 
 /// @brief Sistema de manejo de archivos
+/// @brief Sistema de manejo de archivos
 class FileSystem {
+ protected:  // Metadatos del file system
+  /// ID del usuario
  protected:  // Metadatos del file system
   /// ID del usuario
   int userID;
   /// Archivo .bin utilizado como disco de memoria
   string memoryDisk;
   /// Unidad de memoria
+  /// Archivo .bin utilizado como disco de memoria
+  string memoryDisk;
+  /// Unidad de memoria
   char* unit;
+  /// Estructura de directorio
   /// Estructura de directorio
   directory* dir;
   /// Estructura de inodos
+  /// Estructura de inodos
   iNode_t* inodes;
+  /// tabla FAT
   /// tabla FAT
   int* fat;
   /// ?
+  /// ?
   int n;
   /// Tamaño del directorio
+  /// Tamaño del directorio
   int TDirectory;
+  /// Tamaño de la unidad
   /// Tamaño de la unidad
   int TUnit;
 
  public:  // Funciones
   /// Constructor
+ public:  // Funciones
+  /// Constructor
   FileSystem();
-  /// Destructor
+  /// Destructor  /// Destructor
   ~FileSystem();
-  /// Crea un archivo
-  int createFile(string filename);
+  /// Crea un archivo  /// Crea un archivo
+  int createFile(string filefilename);
   /// Elimina un archivo
-  int deleteFile(string filename);
-  /// Busca un archivo por su nombre
+  /// Elimina un archivo
+  int deleteFile(string filenamename);
+  /// Busca un archivo por su nombre/// Busca un archivo por su nombre
   int search(string filename);
   /// Lee un archivo
-  int read(string filename, int cursor, size_t size, char* buffer);
+  /// Lee un archivo
+  int read(string filenamename, int cursor, size_t size, char* buffer);
   /// Escribe en un archivo
-  int write(string filename, int cursor, size_t size, const char* buffer);
+  /// Escribe en un archivo
+  int write(string filenamename, int cursor, size_t size, const char* buffer);
   /// Cambia el nombre de un archivo
-  int rename(string filename, string newname);
-  /// Imprime todos los archivos en el directorio
+  /// Cambia el nombre de un archivo
+  int rename(string filenamename, string newnewname);
+  /// Imprime todos los archivos en el directorio  /// Imprime todos los archivos en el directorio
   void printDirectory();
   /// Imprime todos los archivos en la unidad
+  /// Imprime todos los archivos en la unidad
   void printUnidad();
-  /// Cambia el ID del usuario
+  /// Cambia el ID del usuario  /// Cambia el ID del usuario
   void changeUserID(int newID);
   /// Cambia el disco de memoria utilizado
   void changeMemoryDisk(string newDisk);
@@ -71,7 +92,23 @@ class FileSystem {
   /// Devuelve si un archivo esta abierto
   bool isOpen(string filename);
   /// Busca un i nodo vació disponible
+  /// Cambia el disco de memoria utilizado
+  void changeMemoryDisk(string newDisk);
+  // Métodos para serialización
+  int saveToDisk(const string& filename);
+  int loadFromDisk(const string& filename);
+ private:  // Funciones privadas
+  /// Abre un archivo
+  int open(string filename);
+  /// @brief Cierra un archivo
+  int close(string filename);
+  /// Devuelve si existe un archivo con cierto nombre
+  bool exist(string filename);
+  /// Devuelve si un archivo esta abierto
+  bool isOpen(string filename);
+  /// Busca un i nodo vació disponible
   int searchEmptyNode();
+  /// Busca un bloque vació disponible
   /// Busca un bloque vació disponible
   int searchFreeBlock();
   /// Guarda un bloque directo a memoria
@@ -96,6 +133,11 @@ class FileSystem {
   void loadFromDisk();
   /// Intenta cargar el archivo de memoria, si no hay crea uno
   int getMemDisk();
+  // Métodos privados para serialización
+  void writeHeader(ofstream& file);
+  void readHeader(ifstream& file);
+  uint32_t calculateUsedBlocks();
+
 };
 
 #endif  // FILE_SYSTEM_2025B
