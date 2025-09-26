@@ -87,7 +87,8 @@ typedef struct iNode {
   uint16_t permissions;   // 16 bits
   uint32_t size;  // 32 bits
   bool isUsed;  // 8 bits
-  block_size_t directBlocks[TOTAL_POINTERS];  // block_size_t bits * 12 indices = 192 bits
+  // block_size_t bits * 12 indices = 192 bits
+  block_size_t directBlocks[TOTAL_POINTERS];
   blockNum_size_t lastUsedBlock;  // 16 bits
   singleFileIndex_t singleIndirect;  // 16 bits
   doubleFileIndex_t doubleIndirect;  // 16 bits
@@ -108,7 +109,6 @@ typedef struct fileEntry {
   /*<- el bool es temporal, podría ser mejor usar una lista
     de archivos abiertos como std::vector<std::string> openFiles; */
 } fileEntry_t;
-
 /// Estructura de directorio
 typedef struct directory {
   char dirName[NAME_MAX];
@@ -117,23 +117,21 @@ typedef struct directory {
   inode_size_t usedInodes;
 } directory_t;
 
-// Como podríamos acomodar la unidad??
-
 typedef struct fsHeader {
-    uint32_t magic;          
-    uint32_t version;        
-    uint32_t totalBlocks;     
-    uint32_t totalInodes;    
-    uint32_t blockSize;      
-    uint32_t usedBlocks;      
-    uint32_t usedInodes;     
-    time_t lastModified;      
+    uint32_t magic;
+    uint32_t version;
+    uint32_t totalBlocks;
+    uint32_t totalInodes;
+    uint32_t blockSize;
+    uint32_t usedBlocks;
+    uint32_t usedInodes;
+    time_t lastModified;
 } fsHeader_t;
 
 typedef struct diskLayout {
-    fsHeader_t header;       
-    directory_t directory;   
-    int fat[BLOCK_TOTAL];  
+    fsHeader_t header;
+    directory_t directory;
+    int fat[BLOCK_TOTAL];
     iNode_t inodes[TOTAL_I_NODES];
     char data[DISK_SIZE];
 } diskLayout_t;

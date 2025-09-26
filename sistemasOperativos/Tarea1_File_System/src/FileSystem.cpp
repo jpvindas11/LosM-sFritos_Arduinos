@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -18,12 +19,13 @@ FileSystem::FileSystem() {
   this->n = 0;
   this->TUnit = DISK_SIZE;
   this->unit = new char[TUnit];
+
   memset(this->unit, 0, TUnit);
   this->dir = new directory_t;   // Reserva memoria para el directorio
   this->dir->usedInodes = 0;     // Inicializa inodos usados
   // Guarda la hora en que se crea el directorio
   this->dir->creationTime = time(0);
-  strcpy(this->dir->dirName, "root");
+  snprintf(this->dir->dirName, NAME_MAX, "root");
   // Inicializar la tabla FAT (File Allocation Table)
   this->fat = new int[BLOCK_TOTAL];
   for (int i = 0; i < BLOCK_TOTAL; i++) {
@@ -61,7 +63,7 @@ int FileSystem::createFile(string filename) {
       inodo->permissions = 0644;  // rw- r-- r--
       inodo->size = 0;
       inodo->lastUsedBlock = 0;
-      strcpy(inodo->path, "/");
+      snprintf(inodo->path, PATH_MAX, "/");
       // Bloques directos
       for (int i = 0; i < TOTAL_POINTERS; ++i) {
         inodo->directBlocks[i] = 0;
@@ -84,8 +86,6 @@ int FileSystem::createFile(string filename) {
       cout << "Archivo '" << filename << "' creado correctamente" << endl;
       cout << "Inodo asignado: " << freeInodeIndex << endl;
       cout << "Bloque asignado: " << freeBlockIndex << endl;
-      this->writeNodeToDisk(freeInodeIndex);
-      this->writeBlockToDisk(freeBlockIndex);
       return EXIT_SUCCESS;
     } else {
       throw FileSysError(ERR_OCCUPIED_FILENAME,
@@ -102,12 +102,12 @@ int FileSystem::deleteFile(string filename) {
     if (exist(filename)) {
       fileEntry* target = &this->dir->files[search(filename)];
       for (int i = 0; i < TOTAL_POINTERS; ++i) {
-        this->fat[this->inodes[target->iNodeIndex].directBlocks[i]] = FREE_BLOCK; // LIBERA BLOQUES
+        this->fat[this->inodes[target->iNodeIndex]
+            .directBlocks[i]] = FREE_BLOCK;  // LIBERA BLOQUES
       }
       // marca el nodo como libre
       this->inodes[target->iNodeIndex].isUsed = false;
       target->iNodeIndex = FREE_INDEX;
-
       // marca el espacio del directorio como libre
       target->isUsed = false;
       // TODO(Todos) Debería de poder borrar directo del disco?
@@ -133,7 +133,8 @@ int FileSystem::search(string filename) {
       return i;
     }
   }
-  return ERR_NO_FILE_FOUND;
+  std::cout << "El archivo " << filename << " no existe" << std::endl;
+  return ERR_NO_INDEX_FOUND;
 }
 
 int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
@@ -154,8 +155,10 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
   size_t bytesToRead = min(size, static_cast<size_t>(inode->size - cursor));
   size_t bytesRead = 0;
   if (open(file) == EXIT_SUCCESS) {
-    const size_t maxBlocks = TOTAL_POINTERS + TOTAL_POINTERS
-                           + TOTAL_POINTERS * TOTAL_POINTERS;
+    const size_t maxBlocks = TOTAL_POINTERS
+                           + TOTAL_POINTERS
+                           + TOTAL_POINTERS
+                           * TOTAL_POINTERS;
     while (bytesRead < bytesToRead) {
       int blockIndex = (cursor + bytesRead) / BLOCK_SIZE;
       int blockOffset = (cursor + bytesRead) % BLOCK_SIZE;
@@ -178,10 +181,10 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
       if (dataBlockNum == FREE_BLOCK) {
         break;
       }
-      dataBlock_t* block = reinterpret_cast<dataBlock_t*>(&unit[dataBlockNum
-                         * sizeof(dataBlock_t)]);
+      dataBlock_t* block =  reinterpret_cast<dataBlock_t*>(&unit[dataBlockNum
+          * sizeof(dataBlock_t)]);
       size_t canRead = min(bytesToRead - bytesRead
-                     , static_cast<size_t>(BLOCK_SIZE - blockOffset));
+          , static_cast<size_t>(BLOCK_SIZE - blockOffset));
       memcpy(buffer + bytesRead, block->data + blockOffset, canRead);
       bytesRead += canRead;
     }
@@ -208,6 +211,7 @@ int FileSystem::write(string file, int cursor
     cerr << "Error: El i nodo no está en uso" << endl;
     return ERR_NO_FILE_FOUND;
   }
+
   if (cursor > static_cast<int>(inode->size)) {
     cerr << "Error: El cursor se encuentra fuera del rango del archivo" << endl;
     return -1;
@@ -231,38 +235,22 @@ int FileSystem::write(string file, int cursor
           inode->lastUsedBlock++;
           if (inode->lastUsedBlock < TOTAL_POINTERS) {
             inode->directBlocks[inode->lastUsedBlock] = searchFreeBlock();
-            this->fat[inode->directBlocks
-                [inode->lastUsedBlock]] = ERR_OCCUPIED_BLOCK;
+            this->fat[inode->directBlocks[inode->lastUsedBlock]]
+                = ERR_OCCUPIED_BLOCK;
           } else {
             continue;
           }
         }
         dataBlockNum = inode->directBlocks[inode->lastUsedBlock];
-      }
-      /*else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
-        int idx = blockIndex - TOTAL_POINTERS;
-        if (!inode->singleIndirect.isUsed) {
-          inode->singleIndirect.isUsed = true;
-          inode->singleIndirect.usedDataPtr = 0;
-          for (int i = 0; i < TOTAL_POINTERS; i++) {
-            inode->singleIndirect.dataPtr[i] = FREE_BLOCK;
-          }
-        }
-        dataBlockNum = inode->singleIndirect.dataPtr[idx];
-        if (dataBlockNum == FREE_BLOCK || dataBlockNum == 0) {
-          dataBlockNum = searchFreeBlock();
-          inode->singleIndirect.dataPtr[idx] = dataBlockNum;
-          inode->singleIndirect.usedDataPtr++;
-          this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
-        }
-      } */
-        else if (inode->singleIndirect.usedDataPtr < TOTAL_POINTERS) {
+      } else if (inode->singleIndirect.usedDataPtr < TOTAL_POINTERS) {
           if (blockIndex != previousBlock && inode->singleIndirect.isUsed) {
               previousBlock = blockIndex;
               inode->singleIndirect.usedDataPtr++;
               if (inode->singleIndirect.usedDataPtr < TOTAL_POINTERS) {
-                inode->singleIndirect.dataPtr[inode->singleIndirect.usedDataPtr] = searchFreeBlock();
-                this->fat[inode->singleIndirect.dataPtr[inode->singleIndirect.usedDataPtr]] = ERR_OCCUPIED_BLOCK;
+                inode->singleIndirect.dataPtr[
+                      inode->singleIndirect.usedDataPtr]= searchFreeBlock();
+                this->fat[inode->singleIndirect.dataPtr[
+                      inode->singleIndirect.usedDataPtr]] = ERR_OCCUPIED_BLOCK;
               } else {
                 continue;
               }
@@ -277,7 +265,8 @@ int FileSystem::write(string file, int cursor
               this->fat[inode->singleIndirect.dataPtr[0]] = ERR_OCCUPIED_BLOCK;
               previousBlock = blockIndex;
           }
-          dataBlockNum = inode->singleIndirect.dataPtr[inode->singleIndirect.usedDataPtr];
+          dataBlockNum = inode->singleIndirect.dataPtr[
+                inode->singleIndirect.usedDataPtr];
         } else {
         int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
         int outer = idx / TOTAL_POINTERS;
@@ -294,12 +283,13 @@ int FileSystem::write(string file, int cursor
           }
           inode->doubleIndirect.dataIndex[0].usedDataPtr = 0;
           inode->doubleIndirect.dataIndex[0].dataPtr[0] = searchFreeBlock();
-          this->fat[inode->doubleIndirect.dataIndex[0].dataPtr[0]] = ERR_OCCUPIED_BLOCK;
+          this->fat[inode->doubleIndirect.dataIndex[0].dataPtr[0]]
+              = ERR_OCCUPIED_BLOCK;
         }
-        if (inode->doubleIndirect.dataIndex[inode->doubleIndirect.usedIndex].usedDataPtr < TOTAL_POINTERS) {
-        }
-        else if (inode->doubleIndirect.dataIndex[inode->doubleIndirect.usedIndex].usedDataPtr >= TOTAL_POINTERS) {
-        }
+        if (inode->doubleIndirect.dataIndex[inode->doubleIndirect.usedIndex]
+              .usedDataPtr < TOTAL_POINTERS) {
+        } else if (inode->doubleIndirect.dataIndex[inode->doubleIndirect
+              .usedIndex].usedDataPtr >= TOTAL_POINTERS) {}
         if (!inode->doubleIndirect.dataIndex[outer].isUsed) {
           inode->doubleIndirect.dataIndex[outer].isUsed = true;
           inode->doubleIndirect.dataIndex[outer].usedDataPtr = 0;
@@ -316,10 +306,10 @@ int FileSystem::write(string file, int cursor
           this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
         }
       }
-      dataBlock_t* block = reinterpret_cast<dataBlock_t*>
-                        (&unit[dataBlockNum * sizeof(dataBlock_t)]);
+      dataBlock_t* block = reinterpret_cast<dataBlock_t*>(&unit[dataBlockNum
+          * sizeof(dataBlock_t)]);
       size_t canWrite = min(bytesToWrite - bytesWritten
-                      , static_cast<size_t>(BLOCK_SIZE - blockOffset));
+          , static_cast<size_t>((BLOCK_SIZE - blockOffset)));
       memcpy(block->data + blockOffset, buffer + bytesWritten, canWrite);
       bytesWritten += canWrite;
       block->offset = blockOffset + canWrite;
@@ -363,11 +353,11 @@ void FileSystem::printUnidad() {
   for (size_t index = 0; index < 512; ++index) {
     if (this->fat[index] == ERR_OCCUPIED_BLOCK) {
       // hallar el bloque en la unidad
-      dataBlock_t* block = reinterpret_cast<dataBlock_t*>
-                        (&unit[index * sizeof(dataBlock_t)]);
-      cout << "Leyendo bloque: " << index <<std::endl;
+      dataBlock_t* block
+          = reinterpret_cast<dataBlock_t*>(&unit[index * sizeof(dataBlock_t)]);
+      std::cout << "Leyendo bloque: " << index << std::endl;
       // imprimir la sección de datos del bloque
-      cout << block->data << std::endl;
+      std::cout << block->data << std::endl;
     }
   }
 }
@@ -413,13 +403,7 @@ int FileSystem::close(string filename) {
 }
 
 bool FileSystem::exist(string filename) {
-  return search(filename) == ERR_NO_INDEX_FOUND;
-}
-
-bool FileSystem::isOpen(string filename) {
-  int index = search(filename);
-  fileEntry_t* file = &dir->files[index];
-  return file->isOpen;
+  return search(filename) != ERR_NO_INDEX_FOUND;
 }
 
 int FileSystem::searchEmptyNode() {
@@ -447,7 +431,6 @@ int FileSystem::saveToDisk(const string& filename) {
     cerr << "Error: No se pudo abrir el archivo " << filename << endl;
     return -1;
   }
-  
   try {
     fsHeader_t header;
     header.magic = 42;
@@ -458,21 +441,18 @@ int FileSystem::saveToDisk(const string& filename) {
     header.usedBlocks = calculateUsedBlocks();
     header.usedInodes = this->dir->usedInodes;
     header.lastModified = time(0);
-    
-    file.write(reinterpret_cast<const char*>(&header), sizeof(fsHeader_t));
-    
-    file.write(reinterpret_cast<const char*>(this->dir), sizeof(directory_t));
-    
-    file.write(reinterpret_cast<const char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
-    
-    file.write(reinterpret_cast<const char*>(this->inodes), sizeof(iNode_t) * TOTAL_I_NODES);
-    
+    file.write(reinterpret_cast<const char*>(&header)
+        , sizeof(fsHeader_t));
+    file.write(reinterpret_cast<const char*>(this->dir)
+        , sizeof(directory_t));
+    file.write(reinterpret_cast<const char*>(this->fat)
+        , sizeof(int) * BLOCK_TOTAL);
+    file.write(reinterpret_cast<const char*>(this->inodes)
+        , sizeof(iNode_t) * TOTAL_I_NODES);
     file.write(this->unit, DISK_SIZE);
-    
     file.close();
     cout << "Sistema de archivos guardado en " << filename << endl;
     return 0;
-    
   } catch (const exception& e) {
     cerr << "Error al guardar: " << e.what() << endl;
     file.close();
@@ -486,7 +466,6 @@ int FileSystem::loadFromDisk(const string& filename) {
     cerr << "Error: No se pudo abrir el archivo " << filename << endl;
     return -1;
   }
-  
   try {
     fsHeader_t header;
     file.read(reinterpret_cast<char*>(&header), sizeof(fsHeader_t));
@@ -494,23 +473,20 @@ int FileSystem::loadFromDisk(const string& filename) {
     if (header.magic != 42) {
       throw runtime_error("Archivo no válido - magic number incorrecto");
     }
-    
-    if (header.totalBlocks != BLOCK_TOTAL || header.totalInodes != TOTAL_I_NODES) {
+    if (header.totalBlocks != BLOCK_TOTAL
+        || header.totalInodes != TOTAL_I_NODES) {
       throw runtime_error("Incompatibilidad de configuración del sistema");
     }
-    
-    file.read(reinterpret_cast<char*>(this->dir), sizeof(directory_t));
-    
-    file.read(reinterpret_cast<char*>(this->fat), sizeof(int) * BLOCK_TOTAL);
-
-    file.read(reinterpret_cast<char*>(this->inodes), sizeof(iNode_t) * TOTAL_I_NODES);
-    
+    file.read(reinterpret_cast<char*>(this->dir)
+        , sizeof(directory_t));
+    file.read(reinterpret_cast<char*>(this->fat)
+        , sizeof(int) * BLOCK_TOTAL);
+    file.read(reinterpret_cast<char*>(this->inodes)
+        , sizeof(iNode_t) * TOTAL_I_NODES);
     file.read(this->unit, DISK_SIZE);
-    
     file.close();
     cout << "Sistema de archivos cargado desde " << filename << endl;
     return 0;
-    
   } catch (const exception& e) {
     cerr << "Error al cargar: " << e.what() << endl;
     file.close();
