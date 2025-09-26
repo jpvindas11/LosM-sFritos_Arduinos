@@ -63,13 +63,15 @@ class FileSystem {
   /// Cambia el disco de memoria utilizado
   void changeMemoryDisk(string newDisk);
   // Métodos para serialización
+  ///
   int saveToDisk(const string& filename);
+  ///
   int loadFromDisk(const string& filename);
 
  private:  // Funciones privadas
   /// Abre un archivo
   int open(string filename);
-  /// @brief Cierra un archivo
+  /// Cierra un archivo
   int close(string filename);
   /// Devuelve si existe un archivo con cierto nombre
   bool exist(string filename);
@@ -80,8 +82,11 @@ class FileSystem {
   /// Busca un bloque vació disponible
   int searchFreeBlock();
   // Métodos privados para serialización
+  ///
   void writeHeader(ofstream& file);
+  ///
   void readHeader(ifstream& file);
+  ///
   uint32_t calculateUsedBlocks();
 };
 

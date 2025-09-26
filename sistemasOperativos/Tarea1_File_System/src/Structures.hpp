@@ -20,7 +20,8 @@
 // Esas macros es para elegir tamaños
 // que rastreen los posibles indices o cantidad de cada tipo
 // intentando de no desperdiciar espacio
-
+// NUEVO: estos macros se cambiaron de unsigned a singed para poder admitir
+// negativos para asi que puedan tener un valor -1 cuando estén libres
 #if TOTAL_I_NODES <= UINT8_MAX
   typedef int8_t inode_size_t;
 #elif TOTAL_I_NODES <= UINT16_MAX
