@@ -22,7 +22,6 @@ enum errors {
 
 /// @brief Clase para manejo de errores locales
 class FileSysError : public std::runtime_error {
-
  private:
   /// Código del error
   errors err_code;

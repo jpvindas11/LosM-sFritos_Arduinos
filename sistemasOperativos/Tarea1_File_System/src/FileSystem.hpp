@@ -65,6 +65,7 @@ class FileSystem {
   // Métodos para serialización
   int saveToDisk(const string& filename);
   int loadFromDisk(const string& filename);
+
  private:  // Funciones privadas
   /// Abre un archivo
   int open(string filename);
@@ -82,7 +83,6 @@ class FileSystem {
   void writeHeader(ofstream& file);
   void readHeader(ifstream& file);
   uint32_t calculateUsedBlocks();
-
 };
 
 #endif  // FILE_SYSTEM_2025B

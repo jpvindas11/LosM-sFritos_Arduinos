@@ -22,27 +22,27 @@
 // intentando de no desperdiciar espacio
 
 #if TOTAL_I_NODES <= UINT8_MAX
-  typedef uint8_t inode_size_t;
+  typedef int8_t inode_size_t;
 #elif TOTAL_I_NODES <= UINT16_MAX
   typedef uint16_t inode_size_t;
 #else
-  typedef uint32_t inode_size_t;
+  typedef int32_t inode_size_t;
 #endif
 
 #if BLOCK_TOTAL <= UINT8_MAX
-  typedef uint8_t blockNum_size_t;
+  typedef int8_t blockNum_size_t;
 #elif BLOCK_TOTAL <= UINT16_MAX
-  typedef uint16_t blockNum_size_t;
+  typedef int16_t blockNum_size_t;
 #else
-  typedef uint32_t blockNum_size_t;
+  typedef int32_t blockNum_size_t;
 #endif
 
 #if BLOCK_SIZE <= UINT8_MAX
-  typedef uint8_t block_size_t;
+  typedef int8_t block_size_t;
 #elif BLOCK_SIZE <= UINT16_MAX
-  typedef uint16_t block_size_t;
+  typedef int16_t block_size_t;
 #else
-  typedef uint32_t block_size_t;
+  typedef int32_t block_size_t;
 #endif
 
 /// Estructura de bloque de datos
@@ -75,7 +75,8 @@ typedef struct iNode {
   uint16_t permissions;   // 16 bits
   uint32_t size;  // 32 bits
   bool isUsed;  // 8 bits
-  block_size_t directBlocks[TOTAL_POINTERS];  // block_size_t bits * 12 indices = 192 bits
+  // block_size_t bits * 12 indices = 192 bits
+  block_size_t directBlocks[TOTAL_POINTERS];
   blockNum_size_t lastUsedBlock;  // 16 bits
   singleFileIndex_t singleIndirect;  // 16 bits
   doubleFileIndex_t doubleIndirect;  // 16 bits
@@ -96,7 +97,6 @@ typedef struct fileEntry {
   /*<- el bool es temporal, podría ser mejor usar una lista
     de archivos abiertos como std::vector<std::string> openFiles; */
 } fileEntry_t;
-
 /// Estructura de directorio
 typedef struct directory {
   char dirName[NAME_MAX];
@@ -105,23 +105,21 @@ typedef struct directory {
   inode_size_t usedInodes;
 } directory_t;
 
-// Como podríamos acomodar la unidad??
-
 typedef struct fsHeader {
-    uint32_t magic;          
-    uint32_t version;        
-    uint32_t totalBlocks;     
-    uint32_t totalInodes;    
-    uint32_t blockSize;      
-    uint32_t usedBlocks;      
-    uint32_t usedInodes;     
-    time_t lastModified;      
+    uint32_t magic;
+    uint32_t version;
+    uint32_t totalBlocks;
+    uint32_t totalInodes;
+    uint32_t blockSize;
+    uint32_t usedBlocks;
+    uint32_t usedInodes;
+    time_t lastModified;
 } fsHeader_t;
 
 typedef struct diskLayout {
-    fsHeader_t header;       
-    directory_t directory;   
-    int fat[BLOCK_TOTAL];  
+    fsHeader_t header;
+    directory_t directory;
+    int fat[BLOCK_TOTAL];
     iNode_t inodes[TOTAL_I_NODES];
     char data[DISK_SIZE];
 } diskLayout_t;

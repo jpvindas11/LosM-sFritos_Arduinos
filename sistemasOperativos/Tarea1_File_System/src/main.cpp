@@ -1,3 +1,5 @@
+/// @copyright Los Más Fritos - 2025
+
 #include <iostream>
 #include "FileSystem.hpp"
 
@@ -59,6 +61,6 @@ int main() {
 
   delete fs;
   delete fs2;
-  
+
   return 0;
 }
