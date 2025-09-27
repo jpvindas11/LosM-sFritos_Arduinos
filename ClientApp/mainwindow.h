@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "autenticatorqt.h"
+#include "userdataqt.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -20,7 +22,8 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-
+    userDataQt currentData;
+    autenticatorQt autenticate;
 
 };
 #endif // MAINWINDOW_H

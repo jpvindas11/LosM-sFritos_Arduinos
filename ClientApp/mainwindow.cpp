@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "menuwindow.h"
+#include "autenticatorqt.h"
+#include <string>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -16,17 +18,16 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
-    QString user = ui->lineEdit_user->text();
-    QString pass = ui->lineEdit_pass->text();
+    std::string user = ui->lineEdit_user->text().toStdString();
+    std::string pass = ui->lineEdit_pass->text().toStdString();
 
-    // Password test
-    // User: carlitos22
-    // Pass: qwerty
+    userDataQt login = this->autenticate.tryLogin(user, pass);
 
-    if (user == "carlitos22" && pass == "qwerty") {
+    if (login.getRank() != -1) {
        ui->login_info->setText("Ingreso exitoso");
 
        MenuWindow* menu = new MenuWindow(this);
+       menu->setCurrentUser(login);
        menu->show();
        this->hide();
 
