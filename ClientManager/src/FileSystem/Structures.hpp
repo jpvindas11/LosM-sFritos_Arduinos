@@ -52,21 +52,18 @@ typedef struct dataBlock {
   block_size_t offset;
   char data[BLOCK_SIZE];
 } dataBlock_t;
-
 /// Indice de archivo simple
 typedef struct singleFileIndex {
   bool isUsed;
   block_size_t dataPtr[TOTAL_POINTERS];
   block_size_t usedDataPtr;
 } singleFileIndex_t;
-
 /// Indice de archivo doble
 typedef struct doubleFileIndex {
   bool isUsed;
   singleFileIndex_t dataIndex[TOTAL_POINTERS];
   block_size_t usedIndex;
 } doubleFileIndex_t;
-
 /// Estructura de inodo
 typedef struct iNode {
   uint32_t user;  // 32 bits
@@ -88,7 +85,6 @@ typedef struct iNode {
   // Necesitamos 618 bloques para almacenar la info de los 512 inodos
   // Alrededor de %7.5 de bloques totales
 } iNode_t;
-
 /// Estructura de entrada de archivo
 typedef struct fileEntry {
   char fileName[NAME_MAX];
@@ -105,7 +101,7 @@ typedef struct directory {
   fileEntry files[TOTAL_I_NODES];
   inode_size_t usedInodes;
 } directory_t;
-
+///
 typedef struct fsHeader {
     uint32_t magic;
     uint32_t version;
@@ -116,7 +112,7 @@ typedef struct fsHeader {
     uint32_t usedInodes;
     time_t lastModified;
 } fsHeader_t;
-
+///
 typedef struct diskLayout {
     fsHeader_t header;
     directory_t directory;
