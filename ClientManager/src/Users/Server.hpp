@@ -9,18 +9,18 @@
 class Server : public virtual Thread {
   DISABLE_COPY(Server);
   
-  protected:
-   std::string message;
-   Semaphore canCheckMessage;
+ protected:
+  std::string message;
+  Semaphore canCheckMessage;
 
-  public:
-   explicit Server()
-    : canCheckMessage(0){
-   }
+ public:
+  explicit Server()  
+   : canCheckMessage(0){
+  }
 
-   virtual ~Server(){}
+  virtual ~Server(){}
 
-   virtual void waitForMessage(){
+  virtual void waitForMessage(){
     while(true){
       this->canCheckMessage.wait();
       if (message == "closeServer"){
@@ -28,18 +28,18 @@ class Server : public virtual Thread {
       }
       this->processMessage();
     }
-   }
+  }
 
-   void setMessage(std::string& message) {
+  void setMessage(std::string& message) {
     this->message = message;
-   }
+  }
 
-   void checkMessage(){
+  void checkMessage(){
     this->canCheckMessage.signal();
-   }
+  }
 
-   virtual void processMessage() = 0;
-   virtual void sendMessage() = 0;
+  virtual void processMessage() = 0;
+  virtual void sendMessage() = 0;
 };
 
 #endif // SERVER_HPP
