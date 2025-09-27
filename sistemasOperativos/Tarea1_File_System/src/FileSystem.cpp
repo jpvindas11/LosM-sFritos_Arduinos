@@ -149,29 +149,28 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
     size_t bytesRead = 0;
 
       if (open(file) == EXIT_SUCCESS) {
-        const size_t maxBlocks = TOTAL_POINTERS
-                               + TOTAL_POINTERS
-                               + TOTAL_POINTERS
-                               * TOTAL_POINTERS;
+        const size_t maxBlocks = TUnit/sizeof(dataBlock_t);
+        int processedBlocks = -1;
+        int previousBlock = -1;
         while (bytesRead < bytesToRead) {
           int blockIndex = (cursor + bytesRead) / BLOCK_SIZE;
           int blockOffset = (cursor + bytesRead) % BLOCK_SIZE;
           block_size_t dataBlockNum = 0;
+          if (previousBlock != blockIndex) {
+            previousBlock = blockIndex;
+            processedBlocks++;
+          }
           if (static_cast<size_t>(blockIndex) >= maxBlocks) {
             cerr << "Error: El archivo es demasiado grande para leer"
                  << endl;
             break;
           }
-          if (blockIndex < TOTAL_POINTERS) {
-            dataBlockNum = inode->directBlocks[blockIndex];
-          } else if (blockIndex < TOTAL_POINTERS + TOTAL_POINTERS) {
-            int idx = blockIndex - TOTAL_POINTERS;
-            dataBlockNum = inode->singleIndirect.dataPtr[idx];
+          if (processedBlocks < TOTAL_POINTERS) {
+            dataBlockNum = inode->directBlocks[processedBlocks];
+          } else if (processedBlocks < (TOTAL_POINTERS + TOTAL_POINTERS)) {
+            dataBlockNum = inode->singleIndirect.dataPtr[processedBlocks-TOTAL_POINTERS];
           } else {
-            int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
-            int outer = idx / TOTAL_POINTERS;
-            int inner = idx % TOTAL_POINTERS;
-            dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
+            dataBlockNum = inode->doubleIndirect.dataIndex[processedBlocks-TOTAL_POINTERS-TOTAL_POINTERS];
           }
           if (dataBlockNum == FREE_BLOCK) {
             break;
@@ -254,7 +253,7 @@ int FileSystem::write(string file, int cursor
                 inode->singleIndirect.isUsed = true;
                 inode->singleIndirect.usedDataPtr = 0;
                 for (int i = 0; i < TOTAL_POINTERS; i++) {
-                  inode->singleIndirect.dataPtr[i] = FREE_BLOCK;
+                  inode->singleIndirect.dataPtr[i] = -1;
                 }
                 inode->singleIndirect.dataPtr[0] = searchFreeBlock();
                 this->fat[inode->singleIndirect.dataPtr[0]] = ERR_OCCUPIED_BLOCK;
@@ -262,44 +261,32 @@ int FileSystem::write(string file, int cursor
             }
             dataBlockNum = inode->singleIndirect.dataPtr[
                   inode->singleIndirect.usedDataPtr];
-          } else {
-          int idx = blockIndex - TOTAL_POINTERS - TOTAL_POINTERS;
-          int outer = idx / TOTAL_POINTERS;
-          int inner = idx % TOTAL_POINTERS;
-          if (!inode->doubleIndirect.isUsed) {
-            previousBlock = blockIndex;
-            inode->doubleIndirect.isUsed = true;
-            inode->doubleIndirect.usedIndex = 0;
-            for (int o = 0; o < TOTAL_POINTERS; ++o) {
-              inode->doubleIndirect.dataIndex[o].isUsed = false;
-              for (int k = 0; k < TOTAL_POINTERS; ++k) {
-                inode->doubleIndirect.dataIndex[o].dataPtr[k] = FREE_BLOCK;
+        } else {
+           if (blockIndex != previousBlock && inode->doubleIndirect.isUsed) {
+              previousBlock = blockIndex;
+              inode->doubleIndirect.usedIndex++;
+              if (inode->doubleIndirect.usedIndex < 
+                                                TOTAL_POINTERS*TOTAL_POINTERS) {
+                inode->doubleIndirect.dataIndex[
+                    inode->doubleIndirect.usedIndex]= searchFreeBlock();
+                this->fat[inode->doubleIndirect.dataIndex[
+                    inode->doubleIndirect.usedIndex]] = ERR_OCCUPIED_BLOCK;
+              } else {
+                continue;
               }
             }
-            inode->doubleIndirect.dataIndex[0].usedDataPtr = 0;
-            inode->doubleIndirect.dataIndex[0].dataPtr[0] = searchFreeBlock();
-            this->fat[inode->doubleIndirect.dataIndex[0].dataPtr[0]]
-                = ERR_OCCUPIED_BLOCK;
-          }
-          if (inode->doubleIndirect.dataIndex[inode->doubleIndirect.usedIndex]
-                .usedDataPtr < TOTAL_POINTERS) {
-          } else if (inode->doubleIndirect.dataIndex[inode->doubleIndirect
-                .usedIndex].usedDataPtr >= TOTAL_POINTERS) {}
-          if (!inode->doubleIndirect.dataIndex[outer].isUsed) {
-            inode->doubleIndirect.dataIndex[outer].isUsed = true;
-            inode->doubleIndirect.dataIndex[outer].usedDataPtr = 0;
-            for (int k = 0; k < TOTAL_POINTERS; ++k) {
-              inode->doubleIndirect.dataIndex[outer].dataPtr[k] = FREE_BLOCK;
+            if (!inode->doubleIndirect.isUsed) {
+                inode->doubleIndirect.isUsed = true;
+                inode->doubleIndirect.usedIndex = 0;
+                for (int i = 0; i < TOTAL_POINTERS*TOTAL_POINTERS; i++) {
+                  inode->doubleIndirect.dataIndex[i] = -1;
+                }
+                inode->doubleIndirect.dataIndex[0] = searchFreeBlock();
+                this->fat[inode->doubleIndirect.dataIndex[0]] = ERR_OCCUPIED_BLOCK;
+                previousBlock = blockIndex;
             }
-            inode->doubleIndirect.usedIndex++;
-          }
-          dataBlockNum = inode->doubleIndirect.dataIndex[outer].dataPtr[inner];
-          if (dataBlockNum == static_cast<block_size_t>(FREE_BLOCK) || dataBlockNum == 0) {
-            dataBlockNum = searchFreeBlock();
-            inode->doubleIndirect.dataIndex[outer].dataPtr[inner] = dataBlockNum;
-            inode->doubleIndirect.dataIndex[outer].usedDataPtr++;
-            this->fat[dataBlockNum] = ERR_OCCUPIED_BLOCK;
-          }
+            dataBlockNum = inode->doubleIndirect.dataIndex[
+                  inode->doubleIndirect.usedIndex];
         }
         dataBlock_t* block = reinterpret_cast<dataBlock_t*>(&unit[dataBlockNum
             * sizeof(dataBlock_t)]);
@@ -313,7 +300,6 @@ int FileSystem::write(string file, int cursor
         if (newEnd > inode->size) {
           inode->size = static_cast<uint32_t>(newEnd);
         }
-        inode->lastUsedBlock = (blockNum_size_t)dataBlockNum;
       }
     }
     close(file);
