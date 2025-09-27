@@ -59,7 +59,7 @@ int FileSystem::createFile(string filename) {
       snprintf(inodo->path, PATH_MAX, "/");
       // Bloques directos
       for (int i = 0; i < TOTAL_POINTERS; ++i) {
-        inodo->directBlocks[i] = 0;
+        inodo->directBlocks[i] = -1;
       }
       inodo->directBlocks[0] = freeBlockIndex;  // Primer bloque
       // Indirección
@@ -95,8 +95,15 @@ int FileSystem::deleteFile(string filename) {
     if (exist(filename)) {
       fileEntry* target = &this->dir->files[search(filename)];
       for (int i = 0; i < TOTAL_POINTERS; ++i) {
-        this->fat[this->inodes[target->iNodeIndex]
-            .directBlocks[i]] = FREE_BLOCK;  // LIBERA BLOQUES
+        int block_index = this->inodes[target->iNodeIndex].directBlocks[i];
+        if (block_index != -1){
+          dataBlock_t* block =
+             reinterpret_cast<dataBlock_t*>(&unit[block_index * sizeof(dataBlock_t)]);
+          for (int j = 0; j < BLOCK_SIZE; j++) {
+            block->data[j] = '\0';
+          }
+          this->fat[block_index] = FREE_BLOCK;  // LIBERA BLOQUES
+        }
       }
       // marca el nodo como libre
       this->inodes[target->iNodeIndex].isUsed = false;

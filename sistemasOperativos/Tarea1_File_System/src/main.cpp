@@ -35,13 +35,16 @@ int main() {
   
   if (fs2->loadFromDisk("filesystem.bin") == 0) {
     std::cout << "\nSistema cargado exitosamente!" << std::endl;
-    
+    fs2->printDirectory();
+    fs2->printUnidad();
    std::cout << "\nNuevo directorio:" << std::endl;
     fs2->deleteFile("datos.log");
     fs2->createFile("hola.log");
     fs2->createFile("hola1.log");
     fs2->createFile("hola2.log");
+    fs2->write("hola.log", 0, 31, "Saludos del sistema: Hola Mundo");
     fs2->printDirectory();
+    fs2->printUnidad();
     
     char buffer2[100] = {0};
     fs2->read("archivo1.txt", 0, 100, buffer2);
