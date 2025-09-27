@@ -1,76 +1,109 @@
 #ifndef AUTHENTICATION_SERVER
 #define AUTHENTICATION_SERVER
 
-#include <mutex>
-#include <string>
-#include <vector>
-#include <set>
-#include "Server.hpp"
-#include "common.hpp"
 #include "FileSystem.hpp"
+#include "Server.hpp"
+#include "Semaphore.hpp"
+#include <sodium.h>
+#include <string>
+#include <unordered_map>
+#include <mutex>
 
-struct UserData
-{
+/// @brief Estructura para datos de usuario almacenados en memoria
+struct AuthUser {
   std::string username;
-  std::string salt;
-  std::string hash;
-};
-
-enum class AuthResult {
-  SUCCESS,
-  USER_NOT_FOUND,
-  INVALID_PASSWORD,
-  ERROR
-};
-
+  std::string passwordHash;
+  std::string salt;        ///< Salt único para este usuario
+  bool isConnected;
+};  
 
 class AuthenticationServer: public Server {
   DISABLE_COPY(AuthenticationServer);
 
  private:
-  FileSystem& fileSystem;
-  std::vector<UserData> users;
-  std::set<std::string> connectedUsers;
-  mutable std::mutex usersMutex;
-  mutable std::mutex connectedUsersMutex;
-  std::string userDataFile = "user_data.csv";
-  bool serverRunning;
+  FileSystem* fs;
 
-  
+  int connectedUsersCount; /// Contador de usuarios conectados
+
+  Semaphore counterMutex; /// Semáforo para controlar acceso al contador
+
+  std::unordered_map<std::string, AuthUser> users; /// Mapa de usuarios registrados
+
+  std::mutex usersMutex; /// Mutex para proteger el mapa de usuarios
+
+
+  /// @brief Genera un salt aleatorio
+  /// @param salt Buffer donde se almacenará el salt
+  void generateSalt(unsigned char* salt);
+
+  /// @brief Hashea una contraseña usando Argon2
+  /// @param password Contraseña en texto plano
+  /// @param salt Salt de usuario
+  /// @param hash Buffer donde se almacenará el hash (debe ser al menos 32 bytes)
+  /// @return true si el hash fue exitoso, false en caso contrario
+  bool hashPassword(const std::string& password, const unsigned char* salt, unsigned char* hash);
+
+  /// @brief Verifica una contraseña contra un hash usando salt
+  /// @param password Contraseña en texto plano
+  /// @param storedHash Hash almacenado
+  /// @param storedSalt Salt almacenado
+  /// @return true si la contraseña es correcta, false en caso contrario
+  bool verifyPassword(const std::string& password, const std::string& storedHash, const std::string& storedSalt);
+
+  /// @brief Procesa mensaje de login
+  /// @param username Nombre de usuario
+  /// @param password Contraseña
+  /// @return Mensaje de respuesta
+  std::string processLogin(const std::string& username, const std::string& password);
+
+  /// @brief Procesa mensaje de logout
+  /// @param username Nombre de usuario
+  /// @return Mensaje de respuesta
+  std::string processLogout(const std::string& username);
+
+  /// @brief Registra un nuevo usuario internamente del lado del servidor
+  /// @param username Nombre de usuario
+  /// @param password Contraseña
+  /// @return true si el registro fue exitoso, false en caso contrario
+  bool registerUser(const std::string& username, const std::string& password);
+
+  /// @brief Obtiene el número de usuarios conectados
+  /// @return Mensaje con el número de usuarios conectados
+  std::string processGetConnectedUsers();
+
+  /// @brief Parsea un mensaje del cliente (solo LOGIN, LOGOUT, GET_CONNECTED)
+  /// @param message Mensaje completo del cliente
+  /// @param command Comando extraído
+  /// @param username Usuario extraído
+  /// @param password Contraseña extraída (si aplica)
+  /// @return true si el parseo fue exitoso
+  bool parseMessage(const std::string& message, std::string& command, 
+                   std::string& username, std::string& password);
 
  public:
-  explicit AuthenticationServer(FileSystem& fs);
+  explicit AuthenticationServer(FileSystem* fileSystem);
   virtual ~AuthenticationServer();
 
+  /// @brief Inicializa el servidor de autenticación
+  /// @return 0 en caso de éxito, -1 en caso de error
+  int initialize();
+
+  /// @brief Procesa el mensaje recibido del cliente
   void processMessage() override;
+
+  /// @brief Envía mensaje de respuesta al cliente
   void sendMessage() override;
 
-  void startServer();
-  void stopServer();
+  /// @brief Registra un nuevo usuario (función pública del servidor)
+  /// @param username Nombre de usuario
+  /// @param password Contraseña en texto plano
+  /// @return true si el registro fue exitoso, false en caso contrario
+  bool addUser(const std::string& username, const std::string& password);
 
-  int getConnectedUsersCount() const;
-  bool isServerRunning() const;
-
- private:
-  std::string hashPassword(const std::string& password, const std::string& salt);
-  std::string generateSalt();
-  bool verifyPassword(const std::string& password, const std::string& salt, const std::string& hash);
-
-  std::pair<std::string, std::string> decryptCredentials(const std::string& message);
-  std::string encryptMessage(const std::string& response);
-
-  bool loadUserData();
-  bool saveUserData();
-  bool findUser(const std::string& username, std::string& salt, std::string& hash);
-  bool addUser(const std::string& username, const std::string& hash, const std::string& salt);
-
-  AuthResult processLogin(const std::string& username, const std::string& password);
-  AuthResult processRegistration(const std::string& username, const std::string& password);
-
-  void registerUserConnected(const std::string& username);
-  void unregisterUserConnected(const std::string& username);
-  bool isUserConnected(const std::string& username) const;
-
+  /// @brief Obtiene información del salt de un usuario (para debugging)
+  /// @param username Nombre del usuario
+  /// @return Salt en formato hexadecimal o string vacío si no existe
+  std::string getUserSaltHex(const std::string& username);
 };
 
-#endif // AUTHENTICATION_SERVER
+#endif
