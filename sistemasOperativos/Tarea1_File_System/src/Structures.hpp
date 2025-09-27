@@ -63,7 +63,7 @@ typedef struct singleFileIndex {
 /// Indice de archivo doble
 typedef struct doubleFileIndex {
   bool isUsed;
-  singleFileIndex_t dataIndex[TOTAL_POINTERS];
+  block_size_t dataIndex[TOTAL_POINTERS*TOTAL_POINTERS];
   block_size_t usedIndex;
 } doubleFileIndex_t;
 
