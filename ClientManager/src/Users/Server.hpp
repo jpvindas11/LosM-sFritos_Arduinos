@@ -38,8 +38,14 @@ class Server : public virtual Thread {
     this->canCheckMessage.signal();
   }
 
+  int run() override {
+    this->waitForMessage();
+    return EXIT_SUCCESS;
+  }
+
   virtual void processMessage() = 0;
   virtual void sendMessage() = 0;
+
 };
 
 #endif // SERVER_HPP

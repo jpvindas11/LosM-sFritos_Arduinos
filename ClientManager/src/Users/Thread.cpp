@@ -19,9 +19,10 @@ int Thread::startThread() {
 }
 
 int Thread::waitToFinish() {
-  assert(this->thread);
-  this->thread->join();
-
+  if (this->thread && this->thread->joinable()) {
+    this->thread->join();
+  }
+  
   delete this->thread;
   this->thread = nullptr;
 
