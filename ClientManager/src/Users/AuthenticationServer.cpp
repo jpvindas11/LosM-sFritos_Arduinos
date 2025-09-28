@@ -106,7 +106,7 @@ std::string AuthenticationServer::processLogin(const std::string& username, cons
     connectedUsersCount++;
     counterMutex.signal();
     
-    return "SUCCESS Login exitoso";
+    return "SUCCESS";
 }
 
 std::string AuthenticationServer::processLogout(const std::string& username) {
@@ -231,4 +231,11 @@ std::string AuthenticationServer::getUserSaltHex(const std::string& username) {
     << static_cast<unsigned int>(static_cast<unsigned char>(it->second.salt[i]));
   }
   return ss.str();
+}
+
+bool AuthenticationServer::status() {
+    if(message == "SUCCESS") {
+        return true;
+    }
+    return false;
 }

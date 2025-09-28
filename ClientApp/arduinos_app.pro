@@ -11,7 +11,13 @@ CONFIG += c++17
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    menuwindow.cpp
+    menuwindow.cpp \
+    ../ClientManager/src/FileSystem/FileSystem.cpp \
+    ../ClientManager/src/Users/AuthenticationServer.cpp \
+    ../ClientManager/src/Users/Semaphore.cpp \
+    ../ClientManager/src/Users/Thread.cpp \
+
+
 
 HEADERS += \
     mainwindow.h \
@@ -25,3 +31,9 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+INCLUDEPATH += /home/axel/Escritorio/LosM-sFritos_Arduinos/ClientManager/src/FileSystem
+INCLUDEPATH += /home/axel/Escritorio/LosM-sFritos_Arduinos/ClientManager/src/Users
+
+LIBS += -lsodium
+

@@ -15,7 +15,7 @@ struct AuthUser {
   std::string passwordHash;
   std::string salt;        ///< Salt único para este usuario
   bool isConnected;
-};  
+};
 
 class AuthenticationServer: public Server {
   DISABLE_COPY(AuthenticationServer);
@@ -30,6 +30,7 @@ class AuthenticationServer: public Server {
   std::unordered_map<std::string, AuthUser> users; /// Mapa de usuarios registrados
 
   std::mutex usersMutex; /// Mutex para proteger el mapa de usuarios
+
 
 
   /// @brief Genera un salt aleatorio
@@ -104,6 +105,9 @@ class AuthenticationServer: public Server {
   /// @param username Nombre del usuario
   /// @return Salt en formato hexadecimal o string vacío si no existe
   std::string getUserSaltHex(const std::string& username);
+
+  bool status();
+
 };
 
 #endif
