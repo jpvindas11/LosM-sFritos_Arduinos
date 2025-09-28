@@ -1,29 +1,32 @@
+/// @copyright Los Más Fritos - 2025
+
 #ifndef SERVER_HPP
 #define SERVER_HPP
+
+#include <string>
 
 #include "common.hpp"
 #include "Thread.hpp"
 #include "Semaphore.hpp"
-#include <string>
 
 class Server : public virtual Thread {
   DISABLE_COPY(Server);
-  
+
  protected:
   std::string message;
   Semaphore canCheckMessage;
 
  public:
-  explicit Server()  
-   : canCheckMessage(0){
+  explicit Server()
+    : canCheckMessage(0) {
   }
 
-  virtual ~Server(){}
+  virtual ~Server() {}
 
-  virtual void waitForMessage(){
-    while(true){
+  virtual void waitForMessage() {
+    while (true) {
       this->canCheckMessage.wait();
-      if (message == "closeServer"){
+      if (message == "closeServer") {
         break;
       }
       this->processMessage();
@@ -34,7 +37,7 @@ class Server : public virtual Thread {
     this->message = message;
   }
 
-  void checkMessage(){
+  void checkMessage() {
     this->canCheckMessage.signal();
   }
 
@@ -42,4 +45,4 @@ class Server : public virtual Thread {
   virtual void sendMessage() = 0;
 };
 
-#endif // SERVER_HPP
+#endif  // SERVER_HPP

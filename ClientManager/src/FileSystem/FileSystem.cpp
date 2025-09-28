@@ -21,6 +21,7 @@ FileSystem::FileSystem() {
   this->dir->usedInodes = 0;     // Inicializa inodos usados
   // Guarda la hora en que se crea el directorio
   this->dir->creationTime = time(0);
+  this->memoryDisk = "filesystem.bin";
   snprintf(this->dir->dirName, NAME_MAX, "root");
   // Inicializar la tabla FAT (File Allocation Table)
   this->fat = new int[BLOCK_TOTAL];
@@ -32,9 +33,11 @@ FileSystem::FileSystem() {
   for (int i = 0; i < TOTAL_I_NODES; i++) {
     this->inodes[i].isUsed = false;
   }
+  // this->loadFromDisk(this->memoryDisk);
 }
 
 FileSystem::~FileSystem() {
+  // this->saveToDisk(this->memoryDisk);
   delete[] this->unit;
   delete this->dir;
   delete[] this->fat;
@@ -96,9 +99,10 @@ int FileSystem::deleteFile(string filename) {
       fileEntry* target = &this->dir->files[search(filename)];
       for (int i = 0; i < TOTAL_POINTERS; ++i) {
        int block_index = this->inodes[target->iNodeIndex].directBlocks[i];
-        if (block_index != -1){
+        if (block_index != -1) {
           dataBlock_t* block =
-             reinterpret_cast<dataBlock_t*>(&unit[block_index * sizeof(dataBlock_t)]);
+             reinterpret_cast<dataBlock_t*>(&unit[block_index
+                * sizeof(dataBlock_t)]);
           for (int j = 0; j < BLOCK_SIZE; j++) {
             block->data[j] = '\0';
           }
@@ -167,16 +171,19 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
           }
           if (processedBlocks < TOTAL_POINTERS) {
             dataBlockNum = inode->directBlocks[processedBlocks];
-          } else if (processedBlocks < (TOTAL_POINTERS + TOTAL_POINTERS)) {
-            dataBlockNum = inode->singleIndirect.dataPtr[processedBlocks-TOTAL_POINTERS];
+          } else if (processedBlocks < (TOTAL_POINTERS
+              + TOTAL_POINTERS)) {
+            dataBlockNum = inode->singleIndirect.dataPtr[processedBlocks
+                - TOTAL_POINTERS];
           } else {
-            dataBlockNum = inode->doubleIndirect.dataIndex[processedBlocks-TOTAL_POINTERS-TOTAL_POINTERS];
+            dataBlockNum = inode->doubleIndirect.dataIndex[processedBlocks
+                - TOTAL_POINTERS - TOTAL_POINTERS];
           }
           if (dataBlockNum == FREE_BLOCK) {
             break;
           }
-          dataBlock_t* block =  reinterpret_cast<dataBlock_t*>(&unit[dataBlockNum
-              * sizeof(dataBlock_t)]);
+          dataBlock_t* block =  reinterpret_cast<dataBlock_t*>
+              (&unit[dataBlockNum * sizeof(dataBlock_t)]);
           size_t canRead = min(bytesToRead - bytesRead
               , static_cast<size_t>(BLOCK_SIZE - blockOffset));
           memcpy(buffer + bytesRead, block->data + blockOffset, canRead);
@@ -187,7 +194,7 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
         } else if (size > 0) {
           buffer[size - 1] = '\0';
         }
-        cout << "Datos leídos: " 
+        cout << "Datos leídos: "
              << buffer
              << endl;
       }
@@ -256,7 +263,8 @@ int FileSystem::write(string file, int cursor
                   inode->singleIndirect.dataPtr[i] = -1;
                 }
                 inode->singleIndirect.dataPtr[0] = searchFreeBlock();
-                this->fat[inode->singleIndirect.dataPtr[0]] = ERR_OCCUPIED_BLOCK;
+                this->fat[inode->singleIndirect.dataPtr[0]]
+                    = ERR_OCCUPIED_BLOCK;
                 previousBlock = blockIndex;
             }
             dataBlockNum = inode->singleIndirect.dataPtr[
@@ -265,8 +273,8 @@ int FileSystem::write(string file, int cursor
            if (blockIndex != previousBlock && inode->doubleIndirect.isUsed) {
               previousBlock = blockIndex;
               inode->doubleIndirect.usedIndex++;
-              if (inode->doubleIndirect.usedIndex < 
-                                                TOTAL_POINTERS*TOTAL_POINTERS) {
+              if (inode->doubleIndirect.usedIndex <
+                  TOTAL_POINTERS*TOTAL_POINTERS) {
                 inode->doubleIndirect.dataIndex[
                     inode->doubleIndirect.usedIndex]= searchFreeBlock();
                 this->fat[inode->doubleIndirect.dataIndex[
@@ -282,7 +290,8 @@ int FileSystem::write(string file, int cursor
                   inode->doubleIndirect.dataIndex[i] = -1;
                 }
                 inode->doubleIndirect.dataIndex[0] = searchFreeBlock();
-                this->fat[inode->doubleIndirect.dataIndex[0]] = ERR_OCCUPIED_BLOCK;
+                this->fat[inode->doubleIndirect.dataIndex[0]]
+                    = ERR_OCCUPIED_BLOCK;
                 previousBlock = blockIndex;
             }
             dataBlockNum = inode->doubleIndirect.dataIndex[
@@ -310,7 +319,6 @@ int FileSystem::write(string file, int cursor
          << endl;
     return err.code();
   }
-  
 }
 
 int FileSystem::rename(string filename, string newname) {
