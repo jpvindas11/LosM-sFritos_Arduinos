@@ -52,6 +52,10 @@ class FileSystem {
   int read(string filename, int cursor, size_t size, char* buffer);
   /// Escribe en un archivo
   int write(string filename, int cursor, size_t size, const char* buffer);
+  /// Modifica un archivo
+  int append(string filename, size_t size, const char* buffer);
+  /// Devuelve el tamaño en bytes de un archivo
+  int getFileSize(const std::string& filename);
   /// Cambia el nombre de un archivo
   int rename(string filename, string newname);
   /// Imprime todos los archivos en el directorio

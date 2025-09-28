@@ -321,6 +321,134 @@ int FileSystem::write(string file, int cursor
   }
 }
 
+int FileSystem::append(string file, size_t size, const char* buffer) {
+  try {
+    int fileIndex = search(file);
+    iNode_t* inode = &this->inodes[this->dir->files[fileIndex].iNodeIndex];
+    int cursor = this->getFileSize(file);
+    if (cursor > static_cast<int>(inode->size)) {
+      throw FileSysError(ERR_OUT_OF_RANGE
+        , "El cursor se encuentra fuera del rango del archivo");
+    }
+    size_t bytesWritten = 0;
+    size_t bytesToWrite = size;
+
+    if (open(file) == EXIT_SUCCESS) {
+      const size_t maxBlocks = TUnit/sizeof(dataBlock_t);
+      int previousBlock = cursor/ BLOCK_SIZE;
+      while (bytesWritten < bytesToWrite) {
+        int blockIndex = (cursor + bytesWritten) / BLOCK_SIZE;
+        int blockOffset = (cursor + bytesWritten) % BLOCK_SIZE;
+        if (blockIndex >= static_cast<int>(maxBlocks)) {
+          cerr << "Error: El archivo es demasiado grande para escribir"
+               << endl;
+          break;
+        }
+        block_size_t dataBlockNum = FREE_BLOCK;
+        if (inode->lastUsedBlock < TOTAL_POINTERS) {
+          if (blockIndex != previousBlock) {
+            previousBlock = blockIndex;
+            inode->lastUsedBlock++;
+            if (inode->lastUsedBlock < TOTAL_POINTERS) {
+              inode->directBlocks[inode->lastUsedBlock] = searchFreeBlock();
+              this->fat[inode->directBlocks[inode->lastUsedBlock]]
+                  = ERR_OCCUPIED_BLOCK;
+            } else {
+              continue;
+            }
+          }
+          dataBlockNum = inode->directBlocks[inode->lastUsedBlock];
+        } else if (inode->singleIndirect.usedDataPtr < TOTAL_POINTERS) {
+          if (blockIndex != previousBlock && inode->singleIndirect.isUsed) {
+              previousBlock = blockIndex;
+              inode->singleIndirect.usedDataPtr++;
+              if (inode->singleIndirect.usedDataPtr < TOTAL_POINTERS) {
+                inode->singleIndirect.dataPtr[
+                    inode->singleIndirect.usedDataPtr]= searchFreeBlock();
+                this->fat[inode->singleIndirect.dataPtr[
+                    inode->singleIndirect.usedDataPtr]] = ERR_OCCUPIED_BLOCK;
+              } else {
+                continue;
+              }
+            }
+            if (!inode->singleIndirect.isUsed) {
+                inode->singleIndirect.isUsed = true;
+                inode->singleIndirect.usedDataPtr = 0;
+                for (int i = 0; i < TOTAL_POINTERS; i++) {
+                  inode->singleIndirect.dataPtr[i] = -1;
+                }
+                inode->singleIndirect.dataPtr[0] = searchFreeBlock();
+                this->fat[inode->singleIndirect.dataPtr[0]]
+                    = ERR_OCCUPIED_BLOCK;
+                previousBlock = blockIndex;
+            }
+            dataBlockNum = inode->singleIndirect.dataPtr[
+                  inode->singleIndirect.usedDataPtr];
+        } else {
+           if (blockIndex != previousBlock && inode->doubleIndirect.isUsed) {
+              previousBlock = blockIndex;
+              inode->doubleIndirect.usedIndex++;
+              if (inode->doubleIndirect.usedIndex <
+                  TOTAL_POINTERS*TOTAL_POINTERS) {
+                inode->doubleIndirect.dataIndex[
+                    inode->doubleIndirect.usedIndex]= searchFreeBlock();
+                this->fat[inode->doubleIndirect.dataIndex[
+                    inode->doubleIndirect.usedIndex]] = ERR_OCCUPIED_BLOCK;
+              } else {
+                continue;
+              }
+            }
+            if (!inode->doubleIndirect.isUsed) {
+                inode->doubleIndirect.isUsed = true;
+                inode->doubleIndirect.usedIndex = 0;
+                for (int i = 0; i < TOTAL_POINTERS*TOTAL_POINTERS; i++) {
+                  inode->doubleIndirect.dataIndex[i] = -1;
+                }
+                inode->doubleIndirect.dataIndex[0] = searchFreeBlock();
+                this->fat[inode->doubleIndirect.dataIndex[0]]
+                    = ERR_OCCUPIED_BLOCK;
+                previousBlock = blockIndex;
+            }
+            dataBlockNum = inode->doubleIndirect.dataIndex[
+                  inode->doubleIndirect.usedIndex];
+         }
+        dataBlock_t* block = reinterpret_cast<dataBlock_t*>(&unit[dataBlockNum
+            * sizeof(dataBlock_t)]);
+        size_t canWrite = min(bytesToWrite - bytesWritten
+            , static_cast<size_t>((BLOCK_SIZE - blockOffset)));
+        memcpy(block->data + blockOffset, buffer + bytesWritten, canWrite);
+        bytesWritten += canWrite;
+        block->offset = blockOffset + canWrite;
+        // Actualizar tamaño del archivo si creció
+        size_t newEnd = static_cast<size_t>(cursor + bytesWritten);
+        if (newEnd > inode->size) {
+          inode->size = static_cast<uint32_t>(newEnd);
+        }
+      }
+    }
+    close(file);
+    return bytesWritten;
+  } catch (const FileSysError& err) {
+    cerr << "Error al escribir el archivo: "
+         << err.what()
+         << endl;
+    return err.code();
+  }
+}
+
+int FileSystem::getFileSize(const std::string& filename) {
+  try {
+    int fileIndex = search(filename);
+    iNode_t* inode = &this->inodes[this->dir->files[fileIndex].iNodeIndex];
+    return static_cast<int>(inode->size);
+  } catch (const FileSysError& err) {
+    cerr << "Error al obtener tamaño de archivo: "
+         << err.what()
+         << endl;
+    return err.code();
+  }
+}
+
 int FileSystem::rename(string filename, string newname) {
   try {
     if (exist(filename) && !exist(newname)) {
@@ -349,8 +477,8 @@ void FileSystem::printUnidad() {
   for (size_t index = 0; index < 512; ++index) {
     if (this->fat[index] == ERR_OCCUPIED_BLOCK) {
       // hallar el bloque en la unidad
-      dataBlock_t* block
-          = reinterpret_cast<dataBlock_t*>(&unit[index * sizeof(dataBlock_t)]);
+      dataBlock_t* block = reinterpret_cast<dataBlock_t*>
+          (&unit[index * sizeof(dataBlock_t)]);
       cout << "Leyendo bloque: " << index << endl;
       // imprimir la sección de datos del bloque
       cout << block->data << endl;
