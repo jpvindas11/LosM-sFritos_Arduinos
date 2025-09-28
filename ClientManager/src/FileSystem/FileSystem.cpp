@@ -323,11 +323,12 @@ int FileSystem::write(string file, int cursor
 
 int FileSystem::append(string filename, int cursor, size_t size, char* buffer) {
   // crea un buffer para leer los datos ya escritos
-  char oldData[10] = " ";
-  this->read(filename, cursor, getFileSize(filename), oldData);
-  size_t newSize = strlen(oldData) + size + 1;
+  size_t oldSize = getFileSize(filename);
+  char* oldData = new char[oldSize + 1]();
+  this->read(filename, cursor, oldSize + 1, oldData);
   // Crea un nuevo buffer
-  char* newBuffer = new char[newSize];
+  size_t newSize = oldSize + size;
+  char* newBuffer = new char[newSize + 1]();
   // Une los datos nuevos y viejos en el nuevo buffer
   strcpy(newBuffer, buffer);
   strcat(newBuffer, oldData);
