@@ -11,7 +11,7 @@ int main() {
   filesystem->printDirectory();
   filesystem->printUnidad();
   char buffer2[100] = "cde";
-  filesystem->append("test.txt", 3, buffer2);
+  filesystem->append("test.txt", 0, 3, buffer2);
   filesystem->printUnidad();
   delete filesystem;
   return 0;

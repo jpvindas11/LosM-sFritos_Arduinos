@@ -50,10 +50,10 @@ class FileSystem {
   int search(string filename);
   /// Lee un archivo
   int read(string filename, int cursor, size_t size, char* buffer);
-  /// Escribe en un archivo
+  /// Escribe en un archivo, borra los contenidos anteriores
   int write(string filename, int cursor, size_t size, const char* buffer);
-  /// Modifica un archivo
-  int append(string filename, size_t size, const char* buffer);
+  /// Agrega datos al final de un archivo
+  int append(string filename, int cursor, size_t size, char* buffer);
   /// Devuelve el tamaño en bytes de un archivo
   int getFileSize(const std::string& filename);
   /// Cambia el nombre de un archivo
