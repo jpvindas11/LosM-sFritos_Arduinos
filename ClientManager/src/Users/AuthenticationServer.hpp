@@ -113,8 +113,8 @@ class AuthenticationServer: public Server {
   /// @return Salt en formato hexadecimal o string vacío si no existe
   std::string getUserSaltHex(const std::string& username);
 
- protected:
-  int run();
+  bool status();
+
 };
 
 #endif

@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "menuwindow.h"
+#include "FileSystem.hpp"
+#include "AuthenticationServer.hpp"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -18,12 +20,24 @@ void MainWindow::on_pushButton_clicked()
 {
     QString user = ui->lineEdit_user->text();
     QString pass = ui->lineEdit_pass->text();
+    FileSystem* fs = new FileSystem();
+    AuthenticationServer* authServer = new AuthenticationServer(fs);
+    authServer->initialize();
+    std::string userAU = "admin";
+    std::string passAU = "admin123";
+
+    authServer->addUser(userAU, passAU);
 
     // Password test
     // User: carlitos22
     // Pass: qwerty
 
-    if (user == "carlitos22" && pass == "qwerty") {
+    std::string loginMessage = "LOGIN " + user.toStdString() + " " + pass.toStdString();
+    authServer->setMessage(loginMessage);
+    authServer->processMessage();
+    authServer->sendMessage();
+
+    if (authServer->status()) {
        ui->login_info->setText("Ingreso exitoso");
 
        MenuWindow* menu = new MenuWindow(this);

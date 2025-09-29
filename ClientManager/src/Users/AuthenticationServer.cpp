@@ -1,5 +1,7 @@
 /// @copyright Los Más Fritos - 2025
 
+/// @copyright Los Más Fritos - 2025
+
 #include "AuthenticationServer.hpp"
 
 #include <iostream>
@@ -12,13 +14,9 @@
 
 AuthenticationServer::AuthenticationServer(FileSystem* fileSystem)
     : Server(), fs(fileSystem), connectedUsersCount(0), counterMutex(1) {
-  // carga datos del disco
-  this->fs->loadFromDisk("filesystem.bin");
 }
 
 AuthenticationServer::~AuthenticationServer() {
-  // guarda datos en el disco antes de borrar
-  this->fs->saveToDisk("filesystem.bin");
   // Cleanup automático por destructores
   delete fs;
 }
