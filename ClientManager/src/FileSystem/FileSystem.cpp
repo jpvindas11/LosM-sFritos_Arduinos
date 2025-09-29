@@ -194,9 +194,11 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
         } else if (size > 0) {
           buffer[size - 1] = '\0';
         }
+        /*
         cout << "Datos leídos: "
              << buffer
              << endl;
+        */
       }
       close(file);
       return bytesRead;

@@ -19,17 +19,17 @@ int main() {
     
     authServer->addUser(user, "admin123");
     std::string getSalt = authServer->getUserSaltHex(user);
-    filesystem->write("user_data.csv", 0, user.size()+getSalt.size(), (user + "," + getSalt).c_str());
+    filesystem->write("user_data.csv", 0, user.size()+getSalt.size(), (user + "," + getSalt + ",").c_str());
     
     std::string user1 = "user1";
     authServer->addUser("user1", "password1");
     std::string getSalt1 = authServer->getUserSaltHex(user);
-    filesystem->append("user_data.csv", 0, user1.size()+getSalt1.size(), (user1 + "," + getSalt1).c_str());
+    filesystem->append("user_data.csv", 0, user1.size()+getSalt1.size(), (user1 + "," + getSalt1 + ",").c_str());
     
     std::string user2 = "user2";
     authServer->addUser("user2", "password2");
     std::string getSalt2 = authServer->getUserSaltHex(user);
-    filesystem->append("user_data.csv", 0, user2.size()+getSalt2.size(), (user2 + "," + getSalt2).c_str());
+    filesystem->append("user_data.csv", 0, user2.size()+getSalt2.size(), (user2 + "," + getSalt2 + ",").c_str());
     
     filesystem->read("user_data.csv", 0, 100, buffer); // Leer para verificar escritura
     std::cout << "Contenido de user_data.csv: " << buffer << std::endl;
