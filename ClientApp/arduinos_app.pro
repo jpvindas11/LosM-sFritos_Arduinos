@@ -10,6 +10,7 @@ CONFIG += c++17
 
 SOURCES += \
     autenticatorqt.cpp \
+    userdataqt.cpp \
     main.cpp \
     mainwindow.cpp \
     menuwindow.cpp \
@@ -17,6 +18,7 @@ SOURCES += \
     ../ClientManager/src/Users/AuthenticationServer.cpp \
     ../ClientManager/src/Users/Semaphore.cpp \
     ../ClientManager/src/Users/Thread.cpp \
+
 
 
 

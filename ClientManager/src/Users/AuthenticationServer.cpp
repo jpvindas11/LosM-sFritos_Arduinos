@@ -114,7 +114,7 @@ std::string AuthenticationServer::processLogin(const std::string& username
   counterMutex.wait();
   connectedUsersCount++;
   counterMutex.signal();
-  return "SUCCESS Login exitoso";
+  return "SUCCESS";
 }
 
 std::string AuthenticationServer::processLogout(const std::string& username) {

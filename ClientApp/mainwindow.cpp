@@ -4,9 +4,9 @@
 #include "FileSystem.hpp"
 #include "AuthenticationServer.hpp"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+MainWindow::MainWindow(AuthenticationServer* authServer, QWidget *parent)
+    : QMainWindow(parent), ui(new Ui::MainWindow)
+    , authServer(authServer)
 {
     ui->setupUi(this);
 }
@@ -28,17 +28,12 @@ void MainWindow::on_pushButton_clicked()
 
     authServer->addUser(userAU, passAU);
 
-    userDataQt login = this->autenticate.tryLogin(user, pass);
-
-    std::string loginMessage = "LOGIN " + user.toStdString() + " " + pass.toStdString();
-    authServer->setMessage(loginMessage);
-    authServer->processMessage();
-    authServer->sendMessage();
-
-    if (authServer->status()) {
+    if (this->autenticate.tryLogin(user.toStdString(), pass.toStdString(), authServer)) {
        ui->login_info->setText("Ingreso exitoso");
 
-       MenuWindow* menu = new MenuWindow(this);
+       MenuWindow* menu = new MenuWindow(this->authServer);
+       userDataQt login;
+       login.setData(user.toStdString(), pass.toStdString(), UR_OWNER);
        menu->setCurrentUser(login);
        menu->show();
        this->hide();

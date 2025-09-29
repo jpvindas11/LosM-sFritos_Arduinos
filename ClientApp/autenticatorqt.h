@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "userdataqt.h"
+#include "AuthenticationServer.hpp"
 
 // Esta clase creo que se podria quitar cuando ustedes
 // Agreguen el check verdadero de la contraseña
@@ -15,7 +16,7 @@ class autenticatorQt
 public:
     autenticatorQt();
 
-    userDataQt tryLogin(std::string user, std::string password);
+    bool tryLogin(std::string user, std::string password, AuthenticationServer* authServer);
 private:
     // Users test
     std::vector<userDataQt> users;

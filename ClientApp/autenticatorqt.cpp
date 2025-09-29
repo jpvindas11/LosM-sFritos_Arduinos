@@ -1,4 +1,6 @@
 #include "autenticatorqt.h"
+#include <iostream>
+#include <ostream>
 
 autenticatorQt::autenticatorQt()
 {
@@ -17,15 +19,11 @@ autenticatorQt::autenticatorQt()
 // De mentiras
 // Pueden poner dentro de esta funcion la de autenticacion que ustedes hicieron
 
-userDataQt autenticatorQt::tryLogin(std::string user, std::string password) {
-    for (size_t i = 0; i < this->users.size(); ++i) {
-        // Cambiar 'user' por 'username' para coincidir con la nueva definición
-        if (this->users[i].getUser() == user && this->users[i].getPass() == password) {
-            return this->users[i];
-        }
-    }
-    // Struct vacío para fallo - usar inicialización de lista
-    userDataQt clear;
-    return clear;
+bool autenticatorQt::tryLogin(std::string user, std::string password, AuthenticationServer* authServer) {
+    std::string loginMessage = "LOGIN " + user + " " + password;
+    authServer->setMessage(loginMessage);
+    authServer->processMessage();
+    authServer->sendMessage();
+    return authServer->status();
 }
 

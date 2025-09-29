@@ -14,7 +14,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    MainWindow(AuthenticationServer* authServer, QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
@@ -24,6 +24,7 @@ private:
     Ui::MainWindow *ui;
     userDataQt currentData;
     autenticatorQt autenticate;
+    AuthenticationServer* authServer;
 
 };
 #endif // MAINWINDOW_H

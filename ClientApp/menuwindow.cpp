@@ -2,9 +2,9 @@
 #include "mainwindow.h"
 #include "ui_menuwindow.h"
 
-MenuWindow::MenuWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MenuWindow)
+MenuWindow::MenuWindow(AuthenticationServer* authServer,QWidget *parent) :
+    QMainWindow(parent), ui(new Ui::MenuWindow),
+    authServer(authServer)
 {
     ui->setupUi(this);
 }
@@ -63,7 +63,7 @@ void MenuWindow::on_b_arduinos_clicked()
 
 void MenuWindow::on_b_cerrarSesion_clicked()
 {
-    MainWindow* login = new MainWindow(this);
+    MainWindow* login = new MainWindow(this->authServer);
     login->show();
     this->hide();
 }

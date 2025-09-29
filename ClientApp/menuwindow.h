@@ -15,7 +15,7 @@ class MenuWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MenuWindow(QWidget *parent = nullptr);
+    explicit MenuWindow(AuthenticationServer* authServer,QWidget *parent = nullptr);
     ~MenuWindow();
 
     void setCurrentUser(userDataQt user);
@@ -33,6 +33,8 @@ private:
     void setActiveMenu(QPushButton *activeBtn, const QString &labelText);
 
     void hideFuctionsForRanks(int rank);
+
+    AuthenticationServer* authServer;
 };
 
 #endif // MENUWINDOW_H
