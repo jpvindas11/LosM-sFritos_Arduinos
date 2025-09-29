@@ -60,10 +60,15 @@ int FileSystem::createFile(string filename) {
       inodo->size = 0;
       inodo->lastUsedBlock = 0;
       snprintf(inodo->path, PATH_MAX, "/");
-      // Bloques directos
-      for (int i = 0; i < TOTAL_POINTERS; ++i) {
-        inodo->directBlocks[i] = -1;
+      // Bloques directos e indirectos
+      for (int i = 0; i < TOTAL_POINTERS*TOTAL_POINTERS; ++i) {
+        if (i < TOTAL_POINTERS) {
+          inodo->directBlocks[i] = -1;
+          inodo->singleIndirect.dataPtr[i] = -1;
+        }
+        inodo->doubleIndirect.dataIndex[i] = -1;
       }
+
       inodo->directBlocks[0] = freeBlockIndex;  // Primer bloque
       // Indirección
       // Solo se usa al necesitar más bloques fuera de los directos
@@ -151,7 +156,6 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
     }
     size_t bytesToRead = min(size, static_cast<size_t>(inode->size - cursor));
     size_t bytesRead = 0;
-
       if (open(file) == EXIT_SUCCESS) {
         const size_t maxBlocks = TUnit/sizeof(dataBlock_t);
         int processedBlocks = -1;
@@ -176,7 +180,7 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
           } else {
             dataBlockNum = inode->doubleIndirect.dataIndex[processedBlocks-TOTAL_POINTERS-TOTAL_POINTERS];
           }
-          if (dataBlockNum == FREE_BLOCK) {
+          if (dataBlockNum == FREE_BLOCK || dataBlockNum == -1) {
             break;
           }
           dataBlock_t* block =  reinterpret_cast<dataBlock_t*>(&unit[dataBlockNum
@@ -219,7 +223,14 @@ int FileSystem::write(string file, int cursor
 
     if (open(file) == EXIT_SUCCESS) {
       const size_t maxBlocks = TUnit/sizeof(dataBlock_t);
-      int previousBlock = cursor/ BLOCK_SIZE;
+      int previousBlock;
+      if (inode->doubleIndirect.isUsed) {
+        previousBlock = inode->doubleIndirect.dataIndex[inode->doubleIndirect.usedIndex];
+      } else if (inode->singleIndirect.isUsed) {
+        previousBlock = inode->singleIndirect.dataPtr[inode->singleIndirect.usedDataPtr];
+      } else {
+        previousBlock = inode->directBlocks[inode->lastUsedBlock];
+      }
       while (bytesWritten < bytesToWrite) {
         int blockIndex = (cursor + bytesWritten) / BLOCK_SIZE;
         int blockOffset = (cursor + bytesWritten) % BLOCK_SIZE;

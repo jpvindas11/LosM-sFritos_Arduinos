@@ -74,8 +74,11 @@ class AuthenticationServer: public Server {
   /// @brief Registra un nuevo usuario internamente del lado del servidor
   /// @param username Nombre de usuario
   /// @param password Contraseña
+  /// @param type Tpo de usuario
+  /// @param permission Permisos de usuario
   /// @return true si el registro fue exitoso, false en caso contrario
-  bool registerUser(const std::string& username, const std::string& password);
+  bool registerUser(const std::string& username, const std::string& password,
+                                                    char type, char permission);
 
   /// @brief Obtiene el número de usuarios conectados
   /// @return Mensaje con el número de usuarios conectados
@@ -91,7 +94,7 @@ class AuthenticationServer: public Server {
                         , std::string& username, std::string& password);
 
  public:
-  explicit AuthenticationServer(FileSystem* fileSystem);
+  explicit AuthenticationServer();
   virtual ~AuthenticationServer();
 
   /// @brief Inicializa el servidor de autenticación
@@ -107,13 +110,23 @@ class AuthenticationServer: public Server {
   /// @brief Registra un nuevo usuario (función pública del servidor)
   /// @param username Nombre de usuario
   /// @param password Contraseña en texto plano
+  /// @param type Tpo de usuario
+  /// @param permission Permisos de usuario
   /// @return true si el registro fue exitoso, false en caso contrario
-  bool addUser(const std::string& username, const std::string& password);
+  bool addUser(const std::string& username, const std::string& password,
+                                                    char type, char permission);
 
   /// @brief Obtiene información del salt de un usuario (para debugging)
   /// @param username Nombre del usuario
   /// @return Salt en formato hexadecimal o string vacío si no existe
   std::string getUserSaltHex(const std::string& username);
+
+  void hexLiterals(const unsigned char* input, size_t inputLen,
+                                                char* output, size_t outputLen);  
+                                                
+  void loadUsers();
+
+  void processUsers(std::vector<std::string>& processUser, std::string& user);
 
   bool status();
 };

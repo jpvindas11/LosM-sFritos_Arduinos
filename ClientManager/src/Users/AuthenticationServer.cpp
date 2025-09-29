@@ -4,20 +4,25 @@
 
 #include "AuthenticationServer.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <cstring>
 #include <iomanip>
+#include <vector>
 
 #include "FileSystem.hpp"
 
-AuthenticationServer::AuthenticationServer(FileSystem* fileSystem)
-    : Server(), fs(fileSystem), connectedUsersCount(0), counterMutex(1) {
+AuthenticationServer::AuthenticationServer()
+    : Server(), connectedUsersCount(0), counterMutex(1) {
+    this->fs = new FileSystem();
+    fs->loadFromDisk("fileSist.bin");
 }
 
 AuthenticationServer::~AuthenticationServer() {
   // Cleanup automático por destructores
+  this->fs->saveToDisk("fileSist.bin");
   delete fs;
 }
 
@@ -28,7 +33,10 @@ int AuthenticationServer::initialize() {
     return -1;
   }
   // crea el archivo para almacenar usuarios
-  this->fs->createFile("user_data.csv");
+  if (fs->search("user_data.csv") == ERR_NO_FILE_FOUND){
+    fs->createFile("user_data.csv");
+  }
+  this->loadUsers();
   return 0;
 }
 
@@ -140,7 +148,7 @@ std::string AuthenticationServer::processLogout(const std::string& username) {
 }
 
 bool AuthenticationServer::registerUser(const std::string& username
-    , const std::string& password) {
+    , const std::string& password, char type, char permission) {
   std::lock_guard<std::mutex> lock(usersMutex);
   // Verificar si el usuario ya existe
   if (users.find(username) != users.end()) {
@@ -172,24 +180,32 @@ bool AuthenticationServer::registerUser(const std::string& username
   }
   // Crea un nuevo usuario para agregar al file system
   user_t user;
-  user.isUsed = 1;
+  user.isUsed = '1';
   memset(user.name, FILLER, sizeof(user.name));
-  strncpy(user.name, username.c_str(), sizeof(user.name) - 1);
-  memcpy(user.hash, hash, sizeof(user.hash));
-  memcpy(user.salt, salt, sizeof(user.salt));
-  user.type = 0; // Por definir...
-  user.permissions = 0; // Por definir...
+  memcpy(user.name, username.c_str(), username.length());
+  hexLiterals(hash, sizeof(hash),user.hash, sizeof(user.hash));
+  hexLiterals(salt, sizeof(salt),user.salt, sizeof(user.salt));
+  user.type = type;
+  user.permissions = permission;
   time_t now = time(nullptr);
   struct tm* tm_info = localtime(&now);
-  user.day = tm_info->tm_mday;
-  user.month = tm_info->tm_mon + 1;
-  user.year = tm_info->tm_year + 1900;
-  user.hour = tm_info->tm_hour;
-  user.minute = tm_info->tm_min;
-  user.separator = SEPARATOR;
+
+  char buf[5];
+
+  sprintf(buf, "%02d", tm_info->tm_mday);
+  memcpy(user.day, buf, 2);
+
+  sprintf(buf, "%02d", tm_info->tm_mon + 1);
+  memcpy(user.month, buf, 2);
+
+  sprintf(buf, "%02d", tm_info->tm_hour);
+  memcpy(user.hour, buf, 2);
+
+  sprintf(buf, "%02d", tm_info->tm_min);
+  memcpy(user.minute, buf, 2);
+  user.separator = '/';
   
   this->fs->append("user_data.csv", 0, sizeof(user_t), reinterpret_cast<const char*>(&user));
-  
   // Crear nuevo usuario
   AuthUser newUser;
   newUser.username = username;
@@ -243,8 +259,8 @@ void AuthenticationServer::sendMessage() {
 }
 
 bool AuthenticationServer::addUser(const std::string& username
-    , const std::string& password) {
-  return registerUser(username, password);
+    , const std::string& password, char type, char permission) {
+  return registerUser(username, password, type, permission);
 }
 
 std::string AuthenticationServer::getUserSaltHex(const std::string& username) {
@@ -271,4 +287,65 @@ bool AuthenticationServer::status() {
       return true;
   }
   return false;
+}
+
+void AuthenticationServer:: hexLiterals(const unsigned char* input, size_t inputLen,
+                        char* output, size_t outputLen) {
+    for (size_t i = 0; i < inputLen; i++) {
+        sprintf(output + (i * 2), "%02x", input[i]);
+    }
+}
+
+void AuthenticationServer::loadUsers() {
+  int initialBlock = 0;
+  std::vector<std::string>Users;
+  //while(true) {
+    char readBuffer[256];
+    if (this->fs->read("user_data.csv", /*initialBlock*256*/0, 256, readBuffer)!= ERR_OUT_OF_RANGE) {
+      if (readBuffer[0] == '1') {
+          std::string firstUser(readBuffer, 128);
+          this->processUsers(Users, firstUser);
+          AuthUser authFirst;
+          authFirst.username = Users[0];
+          authFirst.passwordHash = Users[1];
+          authFirst.salt = Users[2];
+          this->users[Users[0]] = authFirst;
+          Users.clear();
+      }
+      if (readBuffer[128] == '1'){
+          std::string secondUser(readBuffer + 128, 128);
+          this->processUsers(Users, secondUser);
+          AuthUser authsecond;
+          authsecond.username = Users[0];
+          authsecond.passwordHash = Users[1];
+          authsecond.salt = Users[2];
+          this->users[Users[0]] = authsecond;
+      }
+      initialBlock++;
+    } //else {
+    //  break;
+    //}
+  //}
+}
+
+void AuthenticationServer::processUsers(std::vector<std::string>& processUser, std::string& user) {
+  std::string username = user.substr(1,20);
+  username.erase(std::remove(username.begin(), username.end(), '*'), username.end());
+  processUser.push_back(username);
+  std::string hash = user.substr(21,64);
+  processUser.push_back(hash);
+  std::string salt = user.substr(85,32);
+  processUser.push_back(salt);
+  std::string type = user.substr(117,1);
+  processUser.push_back(type);
+  std::string typePermissions = user.substr(118,1);
+  processUser.push_back(typePermissions);
+  std::string day = user.substr(119,2);
+  processUser.push_back(day);
+  std::string month = user.substr(121,2);
+  processUser.push_back(month);
+  std::string hour = user.substr(123,2);
+  processUser.push_back(hour);
+  std::string minutes = user.substr(125,2);
+  processUser.push_back(minutes);
 }

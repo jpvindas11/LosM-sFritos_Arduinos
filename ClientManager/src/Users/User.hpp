@@ -13,18 +13,17 @@
 
 /// Estructura de usuario
 typedef struct User {
-  uint8_t isUsed;       // 1 byte
+  char isUsed;       // 1 byte
   char name[20];        // 20 bytes
-  char hash[32];        // 32 bytes
-  char salt[16];        // 16 bytes
-  uint8_t type;         // 1 byte
-  uint8_t permissions;  // 1 byte
-  uint16_t day;         // 2 bytes
-  uint16_t month;       // 2 bytes
-  uint32_t year;        // 4 bytes
-  uint16_t hour;        // 2 bytes
-  uint16_t minute;      // 2 bytes
+  char hash[64];        // 64 bytes
+  char salt[32];        // 32 bytes
+  char type;         // 1 byte
+  char permissions;  // 1 byte
+  char day [2];         // 2 bytes
+  char month [2];       // 2 bytes
+  char hour [2];        // 2 bytes
+  char minute [2];      // 2 bytes
   char separator;       // 1 byte
-} user_t;               // 84 bytes total
+} user_t;               // 128 bytes total
 
 #endif  // USER_STRUCT_2025B
