@@ -4,20 +4,25 @@
 
 #include "AuthenticationServer.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <cstring>
 #include <iomanip>
+#include <vector>
 
 #include "FileSystem.hpp"
 
-AuthenticationServer::AuthenticationServer(FileSystem* fileSystem)
-    : Server(), fs(fileSystem), connectedUsersCount(0), counterMutex(1) {
+AuthenticationServer::AuthenticationServer()
+    : Server(), connectedUsersCount(0), counterMutex(1) {
+    this->fs = new FileSystem();
+    fs->loadFromDisk("fileSist.bin");
 }
 
 AuthenticationServer::~AuthenticationServer() {
   // Cleanup automático por destructores
+  this->fs->saveToDisk("fileSist.bin");
   delete fs;
 }
 
@@ -28,7 +33,10 @@ int AuthenticationServer::initialize() {
     return -1;
   }
   // crea el archivo para almacenar usuarios
-  this->fs->createFile("user_data.csv");
+  if (fs->search("user_data.csv") == ERR_NO_FILE_FOUND){
+    fs->createFile("user_data.csv");
+  }
+  this->loadUsers();
   return 0;
 }
 
@@ -140,7 +148,7 @@ std::string AuthenticationServer::processLogout(const std::string& username) {
 }
 
 bool AuthenticationServer::registerUser(const std::string& username
-    , const std::string& password) {
+    , const std::string& password, char type, char permission) {
   std::lock_guard<std::mutex> lock(usersMutex);
   // Verificar si el usuario ya existe
   if (users.find(username) != users.end()) {
@@ -172,24 +180,32 @@ bool AuthenticationServer::registerUser(const std::string& username
   }
   // Crea un nuevo usuario para agregar al file system
   user_t user;
-  user.isUsed = 1;
+  user.isUsed = '1';
   memset(user.name, FILLER, sizeof(user.name));
-  strncpy(user.name, username.c_str(), sizeof(user.name) - 1);
-  memcpy(user.hash, hash, sizeof(user.hash));
-  memcpy(user.salt, salt, sizeof(user.salt));
-  user.type = 0; // Por definir...
-  user.permissions = 0; // Por definir...
+  memcpy(user.name, username.c_str(), username.length());
+  hexLiterals(hash, sizeof(hash),user.hash, sizeof(user.hash));
+  hexLiterals(salt, sizeof(salt),user.salt, sizeof(user.salt));
+  user.type = type;
+  user.permissions = permission;
   time_t now = time(nullptr);
   struct tm* tm_info = localtime(&now);
-  user.day = tm_info->tm_mday;
-  user.month = tm_info->tm_mon + 1;
-  user.year = tm_info->tm_year + 1900;
-  user.hour = tm_info->tm_hour;
-  user.minute = tm_info->tm_min;
-  user.separator = SEPARATOR;
+
+  char buf[5];
+
+  sprintf(buf, "%02d", tm_info->tm_mday);
+  memcpy(user.day, buf, 2);
+
+  sprintf(buf, "%02d", tm_info->tm_mon + 1);
+  memcpy(user.month, buf, 2);
+
+  sprintf(buf, "%02d", tm_info->tm_hour);
+  memcpy(user.hour, buf, 2);
+
+  sprintf(buf, "%02d", tm_info->tm_min);
+  memcpy(user.minute, buf, 2);
+  user.separator = '/';
   
   this->fs->append("user_data.csv", 0, sizeof(user_t), reinterpret_cast<const char*>(&user));
-  
   // Crear nuevo usuario
   AuthUser newUser;
   newUser.username = username;
@@ -243,8 +259,8 @@ void AuthenticationServer::sendMessage() {
 }
 
 bool AuthenticationServer::addUser(const std::string& username
-    , const std::string& password) {
-  return registerUser(username, password);
+    , const std::string& password, char type, char permission) {
+  return registerUser(username, password, type, permission);
 }
 
 std::string AuthenticationServer::getUserSaltHex(const std::string& username) {
