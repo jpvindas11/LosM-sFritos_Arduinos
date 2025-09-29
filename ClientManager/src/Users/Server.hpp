@@ -48,7 +48,6 @@ class Server : public virtual Thread {
 
   virtual void processMessage() = 0;
   virtual void sendMessage() = 0;
-
 };
 
 #endif  // SERVER_HPP

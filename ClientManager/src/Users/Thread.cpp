@@ -22,7 +22,7 @@ int Thread::waitToFinish() {
   if (this->thread && this->thread->joinable()) {
     this->thread->join();
   }
-  
+
   delete this->thread;
   this->thread = nullptr;
 

@@ -171,19 +171,16 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
           }
           if (processedBlocks < TOTAL_POINTERS) {
             dataBlockNum = inode->directBlocks[processedBlocks];
-          } else if (processedBlocks < (TOTAL_POINTERS
-              + TOTAL_POINTERS)) {
-            dataBlockNum = inode->singleIndirect.dataPtr[processedBlocks
-                - TOTAL_POINTERS];
+          } else if (processedBlocks < (TOTAL_POINTERS + TOTAL_POINTERS)) {
+            dataBlockNum = inode->singleIndirect.dataPtr[processedBlocks-TOTAL_POINTERS];
           } else {
-            dataBlockNum = inode->doubleIndirect.dataIndex[processedBlocks
-                - TOTAL_POINTERS - TOTAL_POINTERS];
+            dataBlockNum = inode->doubleIndirect.dataIndex[processedBlocks-TOTAL_POINTERS-TOTAL_POINTERS];
           }
           if (dataBlockNum == FREE_BLOCK) {
             break;
           }
-          dataBlock_t* block =  reinterpret_cast<dataBlock_t*>
-              (&unit[dataBlockNum * sizeof(dataBlock_t)]);
+          dataBlock_t* block =  reinterpret_cast<dataBlock_t*>(&unit[dataBlockNum
+              * sizeof(dataBlock_t)]);
           size_t canRead = min(bytesToRead - bytesRead
               , static_cast<size_t>(BLOCK_SIZE - blockOffset));
           memcpy(buffer + bytesRead, block->data + blockOffset, canRead);
@@ -195,10 +192,10 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
           buffer[size - 1] = '\0';
         }
         /*
-        cout << "Datos leídos: "
+        cout << "Datos leídos: " 
              << buffer
              << endl;
-        */
+         */
       }
       close(file);
       return bytesRead;
@@ -265,8 +262,7 @@ int FileSystem::write(string file, int cursor
                   inode->singleIndirect.dataPtr[i] = -1;
                 }
                 inode->singleIndirect.dataPtr[0] = searchFreeBlock();
-                this->fat[inode->singleIndirect.dataPtr[0]]
-                    = ERR_OCCUPIED_BLOCK;
+                this->fat[inode->singleIndirect.dataPtr[0]] = ERR_OCCUPIED_BLOCK;
                 previousBlock = blockIndex;
             }
             dataBlockNum = inode->singleIndirect.dataPtr[
@@ -275,8 +271,8 @@ int FileSystem::write(string file, int cursor
            if (blockIndex != previousBlock && inode->doubleIndirect.isUsed) {
               previousBlock = blockIndex;
               inode->doubleIndirect.usedIndex++;
-              if (inode->doubleIndirect.usedIndex <
-                  TOTAL_POINTERS*TOTAL_POINTERS) {
+              if (inode->doubleIndirect.usedIndex < 
+                                                TOTAL_POINTERS*TOTAL_POINTERS) {
                 inode->doubleIndirect.dataIndex[
                     inode->doubleIndirect.usedIndex]= searchFreeBlock();
                 this->fat[inode->doubleIndirect.dataIndex[
@@ -292,8 +288,7 @@ int FileSystem::write(string file, int cursor
                   inode->doubleIndirect.dataIndex[i] = -1;
                 }
                 inode->doubleIndirect.dataIndex[0] = searchFreeBlock();
-                this->fat[inode->doubleIndirect.dataIndex[0]]
-                    = ERR_OCCUPIED_BLOCK;
+                this->fat[inode->doubleIndirect.dataIndex[0]] = ERR_OCCUPIED_BLOCK;
                 previousBlock = blockIndex;
             }
             dataBlockNum = inode->doubleIndirect.dataIndex[
@@ -321,6 +316,7 @@ int FileSystem::write(string file, int cursor
          << endl;
     return err.code();
   }
+  
 }
 
 int FileSystem::append(string filename, int cursor, size_t size, const char* buffer) {

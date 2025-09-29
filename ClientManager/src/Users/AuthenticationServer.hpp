@@ -114,7 +114,6 @@ class AuthenticationServer: public Server {
   std::string getUserSaltHex(const std::string& username);
 
   bool status();
-
 };
 
 #endif

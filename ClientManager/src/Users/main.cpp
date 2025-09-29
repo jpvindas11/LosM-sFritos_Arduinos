@@ -15,7 +15,7 @@ int main() {
 
     //Registrar usuario de prueba y agregar al fileSystem
     std::string user = "admin";
-    char buffer[100];
+    char buffer[500];
     
     authServer->addUser(user, "admin123");
     std::string getSalt = authServer->getUserSaltHex(user);
