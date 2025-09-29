@@ -20,13 +20,11 @@ void MainWindow::on_pushButton_clicked()
 {
     QString user = ui->lineEdit_user->text();
     QString pass = ui->lineEdit_pass->text();
-    FileSystem* fs = new FileSystem();
-    AuthenticationServer* authServer = new AuthenticationServer(fs);
     authServer->initialize();
     std::string userAU = "admin";
     std::string passAU = "admin123";
 
-    authServer->addUser(userAU, passAU);
+    this->authServer->addUser(userAU, passAU);
 
     if (this->autenticate.tryLogin(user.toStdString(), pass.toStdString(), authServer)) {
        ui->login_info->setText("Ingreso exitoso");
