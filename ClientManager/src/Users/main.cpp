@@ -15,7 +15,7 @@ int main() {
 
     //Registrar usuario de prueba y agregar al fileSystem
     std::string user = "admin";
-    char buffer[500];
+    char buffer[512];
     
     authServer->addUser(user, "admin123");
     std::string getSalt = authServer->getUserSaltHex(user);
@@ -23,16 +23,27 @@ int main() {
     
     std::string user1 = "user1";
     authServer->addUser("user1", "password1");
-    std::string getSalt1 = authServer->getUserSaltHex(user);
+    std::string getSalt1 = authServer->getUserSaltHex(user1);
     filesystem->append("user_data.csv", 0, user1.size()+getSalt1.size(), (user1 + "," + getSalt1 + ",").c_str());
     
     std::string user2 = "user2";
     authServer->addUser("user2", "password2");
-    std::string getSalt2 = authServer->getUserSaltHex(user);
+    std::string getSalt2 = authServer->getUserSaltHex(user2);
     filesystem->append("user_data.csv", 0, user2.size()+getSalt2.size(), (user2 + "," + getSalt2 + ",").c_str());
     
-    filesystem->read("user_data.csv", 0, 100, buffer); // Leer para verificar escritura
+    filesystem->read("user_data.csv", 0, 512, buffer); // Leer para verificar escritura
     std::cout << "Contenido de user_data.csv: " << buffer << std::endl;
+
+    std::string user3 = "user3";
+    authServer->addUser("user3", "password3");
+    std::string getSalt3 = authServer->getUserSaltHex(user3);
+    filesystem->append("user_data.csv", 0, user3.size()+getSalt3.size(), (user3 + "," + getSalt3 + ",").c_str());
+
+    filesystem->read("user_data.csv", 0, 512, buffer); // Leer para verificar escritura
+    std::cout << "Contenido de user_data.csv: " << buffer << std::endl;
+
+    
+
     // Login de prueba
     std::string loginUser = "admin";
     std::string loginPass = "admin123";

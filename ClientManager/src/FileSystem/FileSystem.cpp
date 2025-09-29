@@ -340,7 +340,7 @@ int FileSystem::getFileSize(const std::string& filename) {
     iNode_t* inode = &this->inodes[this->dir->files[fileIndex].iNodeIndex];
     return static_cast<int>(inode->size);
   } catch (const FileSysError& err) {
-    cerr << "Error al obtener tamaño de archivo: "
+    cerr << "Error al obtener tamaño del archivo: "
          << err.what()
          << endl;
     return err.code();
