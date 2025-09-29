@@ -12,6 +12,7 @@
 #include "FileSystem.hpp"
 #include "Server.hpp"
 #include "Semaphore.hpp"
+#include "User.hpp"
 
 /// @brief Estructura para datos de usuario almacenados en memoria
 struct AuthUser {
@@ -25,6 +26,7 @@ class AuthenticationServer: public Server {
   DISABLE_COPY(AuthenticationServer);
 
  private:
+  /// File system para guardar usuarios
   FileSystem* fs;
   /// Contador de usuarios conectados
   int connectedUsersCount;

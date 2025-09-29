@@ -27,6 +27,8 @@ int AuthenticationServer::initialize() {
     std::cerr << "Error: No se pudo inicializar libsodium" << std::endl;
     return -1;
   }
+  // crea el archivo para almacenar usuarios
+  this->fs->createFile("user_data.csv");
   return 0;
 }
 
@@ -39,9 +41,9 @@ bool AuthenticationServer::hashPassword(const std::string& password
     , unsigned char* hash) {
   // Usar Argon2id con salt personalizado
   if (crypto_pwhash(hash, 32, password.c_str(), password.length(), salt
-  , crypto_pwhash_OPSLIMIT_INTERACTIVE
-  , crypto_pwhash_MEMLIMIT_INTERACTIVE
-  , crypto_pwhash_ALG_DEFAULT) != 0) {
+      , crypto_pwhash_OPSLIMIT_INTERACTIVE
+      , crypto_pwhash_MEMLIMIT_INTERACTIVE
+      , crypto_pwhash_ALG_DEFAULT) != 0) {
     return false;
   }
   return true;
@@ -50,22 +52,22 @@ bool AuthenticationServer::hashPassword(const std::string& password
 bool AuthenticationServer::verifyPassword(const std::string& password
     , const std::string& storedHash
     , const std::string& storedSalt) {
-    // Convertir salt de string a bytes
-    unsigned char salt[crypto_pwhash_SALTBYTES];
-    if (storedSalt.length() != crypto_pwhash_SALTBYTES) {
-        return false;
-    }
-    memcpy(salt, storedSalt.c_str(), crypto_pwhash_SALTBYTES);
-    // Generar hash con la contraseña ingresada y el salt almacenado
-    unsigned char hash[32];
-    if (!hashPassword(password, salt, hash)) {
+  // Convertir salt de string a bytes
+  unsigned char salt[crypto_pwhash_SALTBYTES];
+  if (storedSalt.length() != crypto_pwhash_SALTBYTES) {
       return false;
-    }
-    // Comparar hashes
-    if (storedHash.length() != 32) {
-      return false;
-    }
-    return sodium_memcmp(hash, storedHash.c_str(), 32) == 0;
+  }
+  memcpy(salt, storedSalt.c_str(), crypto_pwhash_SALTBYTES);
+  // Generar hash con la contraseña ingresada y el salt almacenado
+  unsigned char hash[32];
+  if (!hashPassword(password, salt, hash)) {
+    return false;
+  }
+  // Comparar hashes
+  if (storedHash.length() != 32) {
+    return false;
+  }
+  return sodium_memcmp(hash, storedHash.c_str(), 32) == 0;
 }
 
 bool AuthenticationServer::parseMessage(const std::string& message
@@ -168,6 +170,26 @@ bool AuthenticationServer::registerUser(const std::string& username
               << std::endl;
     return false;
   }
+  // Crea un nuevo usuario para agregar al file system
+  user_t user;
+  user.isUsed = 1;
+  memset(user.name, FILLER, sizeof(user.name));
+  strncpy(user.name, username.c_str(), sizeof(user.name) - 1);
+  memcpy(user.hash, hash, sizeof(user.hash));
+  memcpy(user.salt, salt, sizeof(user.salt));
+  user.type = 0; // Por definir...
+  user.permissions = 0; // Por definir...
+  time_t now = time(nullptr);
+  struct tm* tm_info = localtime(&now);
+  user.day = tm_info->tm_mday;
+  user.month = tm_info->tm_mon + 1;
+  user.year = tm_info->tm_year + 1900;
+  user.hour = tm_info->tm_hour;
+  user.minute = tm_info->tm_min;
+  user.separator = SEPARATOR;
+  
+  this->fs->append("user_data.csv", 0, sizeof(user_t), reinterpret_cast<const char*>(&user));
+  
   // Crear nuevo usuario
   AuthUser newUser;
   newUser.username = username;

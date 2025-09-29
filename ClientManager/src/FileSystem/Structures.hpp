@@ -1,7 +1,9 @@
 /// @copyright Los Más Fritos - 2025
 
-#include <limits.h>
+#ifndef FILESYS_STRUCTS
+#define FILESYS_STRUCTS
 
+#include <limits.h>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -120,3 +122,5 @@ typedef struct diskLayout {
     iNode_t inodes[TOTAL_I_NODES];
     char data[DISK_SIZE];
 } diskLayout_t;
+
+#endif  // FILESYS_STRUCTS
