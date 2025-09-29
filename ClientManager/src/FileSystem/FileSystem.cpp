@@ -321,7 +321,7 @@ int FileSystem::write(string file, int cursor
   }
 }
 
-int FileSystem::append(string filename, int cursor, size_t size, char* buffer) {
+int FileSystem::append(string filename, int cursor, size_t size, const char* buffer) {
   // crea un buffer para leer los datos ya escritos
   size_t oldSize = getFileSize(filename);
   char* oldData = new char[oldSize + 1]();

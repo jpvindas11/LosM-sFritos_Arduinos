@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-int main() {
+int no_main() {
   // Crear e inicializar el servidor de autenticación
   FileSystem* filesystem = new FileSystem();
   filesystem->createFile("test.txt");

@@ -244,6 +244,9 @@ std::string AuthenticationServer::getUserSaltHex(const std::string& username) {
   return ss.str();
 }
 
-int AuthenticationServer::run() {
-  return 0;
+bool AuthenticationServer::status() {
+  if(message == "SUCCESS") {
+      return true;
+  }
+  return false;
 }
