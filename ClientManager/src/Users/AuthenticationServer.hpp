@@ -122,7 +122,10 @@ class AuthenticationServer: public Server {
   std::string getUserSaltHex(const std::string& username);
 
   void hexLiterals(const unsigned char* input, size_t inputLen,
-                                                char* output, size_t outputLen);  
+                                                char* output, size_t outputLen);
+                                                
+  void hexToBytes(const std::string& hexString, unsigned char* output, 
+                  size_t outputLen);
                                                  
   void loadUsers();
 
@@ -131,6 +134,8 @@ class AuthenticationServer: public Server {
   bool status();
 
   std::unordered_map<std::string, AuthUser>* getUserMap();
+
+  void saveUsers();
   
 };
 
