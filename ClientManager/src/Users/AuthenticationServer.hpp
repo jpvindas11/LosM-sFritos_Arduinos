@@ -115,6 +115,10 @@ class AuthenticationServer: public Server {
   /// @return Salt en formato hexadecimal o string vacío si no existe
   std::string getUserSaltHex(const std::string& username);
 
+  /// @brief Obtiene una referencia a la lista de usuarios en el servidor
+  /// @return El mapa de usuarios en el servidor
+  std::unordered_map<std::string, AuthUser>* getUserMap();
+
   bool status();
 };
 

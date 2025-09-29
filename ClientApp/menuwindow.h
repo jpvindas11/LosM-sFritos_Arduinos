@@ -2,6 +2,7 @@
 #define MENUWINDOW_H
 
 #include "autenticatorqt.h"
+#include "usermenumanager.h"
 #include <QMainWindow>
 #include <QPushButton>
 #include <QString>
@@ -27,6 +28,12 @@ private slots:
 
     void on_b_cerrarSesion_clicked();
 
+    void on_user_list_itemClicked(QListWidgetItem *item);
+
+    void on_user_add_clicked();
+
+    void on_user_delete_clicked();
+
 private:
     Ui::MenuWindow *ui;
     userDataQt currentUser;
@@ -34,7 +41,11 @@ private:
 
     void hideFuctionsForRanks(int rank);
 
+    void hideMenuWidgets();
+
     AuthenticationServer* authServer;
+
+    userMenuManager userMenu;
 };
 
 #endif // MENUWINDOW_H

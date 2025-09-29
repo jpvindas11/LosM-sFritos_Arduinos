@@ -9,6 +9,15 @@ MainWindow::MainWindow(AuthenticationServer* authServer, QWidget *parent)
     , authServer(authServer)
 {
     ui->setupUi(this);
+
+    authServer->initialize();
+
+    for (int i = 0; i < 3; ++i) {
+        std::string userAU = "admin" + std::to_string(i);
+        std::string passAU = "admin123";
+
+        this->authServer->addUser(userAU, passAU);
+    }
 }
 
 MainWindow::~MainWindow()
@@ -20,11 +29,6 @@ void MainWindow::on_pushButton_clicked()
 {
     QString user = ui->lineEdit_user->text();
     QString pass = ui->lineEdit_pass->text();
-    authServer->initialize();
-    std::string userAU = "admin";
-    std::string passAU = "admin123";
-
-    this->authServer->addUser(userAU, passAU);
 
     if (this->autenticate.tryLogin(user.toStdString(), pass.toStdString(), authServer)) {
        ui->login_info->setText("Ingreso exitoso");

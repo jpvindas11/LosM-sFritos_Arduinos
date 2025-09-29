@@ -272,3 +272,7 @@ bool AuthenticationServer::status() {
   }
   return false;
 }
+
+std::unordered_map<std::string, AuthUser>* AuthenticationServer::getUserMap() {
+    return &this->users;
+}

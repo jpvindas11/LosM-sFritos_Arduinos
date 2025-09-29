@@ -8,29 +8,36 @@ CONFIG += c++17
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
+INCLUDEPATH += ../ClientManager/src/Users \
+               ../ClientManager/src/FileSystem
+
 SOURCES += \
     autenticatorqt.cpp \
+    newuserdialog.cpp \
     userdataqt.cpp \
     main.cpp \
     mainwindow.cpp \
     menuwindow.cpp \
-    ../ClientManager/src/FileSystem/FileSystem.cpp \
-    ../ClientManager/src/Users/AuthenticationServer.cpp \
     ../ClientManager/src/Users/Semaphore.cpp \
     ../ClientManager/src/Users/Thread.cpp \
-
-
-
+    ../ClientManager/src/Users/AuthenticationServer.cpp \
+    ../ClientManager/src/FileSystem/FileSystem.cpp \
+    usermenumanager.cpp
 
 HEADERS += \
     autenticatorqt.h \
     mainwindow.h \
     menuwindow.h \
-    userdataqt.h
+    newuserdialog.h \
+    userdataqt.h \
+    ../ClientManager/src/Users/AuthenticationServer.hpp \
+    ../ClientManager/src/FileSystem/FileSystem.hpp \
+    usermenumanager.h
 
 FORMS += \
     mainwindow.ui \
-    menuwindow.ui
+    menuwindow.ui \
+    newuserdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

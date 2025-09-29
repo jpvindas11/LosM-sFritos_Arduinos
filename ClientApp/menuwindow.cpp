@@ -1,12 +1,16 @@
 #include "menuwindow.h"
 #include "mainwindow.h"
 #include "ui_menuwindow.h"
+#include "newuserdialog.h"
+#include <QListWidgetItem>
 
 MenuWindow::MenuWindow(AuthenticationServer* authServer,QWidget *parent) :
     QMainWindow(parent), ui(new Ui::MenuWindow),
     authServer(authServer)
 {
     ui->setupUi(this);
+
+    this->userMenu.setPointers(this->ui->user_list, authServer->getUserMap(), &this->currentUser);
 }
 
 MenuWindow::~MenuWindow()
@@ -23,6 +27,7 @@ void MenuWindow::setCurrentUser(userDataQt user) {
     ui->main_label->setText("Bienvenido, " + username);
 
     this->hideFuctionsForRanks(user.getRank());
+    this->hideMenuWidgets();
 }
 
 void MenuWindow::hideFuctionsForRanks(int rank) {
@@ -41,6 +46,8 @@ void MenuWindow::hideFuctionsForRanks(int rank) {
 
 void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText)
 {
+    this->hideMenuWidgets();
+
     ui->main_label->setText(labelText);
 
     ui->b_usuarios->setEnabled(true);
@@ -52,12 +59,24 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText)
 void MenuWindow::on_b_usuarios_clicked()
 {
     setActiveMenu(ui->b_usuarios, "Usuarios");
+
+    // Scroll list
+    this->ui->user_list->move(280,30);
+
+    // Add button
+    this->ui->user_add->move(170, 30);
+
+    // Delete button
+    this->ui->user_delete->move(170, 70);
+
+    this->userMenu.updateUserList();
 }
 
 
 void MenuWindow::on_b_arduinos_clicked()
 {
     setActiveMenu(ui->b_arduinos, "Arduinos");
+
 }
 
 
@@ -70,4 +89,37 @@ void MenuWindow::on_b_cerrarSesion_clicked()
     MainWindow* login = new MainWindow(this->authServer);
     login->show();
     this->hide();
+}
+
+void MenuWindow::on_user_list_itemClicked(QListWidgetItem *item)
+{
+    this->userMenu.setSelectedUser(item);
+}
+
+
+void MenuWindow::on_user_add_clicked()
+{
+    newUserDialog dialog(this);
+
+    dialog.show();
+
+    if (dialog.exec() == QDialog::Accepted) {
+        std::string user = dialog.getUsername().toStdString();
+        std::string pass = dialog.getPassword().toStdString();
+
+        this->authServer->addUser(user, pass);
+    }
+}
+
+
+void MenuWindow::on_user_delete_clicked()
+{
+
+}
+
+void MenuWindow::hideMenuWidgets() {
+    // Reset widgets
+    this->ui->user_list->move(-500,-100);
+    this->ui->user_add->move(-500,-100);
+    this->ui->user_delete->move(-500,-100);
 }
