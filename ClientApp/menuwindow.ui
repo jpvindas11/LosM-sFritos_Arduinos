@@ -7,24 +7,76 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>600</height>
+    <height>580</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLabel" name="label">
+   <widget class="QLabel" name="main_label">
     <property name="geometry">
      <rect>
-      <x>210</x>
-      <y>130</y>
+      <x>370</x>
+      <y>0</y>
       <width>181</width>
       <height>18</height>
      </rect>
     </property>
     <property name="text">
-     <string>Menu principal abierto</string>
+     <string>Menú Principal</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>141</width>
+      <height>551</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Opciones</string>
+    </property>
+    <widget class="QPushButton" name="b_usuarios">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>20</y>
+       <width>141</width>
+       <height>26</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Usuarios</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="b_arduinos">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>50</y>
+       <width>141</width>
+       <height>26</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Arduinos</string>
+     </property>
+    </widget>
+   </widget>
+   <widget class="QPushButton" name="b_cerrarSesion">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>520</y>
+      <width>141</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Cerrar Sesión</string>
     </property>
    </widget>
   </widget>

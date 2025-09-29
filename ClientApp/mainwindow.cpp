@@ -28,9 +28,7 @@ void MainWindow::on_pushButton_clicked()
 
     authServer->addUser(userAU, passAU);
 
-    // Password test
-    // User: carlitos22
-    // Pass: qwerty
+    userDataQt login = this->autenticate.tryLogin(user, pass);
 
     std::string loginMessage = "LOGIN " + user.toStdString() + " " + pass.toStdString();
     authServer->setMessage(loginMessage);
@@ -41,6 +39,7 @@ void MainWindow::on_pushButton_clicked()
        ui->login_info->setText("Ingreso exitoso");
 
        MenuWindow* menu = new MenuWindow(this);
+       menu->setCurrentUser(login);
        menu->show();
        this->hide();
 
