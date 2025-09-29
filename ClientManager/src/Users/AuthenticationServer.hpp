@@ -128,6 +128,13 @@ class AuthenticationServer: public Server {
 
   void processUsers(std::vector<std::string>& processUser, std::string& user);
 
+  void hexLiterals(const unsigned char* input, size_t inputLen,
+                                                char* output, size_t outputLen);  
+                                                
+  void loadUsers();
+
+  void processUsers(std::vector<std::string>& processUser, std::string& user);
+
   bool status();
 
   std::unordered_map<std::string, AuthUser>* AuthenticationServer::getUserMap();
