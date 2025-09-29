@@ -5,13 +5,16 @@
 
 int main() {
   // Crear e inicializar el servidor de autenticación
-  FileSystem* filesystem = new FileSystem();
+  //FileSystem* filesystem = new FileSystem();
   // filesystem->createFile("user_data.csv");
-  AuthenticationServer* authServer = new AuthenticationServer(filesystem);
+  AuthenticationServer* authServer = new AuthenticationServer();
   if (authServer->initialize() != 0) {
       std::cerr << "Error al inicializar el servidor de autenticación" << std::endl;
       return -1;
   }
+  delete authServer;
+
+  /*
   
   //Registrar usuario de prueba y agregar al fileSystem
   std::string user = "admin";
@@ -19,6 +22,7 @@ int main() {
 
   authServer->addUser(user, "admin123");
   std::string getSalt = authServer->getUserSaltHex(user);
+  */
 
   /*
   filesystem->write("user_data.csv", 0, user.size()+getSalt.size(), (user + "," + getSalt + ",").c_str());
@@ -42,6 +46,8 @@ int main() {
   filesystem->append("user_data.csv", 0, user3.size()+getSalt3.size(), (user3 + "," + getSalt3 + ",").c_str());
   */
 
+  /*
+
   filesystem->read("user_data.csv", 0, 512, buffer); // Leer para verificar escritura
   std::cout << "Contenido de user_data.csv: " << buffer << std::endl;
 
@@ -52,6 +58,6 @@ int main() {
   authServer->setMessage(loginMessage);
   authServer->processMessage();
   authServer->sendMessage();
-
+*/
   return 0;
 }
