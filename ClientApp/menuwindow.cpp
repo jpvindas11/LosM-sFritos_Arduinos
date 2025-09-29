@@ -63,6 +63,10 @@ void MenuWindow::on_b_arduinos_clicked()
 
 void MenuWindow::on_b_cerrarSesion_clicked()
 {
+    std::string logoutMessage = "LOGOUT " + currentUser.getUser();
+    authServer->setMessage(logoutMessage);
+    authServer->processMessage();
+    authServer->sendMessage();
     MainWindow* login = new MainWindow(this->authServer);
     login->show();
     this->hide();
