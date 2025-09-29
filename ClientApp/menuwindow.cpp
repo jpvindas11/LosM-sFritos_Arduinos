@@ -107,7 +107,7 @@ void MenuWindow::on_user_add_clicked()
         std::string user = dialog.getUsername().toStdString();
         std::string pass = dialog.getPassword().toStdString();
 
-        this->authServer->addUser(user, pass);
+        this->authServer->addUser(user, pass, '1', '1');
     }
 }
 

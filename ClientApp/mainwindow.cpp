@@ -16,7 +16,7 @@ MainWindow::MainWindow(AuthenticationServer* authServer, QWidget *parent)
         std::string userAU = "admin" + std::to_string(i);
         std::string passAU = "admin123";
 
-        this->authServer->addUser(userAU, passAU);
+        this->authServer->addUser(userAU, passAU, '1', '1');
     }
 }
 

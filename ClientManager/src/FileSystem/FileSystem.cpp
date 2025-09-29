@@ -141,8 +141,6 @@ int FileSystem::search(string filename) {
       return i;
     }
   }
-  throw FileSysError(ERR_NO_FILE_FOUND
-      , "No se encontró el archivo llamado " + filename);
   return ERR_NO_FILE_FOUND;
 }
 
