@@ -207,7 +207,9 @@ bool AuthenticationServer::registerUser(const std::string& username
   memcpy(user.minute, buf, 2);
   user.separator = '/';
   
-  //this->fs->append("user_data.csv", 0, sizeof(user_t), reinterpret_cast<const char*>(&user));
+  // Obtener el tamaño actual del archivo para hacer append manual
+  int currentSize = this->fs->getFileSize("user_data.csv");
+  this->fs->write("user_data.csv", currentSize, sizeof(user_t), reinterpret_cast<const char*>(&user));
   // Crear nuevo usuario
   AuthUser newUser;
   newUser.username = username;
@@ -381,4 +383,8 @@ void AuthenticationServer::processUsers(std::vector<std::string>& processUser, s
 
 void AuthenticationServer::printUsers() {
   this->fs->printUnidad();
+}
+
+void AuthenticationServer::saveUsers() {
+  fs->saveToDisk("fileSist.bin");
 }
