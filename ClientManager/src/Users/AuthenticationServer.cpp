@@ -205,7 +205,7 @@ bool AuthenticationServer::registerUser(const std::string& username
   memcpy(user.minute, buf, 2);
   user.separator = '/';
   
-  this->fs->append("user_data.csv", 0, sizeof(user_t), reinterpret_cast<const char*>(&user));
+  //this->fs->append("user_data.csv", 0, sizeof(user_t), reinterpret_cast<const char*>(&user));
   // Crear nuevo usuario
   AuthUser newUser;
   newUser.username = username;
@@ -302,9 +302,9 @@ void AuthenticationServer:: hexLiterals(const unsigned char* input, size_t input
 void AuthenticationServer::loadUsers() {
   int initialBlock = 0;
   std::vector<std::string>Users;
-  //while(true) {
+  while(true) {
     char readBuffer[256];
-    if (this->fs->read("user_data.csv", /*initialBlock*256*/0, 256, readBuffer)!= ERR_OUT_OF_RANGE) {
+    if (this->fs->read("user_data.csv", initialBlock*256, 256, readBuffer)!= ERR_OUT_OF_RANGE) {
       if (readBuffer[0] == '1') {
           std::string firstUser(readBuffer, 128);
           this->processUsers(Users, firstUser);
@@ -323,12 +323,13 @@ void AuthenticationServer::loadUsers() {
           authsecond.passwordHash = Users[1];
           authsecond.salt = Users[2];
           this->users[Users[0]] = authsecond;
+          Users.clear();
       }
       initialBlock++;
-    } //else {
-    //  break;
-    //}
-  //}
+    } else {
+      break;
+    }
+  }
 }
 
 void AuthenticationServer::processUsers(std::vector<std::string>& processUser, std::string& user) {
