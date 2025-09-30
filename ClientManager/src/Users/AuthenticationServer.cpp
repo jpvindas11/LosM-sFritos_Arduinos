@@ -16,8 +16,8 @@
 
 AuthenticationServer::AuthenticationServer()
     : Server(), connectedUsersCount(0), counterMutex(1) {
-    this->fs = new FileSystem();
-    fs->loadFromDisk("fileSist.bin");
+  this->fs = new FileSystem();
+  fs->loadFromDisk("fileSist.bin");
 }
 
 AuthenticationServer::~AuthenticationServer() {
@@ -351,4 +351,8 @@ void AuthenticationServer::processUsers(std::vector<std::string>& processUser, s
   processUser.push_back(hour);
   std::string minutes = user.substr(125,2);
   processUser.push_back(minutes);
+}
+
+void AuthenticationServer::printUsers() {
+  this->fs->printUnidad();
 }

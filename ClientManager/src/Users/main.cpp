@@ -5,59 +5,18 @@
 
 int main() {
   // Crear e inicializar el servidor de autenticación
-  //FileSystem* filesystem = new FileSystem();
-  // filesystem->createFile("user_data.csv");
   AuthenticationServer* authServer = new AuthenticationServer();
   if (authServer->initialize() != 0) {
-      std::cerr << "Error al inicializar el servidor de autenticación" << std::endl;
-      return -1;
+    std::cerr << "Error al inicializar el servidor de autenticación" << std::endl;
+    return -1;
   }
-  delete authServer;
-
-  /*
-  
   //Registrar usuario de prueba y agregar al fileSystem
   std::string user = "admin";
   char buffer[512];
-
-  authServer->addUser(user, "admin123");
+  authServer->addUser(user, "user123", 1, 1);
   std::string getSalt = authServer->getUserSaltHex(user);
-  */
+  authServer->printUsers();
+  delete authServer;
 
-  /*
-  filesystem->write("user_data.csv", 0, user.size()+getSalt.size(), (user + "," + getSalt + ",").c_str());
-
-  std::string user1 = "user1";
-  authServer->addUser("user1", "password1");
-  std::string getSalt1 = authServer->getUserSaltHex(user1);
-  filesystem->append("user_data.csv", 0, user1.size()+getSalt1.size(), (user1 + "," + getSalt1 + ",").c_str());
-
-  std::string user2 = "user2";
-  authServer->addUser("user2", "password2");
-  std::string getSalt2 = authServer->getUserSaltHex(user2);
-  filesystem->append("user_data.csv", 0, user2.size()+getSalt2.size(), (user2 + "," + getSalt2 + ",").c_str());
-
-  filesystem->read("user_data.csv", 0, 512, buffer); // Leer para verificar escritura
-  std::cout << "Contenido de user_data.csv: " << buffer << std::endl;
-
-  std::string user3 = "user3";
-  authServer->addUser("user3", "password3");
-  std::string getSalt3 = authServer->getUserSaltHex(user3);
-  filesystem->append("user_data.csv", 0, user3.size()+getSalt3.size(), (user3 + "," + getSalt3 + ",").c_str());
-  */
-
-  /*
-
-  filesystem->read("user_data.csv", 0, 512, buffer); // Leer para verificar escritura
-  std::cout << "Contenido de user_data.csv: " << buffer << std::endl;
-
-  // Login de prueba
-  std::string loginUser = "admin";
-  std::string loginPass = "admin123";
-  std::string loginMessage = "LOGIN " + loginUser + " " + loginPass;
-  authServer->setMessage(loginMessage);
-  authServer->processMessage();
-  authServer->sendMessage();
-*/
   return 0;
 }

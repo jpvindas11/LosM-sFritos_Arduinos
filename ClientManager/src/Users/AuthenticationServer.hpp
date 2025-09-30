@@ -129,9 +129,10 @@ class AuthenticationServer: public Server {
   void processUsers(std::vector<std::string>& processUser, std::string& user);
 
   bool status();
-
-  std::unordered_map<std::string, AuthUser>* getUserMap();
   
+  std::unordered_map<std::string, AuthUser>* getUserMap();
+  /// @brief Imprime los usuarios guardados en el file system
+  void printUsers();
 };
 
 #endif
