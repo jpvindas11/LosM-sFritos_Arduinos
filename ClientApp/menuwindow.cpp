@@ -5,13 +5,14 @@
 #include <QListWidgetItem>
 #include "confirmdeleteuserdialog.h"
 
-MenuWindow::MenuWindow(AuthenticationServer* authServer,QWidget *parent) :
+MenuWindow::MenuWindow(AuthenticationServer* authServer, Master* masterServer,QWidget *parent) :
     QMainWindow(parent), ui(new Ui::MenuWindow),
-    authServer(authServer)
+    authServer(authServer), masterServer(masterServer)
 {
     ui->setupUi(this);
 
     this->userMenu.setPointers(this->ui->user_list, authServer->getUserMap(), &this->currentUser);
+    this->arduinoMenu.setPointers(&masterServer->getAllArduinos(), this->ui->arduino_list);
 }
 
 MenuWindow::~MenuWindow()
@@ -73,6 +74,8 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText)
 
     ui->b_usuarios->setEnabled(true);
     ui->b_arduinos->setEnabled(true);
+    ui->b_consulta->setEnabled(true);
+    ui->b_nodos->setEnabled(true);
 
     activeBtn->setEnabled(false);
 }
@@ -109,6 +112,13 @@ void MenuWindow::on_b_arduinos_clicked()
 {
     setActiveMenu(ui->b_arduinos, "Arduinos");
 
+    // Scroll list
+    this->ui->arduino_list->move(280,30);
+
+    // Turn button
+    this->ui->arduino_turn->move(170, 30);
+
+    this->arduinoMenu.updateList();
 }
 
 
@@ -118,7 +128,7 @@ void MenuWindow::on_b_cerrarSesion_clicked()
     authServer->setMessage(logoutMessage);
     authServer->processMessage();
     authServer->sendMessage();
-    MainWindow* login = new MainWindow(this->authServer);
+    MainWindow* login = new MainWindow(this->authServer, this->masterServer);
     login->show();
     this->hide();
 }
@@ -181,6 +191,9 @@ void MenuWindow::hideMenuWidgets() {
     this->ui->label_cambios->move(-500,-100);
     this->ui->user_change_pass->move(-500,-100);
     this->ui->user_change_rank->move(-500,-100);
+    this->ui->arduino_list->move(-500, -100);
+    this->ui->arduino_turn->move(-500, -100);
+    this->ui->data_list->move(-1000, -100);
 }
 
 void MenuWindow::on_user_change_pass_clicked()
@@ -233,5 +246,32 @@ void MenuWindow::on_user_change_rank_clicked()
             userRank->rank = dialog.getRank();
         }
     }
+}
+
+
+void MenuWindow::on_b_nodos_clicked()
+{
+    setActiveMenu(ui->b_nodos, "Nodos Conectados (Sin Implementar)");
+}
+
+
+void MenuWindow::on_b_consulta_clicked()
+{
+    setActiveMenu(ui->b_consulta, "Información");
+
+    // Scroll list
+    this->ui->data_list->move(150,30);
+}
+
+
+void MenuWindow::on_arduino_list_itemClicked(QListWidgetItem *item)
+{
+    this->arduinoMenu.setSelectedArduino(item);
+}
+
+
+void MenuWindow::on_arduino_turn_clicked()
+{
+    this->arduinoMenu.turnOff();
 }
 

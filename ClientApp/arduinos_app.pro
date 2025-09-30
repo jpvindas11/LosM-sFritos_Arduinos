@@ -21,10 +21,13 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     menuwindow.cpp \
+    arduinomenumanager.cpp \
     ../ClientManager/src/Users/Semaphore.cpp \
     ../ClientManager/src/Users/Thread.cpp \
     ../ClientManager/src/Users/AuthenticationServer.cpp \
     ../ClientManager/src/FileSystem/FileSystem.cpp \
+    ../ClientManager/src/Users/arduinoSimulation.cpp \
+    ../ClientManager/src/Users/Master.cpp \
     usermenumanager.cpp
 
 HEADERS += \
@@ -36,8 +39,11 @@ HEADERS += \
     newuserdialog.h \
     setrankdialog.h \
     userdataqt.h \
+    arduinomenumanager.h \
     ../ClientManager/src/Users/AuthenticationServer.hpp \
     ../ClientManager/src/FileSystem/FileSystem.hpp \
+    ../ClientManager/src/Users/arduinoSimulation.hpp \
+    ../ClientManager/src/Users/Master.hpp \
     usermenumanager.h
 
 FORMS += \
@@ -57,4 +63,3 @@ INCLUDEPATH += /home/axel/Escritorio/LosM-sFritos_Arduinos/ClientManager/src/Fil
 INCLUDEPATH += /home/axel/Escritorio/LosM-sFritos_Arduinos/ClientManager/src/Users
 
 LIBS += -lsodium
-

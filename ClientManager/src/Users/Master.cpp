@@ -4,7 +4,8 @@
 
 Master::Master() {}
 
-Master::~Master() {}
+Master::~Master() {
+}
 
 void Master::addArduino(const ArduinoSimulation& arduino) {
   this->arduinos.push_back(arduino);

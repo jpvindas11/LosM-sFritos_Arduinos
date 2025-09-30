@@ -3,6 +3,12 @@
 #include <iostream>
 #include <string>
 
+enum ARDUINO_TYPE {
+    AT_TILT = 1,
+    AT_BUZZER,
+    AT_ULTRASONIC,
+};
+
 class ArduinoSimulation {
  public:
   ArduinoSimulation(const std::string& id, int type) : arduinoID(id), isConnected(false), type(type) {}

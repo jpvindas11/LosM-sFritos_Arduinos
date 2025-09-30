@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include "autenticatorqt.h"
 #include "userdataqt.h"
+#include "Master.hpp"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -14,7 +15,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(AuthenticationServer* authServer, QWidget *parent = nullptr);
+    MainWindow(AuthenticationServer* authServer, Master* masterServer, QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
@@ -25,6 +26,7 @@ private:
     userDataQt currentData;
     autenticatorQt autenticate;
     AuthenticationServer* authServer;
+    Master* masterServer;
 
 };
 #endif // MAINWINDOW_H

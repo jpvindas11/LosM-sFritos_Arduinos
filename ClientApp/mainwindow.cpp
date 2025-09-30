@@ -4,16 +4,12 @@
 #include "FileSystem.hpp"
 #include "AuthenticationServer.hpp"
 
-MainWindow::MainWindow(AuthenticationServer* authServer, QWidget *parent)
+
+MainWindow::MainWindow(AuthenticationServer* authServer, Master* masterServer, QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
-    , authServer(authServer)
+    , authServer(authServer), masterServer(masterServer)
 {
     ui->setupUi(this);
-
-
-    std::string userAU = "admin";
-    std::string passAU = "admin123";
-    this->authServer->addUser(userAU, passAU, 'o', 'o');
 }
 
 MainWindow::~MainWindow()
@@ -29,7 +25,7 @@ void MainWindow::on_pushButton_clicked()
     if (this->autenticate.tryLogin(user.toStdString(), pass.toStdString(), authServer)) {
        ui->login_info->setText("Ingreso exitoso");
 
-       MenuWindow* menu = new MenuWindow(this->authServer);
+       MenuWindow* menu = new MenuWindow(this->authServer, this->masterServer);
        // Obtener el mapa de usuarios
        auto* userMap = authServer->getUserMap();
 

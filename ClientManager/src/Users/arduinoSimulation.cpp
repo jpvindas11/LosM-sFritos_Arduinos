@@ -20,11 +20,11 @@ std::string ArduinoSimulation::getID() {
 
 std::string ArduinoSimulation::arduinoType() {
   switch (this->type) {
-    case 1:
+    case AT_TILT:
       return "Tilt";
-    case 2:
+    case AT_BUZZER:
       return "Bruzzer";
-    case 3:
+    case AT_ULTRASONIC:
       return "Ultrasonico";
     default:
       return "Led";
