@@ -92,6 +92,8 @@ class FileSystem {
   void readHeader(ifstream& file);
   ///
   uint32_t calculateUsedBlocks();
+  ///
+  int checkBlock(int blockIndex, iNode_t* inode);
 };
 
 #endif  // FILE_SYSTEM_2025B
