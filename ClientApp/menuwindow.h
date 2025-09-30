@@ -3,6 +3,7 @@
 
 #include "autenticatorqt.h"
 #include "usermenumanager.h"
+#include "changepassdialog.h"
 #include <QMainWindow>
 #include <QPushButton>
 #include <QString>
@@ -33,6 +34,10 @@ private slots:
     void on_user_add_clicked();
 
     void on_user_delete_clicked();
+
+    void on_user_change_pass_clicked();
+
+    void on_user_change_rank_clicked();
 
 private:
     Ui::MenuWindow *ui;

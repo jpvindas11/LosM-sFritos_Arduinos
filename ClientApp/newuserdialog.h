@@ -17,6 +17,7 @@ public:
 
     QString getUsername() const;
     QString getPassword() const;
+    char getRank();
 
 private:
     Ui::newUserDialog *ui;

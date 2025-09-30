@@ -13,6 +13,7 @@ INCLUDEPATH += ../ClientManager/src/Users \
 
 SOURCES += \
     autenticatorqt.cpp \
+    changepassdialog.cpp \
     confirmdeleteuserdialog.cpp \
     newuserdialog.cpp \
     userdataqt.cpp \
@@ -27,6 +28,7 @@ SOURCES += \
 
 HEADERS += \
     autenticatorqt.h \
+    changepassdialog.h \
     confirmdeleteuserdialog.h \
     mainwindow.h \
     menuwindow.h \
@@ -37,6 +39,7 @@ HEADERS += \
     usermenumanager.h
 
 FORMS += \
+    changepassdialog.ui \
     confirmdeleteuserdialog.ui \
     mainwindow.ui \
     menuwindow.ui \

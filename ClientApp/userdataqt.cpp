@@ -5,10 +5,18 @@ userDataQt::userDataQt() : user(""), password(""), rank(-1)
 
 }
 
-void userDataQt::setData(std::string user, std::string password, int rank) {
+void userDataQt::setData(std::string user, std::string password, char rank) {
     this->user = user;
     this->password = password;
-    this->rank = rank;
+
+    switch(rank) {
+        case 'o' : this->rank = UR_OWNER; break;
+        case 'h' : this->rank = UR_HARDWAREMANAGER; break;
+        case 's' : this->rank = UR_SOFTWAREMANAGER; break;
+        case 'u' : this->rank = UR_USERMANAGER; break;
+        case 'c' : this->rank = UR_CONSULTANT; break;
+        default: break;
+    }
 }
 
 std::string userDataQt::getUser() { return this->user; }

@@ -20,3 +20,10 @@ QString newUserDialog::getUsername() const {
 QString newUserDialog::getPassword() const {
     return ui->lineEdit_password->text();
 }
+
+char newUserDialog::getRank() {
+    if (ui->radioButton_c->isChecked()) { return 'c'; }
+    else if (ui->radioButton_h->isChecked()) { return 'h'; }
+    else if (ui->radioButton_s->isChecked()) { return 's'; }
+    else if (ui->radioButton_u->isChecked()) { return 'u'; }
+}

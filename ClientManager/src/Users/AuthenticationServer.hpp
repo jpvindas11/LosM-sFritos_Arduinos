@@ -19,6 +19,7 @@ struct AuthUser {
   std::string username;
   std::string passwordHash;
   std::string salt;  ///< Salt único para este usuario
+  char rank;
   bool isConnected;
 };
 

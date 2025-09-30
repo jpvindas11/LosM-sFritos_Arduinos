@@ -4,16 +4,7 @@
 
 autenticatorQt::autenticatorQt()
 {
-    // Usar inicialización de estructura en lugar de constructor
-    userDataQt user;
-    user.setData("carlos", "a", UR_USERMANAGER);
-    this->users.push_back(user);
 
-    user.setData("mario", "b", UR_HARDWAREMANAGER);
-    this->users.push_back(user);
-
-    user.setData("dora", "c", UR_OWNER);
-    this->users.push_back(user);
 }
 
 // De mentiras

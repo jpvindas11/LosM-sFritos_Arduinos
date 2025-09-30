@@ -217,6 +217,7 @@ bool AuthenticationServer::registerUser(const std::string& username
   newUser.passwordHash.assign(reinterpret_cast<char*>(hash), 32);
   newUser.salt.assign(reinterpret_cast<char*>(salt), crypto_pwhash_SALTBYTES);
   newUser.isConnected = false;
+  newUser.rank = type;
   users[username] = newUser;
   std::cout << "Usuario '"
             << username
@@ -332,6 +333,9 @@ void AuthenticationServer::loadUsers() {
           hexToBytes(Users[2], saltBytes, crypto_pwhash_SALTBYTES);
           authFirst.salt.assign(reinterpret_cast<char*>(saltBytes), crypto_pwhash_SALTBYTES);
           authFirst.isConnected = false;
+
+          authFirst.rank = Users[3][0];
+
           this->users[Users[0]] = authFirst;
           Users.clear();
       }
@@ -349,6 +353,9 @@ void AuthenticationServer::loadUsers() {
           hexToBytes(Users[2], saltBytes, crypto_pwhash_SALTBYTES);
           authsecond.salt.assign(reinterpret_cast<char*>(saltBytes), crypto_pwhash_SALTBYTES);
           authsecond.isConnected = false;
+
+          authsecond.rank = Users[3][0];
+
           this->users[Users[0]] = authsecond;
           Users.clear();
       }

@@ -43,7 +43,7 @@
      <property name="geometry">
       <rect>
        <x>0</x>
-       <y>20</y>
+       <y>60</y>
        <width>141</width>
        <height>26</height>
       </rect>
@@ -56,13 +56,39 @@
      <property name="geometry">
       <rect>
        <x>0</x>
-       <y>50</y>
+       <y>120</y>
        <width>141</width>
        <height>26</height>
       </rect>
      </property>
      <property name="text">
       <string>Arduinos</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="b_nodos">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>90</y>
+       <width>141</width>
+       <height>26</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Nodos</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="b_consulta">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>150</y>
+       <width>141</width>
+       <height>26</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Consulta</string>
      </property>
     </widget>
    </widget>
@@ -113,6 +139,48 @@
       <width>501</width>
       <height>481</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="user_change_pass">
+    <property name="geometry">
+     <rect>
+      <x>170</x>
+      <y>140</y>
+      <width>87</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Contraseña</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="user_change_rank">
+    <property name="geometry">
+     <rect>
+      <x>170</x>
+      <y>180</y>
+      <width>87</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Permisos</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_cambios">
+    <property name="geometry">
+     <rect>
+      <x>170</x>
+      <y>110</y>
+      <width>81</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Cambios</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
     </property>
    </widget>
   </widget>

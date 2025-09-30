@@ -32,15 +32,35 @@ void MenuWindow::setCurrentUser(userDataQt user) {
 }
 
 void MenuWindow::hideFuctionsForRanks(int rank) {
+    // Primero ocultar todos los botones sensibles
+    this->ui->b_usuarios->move(-100, -100);
+    this->ui->b_arduinos->move(-100, -100);
+    this->ui->b_nodos->move(-100, -100);
+    this->ui->b_consulta->move(-100, -100);
+
+    // Luego mostrar solo los permitidos según el rango
     switch(rank) {
         case UR_HARDWAREMANAGER:
-            this->ui->b_usuarios->move(-100, -100);
+            this->ui->b_arduinos->move(0, 30);
             break;
         case UR_USERMANAGER:
-            this->ui->b_arduinos->move(-100, -100);
+            this->ui->b_usuarios->move(0, 30);
+            break;
+        case UR_SOFTWAREMANAGER:
+            this->ui->b_nodos->move(0, 30);
+            break;
+        case UR_CONSULTANT:
+            this->ui->b_consulta->move(0, 30);
             break;
         case UR_OWNER:
+            // OWNER tiene acceso a todo
+            this->ui->b_consulta->move(0, 30);
+            this->ui->b_usuarios->move(0, 60);    // Ajusta las posiciones
+            this->ui->b_arduinos->move(0, 90);    // según tu diseño
+            this->ui->b_nodos->move(0, 120);
+            break;
         default:
+            this->ui->b_consulta->move(0, 30);
             break;
     }
 }
@@ -61,6 +81,8 @@ void MenuWindow::on_b_usuarios_clicked()
 {
     setActiveMenu(ui->b_usuarios, "Usuarios");
 
+    this->userMenu.setSelectedUser(nullptr);
+
     // Scroll list
     this->ui->user_list->move(280,30);
 
@@ -69,6 +91,15 @@ void MenuWindow::on_b_usuarios_clicked()
 
     // Delete button
     this->ui->user_delete->move(170, 70);
+
+    // Change label
+    this->ui->label_cambios->move(170, 110);
+
+    // Password button
+    this->ui->user_change_pass->move(170, 130);
+
+    // Rank button
+    this->ui->user_change_rank->move(170, 170);
 
     this->userMenu.updateUserList();
 }
@@ -109,7 +140,11 @@ void MenuWindow::on_user_add_clicked()
         std::string user = dialog.getUsername().toStdString();
         std::string pass = dialog.getPassword().toStdString();
 
-        this->authServer->addUser(user, pass, '1', '1');
+        char rank = dialog.getRank();
+
+        this->authServer->addUser(user, pass, rank, rank);
+
+        this->userMenu.updateUserList();
     }
 }
 
@@ -143,4 +178,37 @@ void MenuWindow::hideMenuWidgets() {
     this->ui->user_list->move(-500,-100);
     this->ui->user_add->move(-500,-100);
     this->ui->user_delete->move(-500,-100);
+    this->ui->b_consulta->move(-500,-100);
+    this->ui->label_cambios->move(-500,-100);
+    this->ui->user_change_pass->move(-500,-100);
+    this->ui->user_change_rank->move(-500,-100);
 }
+
+void MenuWindow::on_user_change_pass_clicked()
+{
+    AuthUser* userPass = this->userMenu.getSelectedAuthUser();
+
+    // Has to have something selected
+    if (!userPass) return;
+
+    changePassDialog dialog(this);
+
+    QString message = QString("Cambiar contraseña de %1")
+                      .arg(QString::fromStdString(userPass->username));
+
+    dialog.setUsername(message);
+
+    dialog.show();
+
+    if (dialog.exec() == QDialog::Accepted) {
+        if (dialog.getFirstPass() == dialog.getSecondPass()) {
+            // Funcion para cambiar contrasena de usuario
+        }
+    }
+}
+
+void MenuWindow::on_user_change_rank_clicked()
+{
+
+}
+

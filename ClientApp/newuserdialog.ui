@@ -33,17 +33,23 @@
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>80</y>
+     <y>70</y>
      <width>341</width>
      <height>26</height>
     </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="placeholderText">
+    <string>Usuario</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="lineEdit_password">
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>140</y>
+     <y>120</y>
      <width>341</width>
      <height>26</height>
     </rect>
@@ -51,30 +57,7 @@
    <property name="echoMode">
     <enum>QLineEdit::Password</enum>
    </property>
-  </widget>
-  <widget class="QLabel" name="label_user">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>60</y>
-     <width>66</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Usuario</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_pass">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>120</y>
-     <width>91</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
+   <property name="placeholderText">
     <string>Contraseña</string>
    </property>
   </widget>
@@ -109,6 +92,77 @@
    <property name="alignment">
     <set>Qt::AlignCenter</set>
    </property>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_usertype">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>170</y>
+     <width>151</width>
+     <height>111</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Tipo de Usuario</string>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <widget class="QRadioButton" name="radioButton_c">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>20</y>
+      <width>121</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Consultante</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radioButton_h">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>40</y>
+      <width>141</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Admin. Hardware</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radioButton_s">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>60</y>
+      <width>141</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Admin. Software</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="radioButton_u">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>80</y>
+      <width>141</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Admin. Usuarios</string>
+    </property>
+   </widget>
   </widget>
  </widget>
  <resources/>
