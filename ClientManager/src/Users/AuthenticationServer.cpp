@@ -16,13 +16,15 @@
 
 AuthenticationServer::AuthenticationServer()
     : Server(), connectedUsersCount(0), counterMutex(1) {
-  this->fs = new FileSystem();
-  fs->loadFromDisk("fileSist.bin");
+    this->fs = new FileSystem();
+    if (fs->loadFromDisk("fileSist.bin") != 0) {
+        fs->saveToDisk("fileSist.bin");
+    }
 }
 
 AuthenticationServer::~AuthenticationServer() {
   // Cleanup automático por destructores
-  this->fs->saveToDisk("fileSist.bin");
+  this->saveUsers();
   delete fs;
 }
 
@@ -205,19 +207,20 @@ bool AuthenticationServer::registerUser(const std::string& username
   memcpy(user.minute, buf, 2);
   user.separator = '/';
   
-  this->fs->append("user_data.csv", 0, sizeof(user_t), reinterpret_cast<const char*>(&user));
+  //this->fs->append("user_data.csv", 0, sizeof(user_t), reinterpret_cast<const char*>(&user));
   // Crear nuevo usuario
   AuthUser newUser;
   newUser.username = username;
-  newUser.passwordHash = std::string(reinterpret_cast<char*>(hash), 32);
-  newUser.salt = std::string(reinterpret_cast<char*>(salt)
-      , crypto_pwhash_SALTBYTES);
+  // Convertir hash y salt a vectores de bytes para evitar problemas con strings
+  newUser.passwordHash.assign(reinterpret_cast<char*>(hash), 32);
+  newUser.salt.assign(reinterpret_cast<char*>(salt), crypto_pwhash_SALTBYTES);
   newUser.isConnected = false;
   users[username] = newUser;
   std::cout << "Usuario '"
             << username
             << "' registrado exitosamente por el servidor"
             << std::endl;
+  this->saveUsers();
   return true;
 }
 
@@ -299,19 +302,34 @@ void AuthenticationServer:: hexLiterals(const unsigned char* input, size_t input
     }
 }
 
+void AuthenticationServer::hexToBytes(const std::string& hexString, 
+                                     unsigned char* output, size_t outputLen) {
+    for (size_t i = 0; i < outputLen && i * 2 < hexString.length(); i++) {
+        std::string byteString = hexString.substr(i * 2, 2);
+        output[i] = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
+    }
+}
+
 void AuthenticationServer::loadUsers() {
   int initialBlock = 0;
   std::vector<std::string>Users;
-  //while(true) {
+  while(true) {
     char readBuffer[256];
-    if (this->fs->read("user_data.csv", /*initialBlock*256*/0, 256, readBuffer)!= ERR_OUT_OF_RANGE) {
+    if (this->fs->read("user_data.csv", initialBlock*256, 256, readBuffer)!= ERR_OUT_OF_RANGE) {
       if (readBuffer[0] == '1') {
           std::string firstUser(readBuffer, 128);
           this->processUsers(Users, firstUser);
           AuthUser authFirst;
           authFirst.username = Users[0];
-          authFirst.passwordHash = Users[1];
-          authFirst.salt = Users[2];
+          // Convertir hash hexadecimal a bytes
+          unsigned char hashBytes[32];
+          hexToBytes(Users[1], hashBytes, 32);
+          authFirst.passwordHash.assign(reinterpret_cast<char*>(hashBytes), 32);
+          // Convertir salt hexadecimal a bytes
+          unsigned char saltBytes[crypto_pwhash_SALTBYTES];
+          hexToBytes(Users[2], saltBytes, crypto_pwhash_SALTBYTES);
+          authFirst.salt.assign(reinterpret_cast<char*>(saltBytes), crypto_pwhash_SALTBYTES);
+          authFirst.isConnected = false;
           this->users[Users[0]] = authFirst;
           Users.clear();
       }
@@ -320,15 +338,23 @@ void AuthenticationServer::loadUsers() {
           this->processUsers(Users, secondUser);
           AuthUser authsecond;
           authsecond.username = Users[0];
-          authsecond.passwordHash = Users[1];
-          authsecond.salt = Users[2];
+          // Convertir hash hexadecimal a bytes
+          unsigned char hashBytes[32];
+          hexToBytes(Users[1], hashBytes, 32);
+          authsecond.passwordHash.assign(reinterpret_cast<char*>(hashBytes), 32);
+          // Convertir salt hexadecimal a bytes
+          unsigned char saltBytes[crypto_pwhash_SALTBYTES];
+          hexToBytes(Users[2], saltBytes, crypto_pwhash_SALTBYTES);
+          authsecond.salt.assign(reinterpret_cast<char*>(saltBytes), crypto_pwhash_SALTBYTES);
+          authsecond.isConnected = false;
           this->users[Users[0]] = authsecond;
+          Users.clear();
       }
       initialBlock++;
-    } //else {
-    //  break;
-    //}
-  //}
+    } else {
+      break;
+    }
+  }
 }
 
 void AuthenticationServer::processUsers(std::vector<std::string>& processUser, std::string& user) {

@@ -158,6 +158,7 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
         const size_t maxBlocks = TUnit/sizeof(dataBlock_t);
         int processedBlocks = -1;
         int previousBlock = -1;
+        int inodeIntIndex;
         while (bytesRead < bytesToRead) {
           int blockIndex = (cursor + bytesRead) / BLOCK_SIZE;
           int blockOffset = (cursor + bytesRead) % BLOCK_SIZE;
@@ -165,6 +166,7 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
           if (previousBlock != blockIndex) {
             previousBlock = blockIndex;
             processedBlocks++;
+            inodeIntIndex = this->checkBlock(blockIndex, inode);
           }
           if (static_cast<size_t>(blockIndex) >= maxBlocks) {
             cerr << "Error: El archivo es demasiado grande para leer"
@@ -172,11 +174,11 @@ int FileSystem::read(string file, int cursor, size_t size, char* buffer) {
             break;
           }
           if (processedBlocks < TOTAL_POINTERS) {
-            dataBlockNum = inode->directBlocks[processedBlocks];
+            dataBlockNum = inode->directBlocks[inodeIntIndex];
           } else if (processedBlocks < (TOTAL_POINTERS + TOTAL_POINTERS)) {
-            dataBlockNum = inode->singleIndirect.dataPtr[processedBlocks-TOTAL_POINTERS];
+            dataBlockNum = inode->singleIndirect.dataPtr[inodeIntIndex];
           } else {
-            dataBlockNum = inode->doubleIndirect.dataIndex[processedBlocks-TOTAL_POINTERS-TOTAL_POINTERS];
+            dataBlockNum = inode->doubleIndirect.dataIndex[inodeIntIndex];
           }
           if (dataBlockNum == FREE_BLOCK || dataBlockNum == -1) {
             break;
@@ -531,6 +533,29 @@ int FileSystem::loadFromDisk(const string& filename) {
     file.close();
     return err.code();
   }
+}
+
+int FileSystem::checkBlock(int blockIndex, iNode_t* inode) {
+  if (inode->doubleIndirect.isUsed) {
+    for (int i = 0; i < TOTAL_POINTERS * TOTAL_POINTERS; i++) {
+      if (blockIndex == inode->doubleIndirect.dataIndex[i]) {
+        return i;
+      }
+    }
+  } else if (inode->singleIndirect.isUsed) {
+      for (int i = 0; i < TOTAL_POINTERS; i++) {
+      if (blockIndex == inode->singleIndirect.dataPtr[i]) {
+        return i;
+      }
+    }
+  } else {
+      for (int i = 0; i < TOTAL_POINTERS; i++) {
+      if (blockIndex == inode->directBlocks[i]) {
+        return i;
+      }
+    }
+  }
+  return -1;
 }
 
 uint32_t FileSystem::calculateUsedBlocks() {
