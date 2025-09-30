@@ -219,6 +219,32 @@
      </rect>
     </property>
    </widget>
+   <widget class="QPushButton" name="b_consultar">
+    <property name="geometry">
+     <rect>
+      <x>170</x>
+      <y>270</y>
+      <width>87</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Consultar</string>
+    </property>
+   </widget>
+   <zorder>b_consultar</zorder>
+   <zorder>main_label</zorder>
+   <zorder>groupBox</zorder>
+   <zorder>b_cerrarSesion</zorder>
+   <zorder>user_add</zorder>
+   <zorder>user_delete</zorder>
+   <zorder>user_list</zorder>
+   <zorder>user_change_pass</zorder>
+   <zorder>user_change_rank</zorder>
+   <zorder>label_cambios</zorder>
+   <zorder>arduino_list</zorder>
+   <zorder>arduino_turn</zorder>
+   <zorder>data_list</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -226,7 +252,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>23</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

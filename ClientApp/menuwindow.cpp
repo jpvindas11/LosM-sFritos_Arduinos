@@ -13,6 +13,7 @@ MenuWindow::MenuWindow(AuthenticationServer* authServer, Master* masterServer,QW
 
     this->userMenu.setPointers(this->ui->user_list, authServer->getUserMap(), &this->currentUser);
     this->arduinoMenu.setPointers(&masterServer->getAllArduinos(), this->ui->arduino_list);
+    this->dataMenu.setPointers(&masterServer->getAllArduinos(), this->ui->data_list);
 }
 
 MenuWindow::~MenuWindow()
@@ -117,6 +118,9 @@ void MenuWindow::on_b_arduinos_clicked()
 
     // Turn button
     this->ui->arduino_turn->move(170, 30);
+    this->ui->b_consultar->move(-170, 90);
+
+    this->arduinoMenu.setSelectedArduino(nullptr);
 
     this->arduinoMenu.updateList();
 }
@@ -193,6 +197,7 @@ void MenuWindow::hideMenuWidgets() {
     this->ui->user_change_rank->move(-500,-100);
     this->ui->arduino_list->move(-500, -100);
     this->ui->arduino_turn->move(-500, -100);
+    this->ui->b_consultar->move(-500, -100);
     this->ui->data_list->move(-1000, -100);
 }
 
@@ -261,6 +266,7 @@ void MenuWindow::on_b_consulta_clicked()
 
     // Scroll list
     this->ui->data_list->move(150,30);
+    this->dataMenu.updateList();
 }
 
 
@@ -275,3 +281,8 @@ void MenuWindow::on_arduino_turn_clicked()
     this->arduinoMenu.turnOff();
 }
 
+void MenuWindow::on_arduino_consultar_Clicked(){
+    // setActiveMenu("")
+    this->dataMenu.getData();
+    this->dataMenu.updateList();
+}

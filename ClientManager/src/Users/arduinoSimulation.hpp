@@ -20,7 +20,7 @@ class ArduinoSimulation {
 
   bool getConnectionStatus();
 
-  void sendData(const std::string& data);
+  std::string sendData();
 
   std::string getID();
 

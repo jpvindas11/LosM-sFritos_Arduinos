@@ -15,6 +15,7 @@ SOURCES += \
     autenticatorqt.cpp \
     changepassdialog.cpp \
     confirmdeleteuserdialog.cpp \
+    datamenumanager.cpp \
     newuserdialog.cpp \
     setrankdialog.cpp \
     userdataqt.cpp \
@@ -34,6 +35,7 @@ HEADERS += \
     autenticatorqt.h \
     changepassdialog.h \
     confirmdeleteuserdialog.h \
+    datamenumanager.h \
     mainwindow.h \
     menuwindow.h \
     newuserdialog.h \

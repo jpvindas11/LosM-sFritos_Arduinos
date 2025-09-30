@@ -14,9 +14,11 @@ class Master {
   void removeArduino(const std::string& id);
   ArduinoSimulation* getArduino(const std::string& id);
   std::vector<ArduinoSimulation>& getAllArduinos() { return this->arduinos; }
+  std::vector<std::string>* getDataArduino() { return &this->data; }
 
  private:
   std::vector<ArduinoSimulation> arduinos;
+     std::vector<std::string> data;
 };
 
 #endif  // MASTER_HPP

@@ -3,6 +3,7 @@
 
 #include "autenticatorqt.h"
 #include "usermenumanager.h"
+#include "datamenumanager.h"
 #include "changepassdialog.h"
 #include "arduinomenumanager.h"
 #include "setrankdialog.h"
@@ -48,6 +49,8 @@ private slots:
 
     void on_arduino_list_itemClicked(QListWidgetItem *item);
 
+    void on_arduino_consultar_Clicked();
+
     void on_arduino_turn_clicked();
 
 private:
@@ -66,6 +69,9 @@ private:
     userMenuManager userMenu;
 
     arduinoMenuManager arduinoMenu;
+
+    dataMenuManager dataMenu;
+
 };
 
 #endif // MENUWINDOW_H
