@@ -4,6 +4,8 @@
 #include <QListWidgetItem>
 #include "userdataqt.h"
 #include "AuthenticationServer.hpp"
+#include <QPushButton>
+
 
 class userMenuManager
 {
@@ -17,8 +19,11 @@ public:
     void updateUserList();
 
     void setSelectedUser(QListWidgetItem* user);
+    AuthUser* getSelectedAuthUser();
 
     QListWidgetItem* getSelectedUser();
+
+    void hideDeleteButton(QPushButton* deleteButton);
 
 private:
     QListWidget* user_list;

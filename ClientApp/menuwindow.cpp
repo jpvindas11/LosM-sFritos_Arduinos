@@ -3,6 +3,7 @@
 #include "ui_menuwindow.h"
 #include "newuserdialog.h"
 #include <QListWidgetItem>
+#include "confirmdeleteuserdialog.h"
 
 MenuWindow::MenuWindow(AuthenticationServer* authServer,QWidget *parent) :
     QMainWindow(parent), ui(new Ui::MenuWindow),
@@ -94,6 +95,7 @@ void MenuWindow::on_b_cerrarSesion_clicked()
 void MenuWindow::on_user_list_itemClicked(QListWidgetItem *item)
 {
     this->userMenu.setSelectedUser(item);
+    userMenu.hideDeleteButton(ui->user_delete);
 }
 
 
@@ -114,7 +116,26 @@ void MenuWindow::on_user_add_clicked()
 
 void MenuWindow::on_user_delete_clicked()
 {
+    AuthUser* userDel = this->userMenu.getSelectedAuthUser();
 
+    // Has to have something selected
+    if (!userDel) return;
+
+    // Cannot delete self
+    if (userDel->username == currentUser.getUser()) return;
+
+    confirmDeleteUserDialog dialog(this);
+
+    QString message = QString("¿Estás seguro de querer eliminar a %1?")
+                      .arg(QString::fromStdString(userDel->username));
+
+    dialog.setUsername(message);
+
+    dialog.show();
+
+    if (dialog.exec() == QDialog::Accepted) {
+        // Funcion para borrar usuario aqui
+    }
 }
 
 void MenuWindow::hideMenuWidgets() {
