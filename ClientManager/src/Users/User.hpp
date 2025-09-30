@@ -11,6 +11,33 @@
 #define SEPARATOR '/'
 #define FILLER '*'
 
+// Tipos de usuarios
+enum userTypes {
+  CONSULTANT = 1,
+  USER_ADMIN,
+  SOFTWARE_ADMIN,
+  HARDWARE_ADMIN
+};
+
+// Permisos
+#define PERM_AUTH_READ      0x01
+#define PERM_AUTH_WRITE     0x02
+#define PERM_SENSOR_READ    0x04
+#define PERM_SENSOR_WRITE   0x08
+#define PERM_LOG_READ       0x10
+#define PERM_LOG_WRITE      0x20
+#define PERM_USERDATA_READ  0x40
+#define PERM_USERDATA_WRITE 0x80
+
+// Permisos por tipo de usuario
+#define PERMS_SOFTWARE_ADMIN   (PERM_AUTH_READ | PERM_AUTH_WRITE \
+                              | PERM_SENSOR_READ | PERM_SENSOR_WRITE \
+                              | PERM_LOG_READ | PERM_LOG_WRITE \
+                              | PERM_USERDATA_READ | PERM_USERDATA_WRITE)
+#define PERMS_HARDWARE_ADMIN   (PERM_SENSOR_READ | PERM_SENSOR_WRITE)
+#define PERMS_USER_ADMIN       (PERM_USERDATA_READ | PERM_USERDATA_WRITE)
+#define PERMS_CONSULTANT       (PERM_SENSOR_READ | PERM_LOG_READ)
+
 /// Estructura de usuario
 typedef struct User {
   char isUsed;       // 1 byte
