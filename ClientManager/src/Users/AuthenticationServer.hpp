@@ -140,6 +140,10 @@ class AuthenticationServer: public Server {
   
   /// @brief Imprime los usuarios guardados en el file system
   void printUsers();
+
+  void changePassword(std::string& username, const std::string& newPassword);
+
+  void changePermissions(std::string& username, char newType, char newPermission);
 };
 
 #endif

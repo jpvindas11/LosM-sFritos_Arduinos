@@ -395,3 +395,80 @@ void AuthenticationServer::printUsers() {
 void AuthenticationServer::saveUsers() {
   fs->saveToDisk("fileSist.bin");
 }
+
+void AuthenticationServer::changePassword(std::string& username, const std::string& newPassword) {
+  std::lock_guard<std::mutex> lock(usersMutex);
+  auto it = users.find(username);
+  if (it == users.end()) {
+    std::cout << "Error: Usuario '" << username << "' no existe" << std::endl;
+    return;
+  }
+  // Validar nueva contraseña (mínimo 4 caracteres para simplificar)
+  if (newPassword.length() < 4) {
+    std::cout << "Error: Nueva contraseña muy corta para usuario '" << username << "' (mínimo 4 caracteres)" << std::endl;
+    return;
+  }
+  // Generar nuevo salt único para este usuario
+  unsigned char newSalt[crypto_pwhash_SALTBYTES];
+  generateSalt(newSalt);
+  // Hashear nueva contraseña con el nuevo salt generado
+  unsigned char newHash[32];
+  if (!hashPassword(newPassword, newSalt, newHash)) {
+    std::cout << "Error: No se pudo hashear la nueva contraseña para usuario '" << username << "'" << std::endl;
+    return;
+  }
+  // Actualizar hash y salt en el mapa de usuarios
+  it->second.passwordHash.assign(reinterpret_cast<char*>(newHash), 32);
+  it->second.salt.assign(reinterpret_cast<char*>(newSalt), crypto_pwhash_SALTBYTES);
+  std::cout << "Contraseña del usuario '" << username << "' actualizada exitosamente" << std::endl;
+  // Actualizar en el file system
+  int fileSize = this->fs->getFileSize("user_data.csv");
+  int totalUsers = fileSize / sizeof(user_t);
+  for (int i = 0; i < totalUsers; ++i) {
+    char buffer[sizeof(user_t)];
+    if (this->fs->read("user_data.csv", i * sizeof(user_t), sizeof(user_t), buffer) != ERR_OUT_OF_RANGE) {
+      user_t* userRecord = reinterpret_cast<user_t*>(buffer);
+      std::string recordName(userRecord->name, 20);
+      recordName.erase(std::remove(recordName.begin(), recordName.end(), '*'), recordName.end());
+      if (recordName == username) {
+        // Encontrado el usuario, actualizar hash y salt
+        hexLiterals(newHash, sizeof(newHash), userRecord->hash, sizeof(userRecord->hash));
+        hexLiterals(newSalt, sizeof(newSalt), userRecord->salt, sizeof(userRecord->salt));
+        // Escribir de vuelta al file system
+        this->fs->write("user_data.csv", i * sizeof(user_t), sizeof(user_t), reinterpret_cast<const char*>(userRecord));
+        break;
+      }
+    }
+  }
+}
+
+void AuthenticationServer::changePermissions(std::string& username, char newType, char newPermission) {
+  std::lock_guard<std::mutex> lock(usersMutex);
+  auto it = users.find(username);
+  if (it == users.end()) {
+    std::cout << "Error: Usuario '" << username << "' no existe" << std::endl;
+    return;
+  }
+  // Actualizar tipo y permisos en el mapa de usuarios
+  it->second.rank = newType;
+  std::cout << "Permisos del usuario '" << username << "' actualizados exitosamente" << std::endl;
+  // Actualizar en el file system
+  int fileSize = this->fs->getFileSize("user_data.csv");
+  int totalUsers = fileSize / sizeof(user_t);
+  for (int i = 0; i < totalUsers; ++i) {
+    char buffer[sizeof(user_t)];
+    if (this->fs->read("user_data.csv", i * sizeof(user_t), sizeof(user_t), buffer) != ERR_OUT_OF_RANGE) {
+      user_t* userRecord = reinterpret_cast<user_t*>(buffer);
+      std::string recordName(userRecord->name, 20);
+      recordName.erase(std::remove(recordName.begin(), recordName.end(), '*'), recordName.end());
+      if (recordName == username) {
+        // Encontrado el usuario, actualizar tipo y permisos
+        userRecord->type = newType;
+        userRecord->permissions = newPermission;
+        // Escribir de vuelta al file system
+        this->fs->write("user_data.csv", i * sizeof(user_t), sizeof(user_t), reinterpret_cast<const char*>(userRecord));
+        break;
+      }
+    }
+  }
+}
