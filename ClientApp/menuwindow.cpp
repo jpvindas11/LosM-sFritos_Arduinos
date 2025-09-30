@@ -202,6 +202,7 @@ void MenuWindow::on_user_change_pass_clicked()
     if (dialog.exec() == QDialog::Accepted) {
         if (dialog.getFirstPass() == dialog.getSecondPass()) {
             // Funcion para cambiar contrasena de usuario
+            authServer->changePassword(userPass->username , dialog.getFirstPass().toStdString());
         }
     }
 }
@@ -228,6 +229,8 @@ void MenuWindow::on_user_change_rank_clicked()
     if (dialog.exec() == QDialog::Accepted) {
         if (dialog.getRank() != '-') {
             // Funcion para cambiar rango del usuario
+            authServer->changePermissions(userRank->username, userRank->rank, '1');
+            userRank->rank = dialog.getRank();
         }
     }
 }
