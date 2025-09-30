@@ -4,6 +4,7 @@
 #include "autenticatorqt.h"
 #include "usermenumanager.h"
 #include "changepassdialog.h"
+#include "setrankdialog.h"
 #include <QMainWindow>
 #include <QPushButton>
 #include <QString>

@@ -27,8 +27,8 @@ void MenuWindow::setCurrentUser(userDataQt user) {
 
     ui->main_label->setText("Bienvenido, " + username);
 
-    this->hideFuctionsForRanks(user.getRank());
     this->hideMenuWidgets();
+    this->hideFuctionsForRanks(user.getRank());
 }
 
 void MenuWindow::hideFuctionsForRanks(int rank) {
@@ -178,7 +178,6 @@ void MenuWindow::hideMenuWidgets() {
     this->ui->user_list->move(-500,-100);
     this->ui->user_add->move(-500,-100);
     this->ui->user_delete->move(-500,-100);
-    this->ui->b_consulta->move(-500,-100);
     this->ui->label_cambios->move(-500,-100);
     this->ui->user_change_pass->move(-500,-100);
     this->ui->user_change_rank->move(-500,-100);
@@ -209,6 +208,27 @@ void MenuWindow::on_user_change_pass_clicked()
 
 void MenuWindow::on_user_change_rank_clicked()
 {
+    AuthUser* userRank = this->userMenu.getSelectedAuthUser();
 
+    // Has to have something selected
+    if (!userRank) return;
+
+    // Cannot delete self
+    if (userRank->username == currentUser.getUser()) return;
+
+    setRankDialog dialog(this);
+
+    QString message = QString("Cambiar permisos de %1")
+                      .arg(QString::fromStdString(userRank->username));
+
+    dialog.setUsername(message);
+
+    dialog.show();
+
+    if (dialog.exec() == QDialog::Accepted) {
+        if (dialog.getRank() != '-') {
+            // Funcion para cambiar rango del usuario
+        }
+    }
 }
 

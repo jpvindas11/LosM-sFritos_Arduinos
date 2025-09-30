@@ -16,6 +16,7 @@ SOURCES += \
     changepassdialog.cpp \
     confirmdeleteuserdialog.cpp \
     newuserdialog.cpp \
+    setrankdialog.cpp \
     userdataqt.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -33,6 +34,7 @@ HEADERS += \
     mainwindow.h \
     menuwindow.h \
     newuserdialog.h \
+    setrankdialog.h \
     userdataqt.h \
     ../ClientManager/src/Users/AuthenticationServer.hpp \
     ../ClientManager/src/FileSystem/FileSystem.hpp \
@@ -43,7 +45,8 @@ FORMS += \
     confirmdeleteuserdialog.ui \
     mainwindow.ui \
     menuwindow.ui \
-    newuserdialog.ui
+    newuserdialog.ui \
+    setrankdialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
