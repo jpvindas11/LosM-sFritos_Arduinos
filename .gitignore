@@ -59,3 +59,14 @@ release/
 *.rcc
 *.ui.*
 *.qrc.cpp
+
+.vscode
+bin/
+build/
+doc/
+*.pyc
+*.7z
+*.rar
+*Zone.Identifier
+*bin
+*tsv
