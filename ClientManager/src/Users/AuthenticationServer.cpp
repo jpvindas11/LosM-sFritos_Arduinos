@@ -1,7 +1,5 @@
 /// @copyright Los Más Fritos - 2025
 
-/// @copyright Los Más Fritos - 2025
-
 #include "AuthenticationServer.hpp"
 
 #include <algorithm>
