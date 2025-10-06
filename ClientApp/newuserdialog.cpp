@@ -26,4 +26,5 @@ char newUserDialog::getRank() {
     else if (ui->radioButton_h->isChecked()) { return 'h'; }
     else if (ui->radioButton_s->isChecked()) { return 's'; }
     else if (ui->radioButton_u->isChecked()) { return 'u'; }
+    return '0';
 }

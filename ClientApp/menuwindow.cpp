@@ -183,7 +183,7 @@ void MenuWindow::on_user_delete_clicked()
     dialog.show();
 
     if (dialog.exec() == QDialog::Accepted) {
-        // Funcion para borrar usuario aqui
+        authServer->deleteUser(userDel->username);
     }
 }
 

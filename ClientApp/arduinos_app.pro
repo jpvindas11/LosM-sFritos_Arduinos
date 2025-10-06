@@ -8,8 +8,9 @@ CONFIG += c++17
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-INCLUDEPATH += ../ClientManager/src/Users \
-               ../ClientManager/src/FileSystem
+INCLUDEPATH += ../ClientManager/Users/src \
+               ../ClientManager/FileSystem/src \
+               ../ClientManager/Util
 
 SOURCES += \
     autenticatorqt.cpp \
@@ -23,12 +24,12 @@ SOURCES += \
     mainwindow.cpp \
     menuwindow.cpp \
     arduinomenumanager.cpp \
-    ../ClientManager/src/Users/Semaphore.cpp \
-    ../ClientManager/src/Users/Thread.cpp \
-    ../ClientManager/src/Users/AuthenticationServer.cpp \
-    ../ClientManager/src/FileSystem/FileSystem.cpp \
-    ../ClientManager/src/Users/arduinoSimulation.cpp \
-    ../ClientManager/src/Users/Master.cpp \
+    ../ClientManager/Util/Semaphore.cpp \
+    ../ClientManager/Util/Thread.cpp \
+    ../ClientManager/Users/src/AuthenticationServer.cpp \
+    ../ClientManager/FileSystem/src/FileSystem.cpp \
+    ../ClientManager/Users/src/arduinoSimulation.cpp \
+    ../ClientManager/Users/src/Master.cpp \
     usermenumanager.cpp
 
 HEADERS += \
@@ -42,10 +43,10 @@ HEADERS += \
     setrankdialog.h \
     userdataqt.h \
     arduinomenumanager.h \
-    ../ClientManager/src/Users/AuthenticationServer.hpp \
-    ../ClientManager/src/FileSystem/FileSystem.hpp \
-    ../ClientManager/src/Users/arduinoSimulation.hpp \
-    ../ClientManager/src/Users/Master.hpp \
+    ../ClientManager/Users/src/AuthenticationServer.hpp \
+    ../ClientManager/FileSystem/src/FileSystem.hpp \
+    ../ClientManager/Users/src/arduinoSimulation.hpp \
+    ../ClientManager/Users/src/Master.hpp \
     usermenumanager.h
 
 FORMS += \
@@ -60,8 +61,5 @@ FORMS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
-
-INCLUDEPATH += /home/axel/Escritorio/LosM-sFritos_Arduinos/ClientManager/src/FileSystem
-INCLUDEPATH += /home/axel/Escritorio/LosM-sFritos_Arduinos/ClientManager/src/Users
 
 LIBS += -lsodium

@@ -117,6 +117,7 @@ class AuthenticationServer: public Server {
   bool addUser(const std::string& username, const std::string& password,
                                                     char type, char permission);
 
+
   /// @brief Obtiene información del salt de un usuario (para debugging)
   /// @param username Nombre del usuario
   /// @return Salt en formato hexadecimal o string vacío si no existe
@@ -142,6 +143,8 @@ class AuthenticationServer: public Server {
   void printUsers();
 
   void changePassword(std::string& username, const std::string& newPassword);
+
+  bool deleteUser(const std::string& username);
 
   void changePermissions(std::string& username, char newType, char newPermission);
 };

@@ -522,6 +522,88 @@ void AuthenticationServer::changePassword(std::string& username,
     delete[] buffer;
 }
 
+bool AuthenticationServer::deleteUser(const std::string& username) {
+    std::lock_guard<std::mutex> lock(usersMutex);
+    
+    // Verificar que el usuario existe en memoria
+    auto it = users.find(username);
+    if (it == users.end()) {
+        std::cout << "Error: Usuario '" << username << "' no existe" << std::endl;
+        return false;
+    }
+    
+    // Si el usuario está conectado, desconectarlo primero
+    if (it->second.isConnected) {
+        std::cout << "Advertencia: Usuario '" << username 
+                  << "' está conectado, desconectando..." << std::endl;
+        it->second.isConnected = false;
+        counterMutex.wait();
+        if (connectedUsersCount > 0) {
+            connectedUsersCount--;
+        }
+        counterMutex.signal();
+    }
+    
+    // Leer el archivo completo
+    uint32_t fileSize = fs->getFileSize("user_data.csv");
+    if (fileSize == 0) {
+        std::cerr << "Error: Archivo de usuarios vacío" << std::endl;
+        return false;
+    }
+    
+    uint32_t numUsers = fileSize / sizeof(user_t);
+    
+    char* buffer = new char[fileSize];
+    uint32_t bytesRead = fileSize;
+    
+    if (!fs->readFile("user_data.csv", buffer, bytesRead)) {
+        std::cerr << "Error al leer archivo de usuarios" << std::endl;
+        delete[] buffer;
+        return false;
+    }
+    
+    // Buscar y marcar el usuario como no usado
+    bool found = false;
+    for (uint32_t i = 0; i < numUsers; i++) {
+        user_t* userRecord = reinterpret_cast<user_t*>(buffer + (i * sizeof(user_t)));
+        
+        if (userRecord->isUsed != '1') continue;
+        
+        std::string recordName(userRecord->name, USER_NAME_SIZE);
+        recordName.erase(std::remove(recordName.begin(), recordName.end(), FILLER),
+                        recordName.end());
+        
+        if (recordName == username) {
+            // Marcar como en desuso
+            userRecord->isUsed = '0';
+            found = true;
+            break;
+        }
+    }
+    
+    if (!found) {
+        std::cout << "Error: Usuario '" << username 
+                  << "' no encontrado en el archivo" << std::endl;
+        delete[] buffer;
+        return false;
+    }
+    
+    // Escribir el archivo actualizado
+    if (!fs->writeFile("user_data.csv", buffer, fileSize)) {
+        std::cerr << "Error al guardar cambios en el filesystem" << std::endl;
+        delete[] buffer;
+        return false;
+    }
+    
+    delete[] buffer;
+    
+    // Eliminar de la memoria
+    users.erase(username);
+    
+    std::cout << "Usuario '" << username << "' eliminado exitosamente" << std::endl;
+    return true;
+}
+
 void AuthenticationServer::changePermissions(std::string& username,
                                             char newType,
                                             char newPermission) {
