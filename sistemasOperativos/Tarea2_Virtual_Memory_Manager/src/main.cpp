@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <vector>
-#include <iomanip>
 
 #define PAGE_SIZE = 256; // 8 bits para offset
 #define PAGE_TABLE_SIZE = 256; // 8 bits para page number
