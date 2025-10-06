@@ -1,5 +1,4 @@
 #include "AuthenticationServer.hpp"
-#include "FileSystem.hpp"
 #include <iostream>
 #include <string>
 
@@ -12,7 +11,6 @@ int main() {
   }
   //Registrar usuario de prueba y agregar al fileSystem
   std::string user = "admin";
-  char buffer[512];
   authServer->addUser(user, "user123", 1, 1);
   std::string getSalt = authServer->getUserSaltHex(user);
   authServer->printUsers();

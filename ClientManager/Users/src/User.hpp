@@ -1,56 +1,36 @@
 /// @copyright Los Más Fritos - 2025
 
-#ifndef USER_STRUCT_2025B
-#define USER_STRUCT_2025B
+#ifndef USER_HPP
+#define USER_HPP
 
-#include <limits.h>
 #include <cstdint>
-#include <string>
 
-#define EMPTY_USER -1
-#define SEPARATOR '/'
 #define FILLER '*'
+#define USER_NAME_SIZE 20
+#define USER_HASH_SIZE 64  // Hexadecimal representation (32 bytes = 64 hex chars)
+#define USER_SALT_SIZE 32  // Hexadecimal representation (16 bytes = 32 hex chars)
 
-// Tipos de usuarios
-enum userTypes {
-  CONSULTANT = 1,
-  USER_ADMIN,
-  SOFTWARE_ADMIN,
-  HARDWARE_ADMIN
-};
+/**
+ * @brief Estructura que representa un usuario en el sistema
+ * 
+ * Total size: 128 bytes
+ * Layout optimizado para almacenamiento en bloques de 256 bytes (2 usuarios por bloque)
+ */
+typedef struct __attribute__((packed)) user_t {
+    char isUsed;                    // '1' = usado, '0' = libre (1 byte)
+    char name[USER_NAME_SIZE];      // Nombre de usuario, rellenado con FILLER (20 bytes)
+    char hash[USER_HASH_SIZE];      // Hash de contraseña en hexadecimal (64 bytes)
+    char salt[USER_SALT_SIZE];      // Salt en hexadecimal (32 bytes)
+    char type;                      // Tipo de usuario/rank (1 byte)
+    char permissions;               // Permisos (1 byte)
+    char day[2];                    // Día de creación (2 bytes)
+    char month[2];                  // Mes de creación (2 bytes)
+    char hour[2];                   // Hora de creación (2 bytes)
+    char minute[2];                 // Minuto de creación (2 bytes)
+    char separator;                 // Separador '/' (1 byte)
+    // Total: 128 bytes
+} user_t;
 
-// Permisos
-#define PERM_AUTH_READ      0x01
-#define PERM_AUTH_WRITE     0x02
-#define PERM_SENSOR_READ    0x04
-#define PERM_SENSOR_WRITE   0x08
-#define PERM_LOG_READ       0x10
-#define PERM_LOG_WRITE      0x20
-#define PERM_USERDATA_READ  0x40
-#define PERM_USERDATA_WRITE 0x80
+static_assert(sizeof(user_t) == 128, "user_t must be exactly 128 bytes");
 
-// Permisos por tipo de usuario
-#define PERMS_SOFTWARE_ADMIN   (PERM_AUTH_READ | PERM_AUTH_WRITE \
-                              | PERM_SENSOR_READ | PERM_SENSOR_WRITE \
-                              | PERM_LOG_READ | PERM_LOG_WRITE \
-                              | PERM_USERDATA_READ | PERM_USERDATA_WRITE)
-#define PERMS_HARDWARE_ADMIN   (PERM_SENSOR_READ | PERM_SENSOR_WRITE)
-#define PERMS_USER_ADMIN       (PERM_USERDATA_READ | PERM_USERDATA_WRITE)
-#define PERMS_CONSULTANT       (PERM_SENSOR_READ | PERM_LOG_READ)
-
-/// Estructura de usuario
-typedef struct User {
-  char isUsed;       // 1 byte
-  char name[20];     // 20 bytes
-  char hash[64];     // 64 bytes
-  char salt[32];     // 32 bytes
-  char type;         // 1 byte
-  char permissions;  // 1 byte
-  char day [2];      // 2 bytes
-  char month [2];    // 2 bytes
-  char hour [2];     // 2 bytes
-  char minute [2];   // 2 bytes
-  char separator;    // 1 byte
-} user_t;            // 128 bytes total
-
-#endif  // USER_STRUCT_2025B
+#endif // USER_HPP

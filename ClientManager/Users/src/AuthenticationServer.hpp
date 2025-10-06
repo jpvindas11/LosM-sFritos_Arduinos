@@ -9,9 +9,9 @@
 #include <unordered_map>
 #include <mutex>
 
-#include "FileSystem.hpp"
+#include "../../FileSystem/src/FileSystem.hpp"
+#include "../../Util/Semaphore.hpp"
 #include "Server.hpp"
-#include "Semaphore.hpp"
 #include "User.hpp"
 
 /// @brief Estructura para datos de usuario almacenados en memoria

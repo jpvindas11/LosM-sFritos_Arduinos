@@ -5,9 +5,9 @@
 
 #include <string>
 
-#include "common.hpp"
-#include "Thread.hpp"
-#include "Semaphore.hpp"
+#include "../../Util/common.hpp"
+#include "../../Util/Thread.hpp"
+#include "../../Util/Semaphore.hpp"
 
 class Server : public virtual Thread {
   DISABLE_COPY(Server);
