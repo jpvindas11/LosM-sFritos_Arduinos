@@ -21,8 +21,8 @@ algorithm.
 
 == Specific
 Your program will read a file containing several 32-bit integer numbers that
-represent logical addresses. However, you need only be concerned with 16-
-bit addresses, so you must mask the rightmost 16 bits of each logical address.
+represent logical addresses. However, you need only be concerned with 16-bit
+addresses, so you must mask the rightmost 16 bits of each logical address.
 These 16 bits are divided into (1) an 8-bit page number and (2) an 8-bit page
 offset. Hence, the addresses are structured as shown as:
 
@@ -47,8 +47,7 @@ table as outlined in Section 9.3. First, the page number is extracted from the
 logical address, and the TLB is consulted. In the case of a TLB hit, the frame
 number is obtained from the TLB. In the case of a TLB miss, the page table
 must be consulted. In the latter case, either the frame number is obtained from
-the page table, or a page fault occurs. A visual representation of the address-
-translation process is:
+the page table, or a page fault occurs. A visual representation of the address translation process is:
 
 image::../img/memory_manager02.png[figure 2]
 
@@ -58,16 +57,11 @@ backing store is represented by the file BACKING STORE.bin, a binary file of
 size 65,536 bytes. When a page fault occurs, you will read in a 256-byte page
 from the file BACKING STORE and store it in an available page frame in physical
 memory. For example, if a logical address with page number 15 resulted in a
-page fault, your program would read in page 15 from BACKING STORE (remem-
-ber that pages begin at 0 and are 256 bytes in size) and store it in a page frame
+page fault, your program would read in page 15 from BACKING STORE (remember that pages begin at 0 and are 256 bytes in size)
+and store it in a page frame
 in physical memory. Once this frame is stored (and the page table and TLB are
 updated), subsequent accesses to page 15 will be resolved by either the TLB or
 the page table.
-
-You will need to treat BACKING STORE.bin as a random-access file so that
-you can randomly seek to certain positions of the file for reading. We suggest
-using the standard C library functions for performing I/O, including fopen(),
-fread(), fseek(), and fclose().
 
 The size of physical memory is the same as the size of the virtual address
 space—65,536 bytes—so you do not need to be concerned about page replace-
@@ -76,8 +70,7 @@ using a smaller amount of physical memory; at that point, a page-replacement
 strategy will be required.
 
 == Test File
-We provide the file addresses.txt, which contains integer values represent-
-ing logical addresses ranging from 0to65535 (the size of the virtual address
+We provide the file addresses.txt, which contains integer values representing logical addresses ranging from 0to65535 (the size of the virtual address
 space). Your program will open this file, read each logical address and translate
 it to its corresponding physical address, and output the value of the signed byte
 at the physical address.
@@ -104,7 +97,7 @@ you are ready to implement the TLB, recall that it has only sixteen entries, so
 you will need to use a replacement strategy when you update a full TLB. You
 may use either a FIFO or an LRU policy for updating your TLB.
 
-How to Run Your Program
+== How to Run Your Program
 Your program should run as follows:
 
 ----
