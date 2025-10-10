@@ -80,8 +80,8 @@ void Socket::closeSocket(int fd) {
     }
     // else close the client socket
     if (fd >= 0) {
-        close(fd)
-    };
+        close(fd);
+    }
 }
 
 int Socket::getSocketFD() const {

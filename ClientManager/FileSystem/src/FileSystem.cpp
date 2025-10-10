@@ -83,7 +83,8 @@ bool FileSystem::format(const std::string& path) {
     File emptyFile;
     memset(emptyFile.fileName, 0, FILE_NAME_LENGTH);
     emptyFile.iNodePointer = INODE_FREE_SLOT;
-    emptyFile.filler = 0;
+    emptyFile.isOpen = false;
+    emptyFile.type = 0;
     
     char directoryBlock[BLOCK_SIZE];
     memset(directoryBlock, 0, BLOCK_SIZE);
@@ -690,7 +691,8 @@ bool FileSystem::addFileToDirectory(const std::string& fileName, uint16_t inodeN
     file.fileName[FILE_NAME_LENGTH - 1] = '\0';
     
     file.iNodePointer = inodeNum;
-    file.filler = 0;
+    file.isOpen = false;
+    file.type = 0;
     
     return true;
 }
@@ -712,7 +714,8 @@ bool FileSystem::removeFileFromDirectory(const std::string& fileName) {
     File& file = this->directory.entries[fileIndex];
     memset(file.fileName, 0, FILE_NAME_LENGTH);
     file.iNodePointer = INODE_FREE_SLOT;
-    file.filler = 0;
+    file.isOpen = false;
+    file.type = 0;
     
     return true;
 } 

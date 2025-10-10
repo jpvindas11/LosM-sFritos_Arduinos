@@ -7,6 +7,7 @@
 
 #define FILLER '*'
 #define USER_NAME_SIZE 20
+#define USER_PASSWORD_SIZE_MAX 32
 #define USER_HASH_SIZE 64  // Hexadecimal representation (32 bytes = 64 hex chars)
 #define USER_SALT_SIZE 32  // Hexadecimal representation (16 bytes = 32 hex chars)
 

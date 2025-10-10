@@ -7,52 +7,53 @@
 #include <cmath>
 #include <inttypes.h>
 
-#define BLOCK_SIZE 256
-#define TOTAL_BLOCK 65536  // 2^16 = direcciones de 16 bits
+#define BLOCK_SIZE 1024
+#define TOTAL_BLOCK 16384
 #define DISK_SIZE (TOTAL_BLOCK * BLOCK_SIZE)  // 16 MB
-#define TOTAL_I_NODES 512
+#define TOTAL_I_NODES 2048
 #define TOTAL_DIRECT_POINTERS 12
-#define INODE_FREE_SLOT 0xFFFF    // Para uint16_t (iNodePointer)
-#define BLOCK_FREE_SLOT 0xFFFFFFFF // Para uint32_t (bloques)
+#define INODE_FREE_SLOT 0xFFFF
+#define BLOCK_FREE_SLOT 0xFFFFFFFF
 #define FILE_NAME_LENGTH 28
 
 // Helper macro para calcular bloques necesarios
-#define BLOCKS_NEEDED(bytes) ((bytes + BLOCK_SIZE - 1) / BLOCK_SIZE)
+#define BLOCKS_NEEDED(bytes) (((bytes) + BLOCK_SIZE - 1) / BLOCK_SIZE)
 
-// Bitmap de inodos: 512 bits = 64 bytes = 1 bloque
+// Bitmap de inodos: 2048 bits = 256 bytes = 1 bloque
 #define INODE_BITMAP_START 1
-#define INODE_BITMAP_BLOCKS BLOCKS_NEEDED(TOTAL_I_NODES / 8)
+#define INODE_BITMAP_BLOCKS 1  // 256 bytes caben en 1 bloque de 1KB
 
-// Bitmap de bloques: 65536 bits = 8192 bytes = 32 bloques
-#define BLOCK_BITMAP_START (INODE_BITMAP_START + INODE_BITMAP_BLOCKS)
-#define BLOCK_BITMAP_BLOCKS BLOCKS_NEEDED(TOTAL_BLOCK / 8)
+// Bitmap de bloques: 16384 bits = 2048 bytes = 2 bloques
+#define BLOCK_BITMAP_START (INODE_BITMAP_START + INODE_BITMAP_BLOCKS)  // = 2
+#define BLOCK_BITMAP_BLOCKS 2  // 2048 bytes necesitan 2 bloques de 1KB
 
-// Tabla de inodos: 512 inodos × 106 bytes = 54272 bytes
-#define INODE_SIZE 94
-#define INODES_PER_BLOCK 2
-#define INODE_TABLE_START (BLOCK_BITMAP_START + BLOCK_BITMAP_BLOCKS)
-#define INODE_TABLE_BLOCKS (TOTAL_I_NODES / INODES_PER_BLOCK)
+// Tabla de inodos: 2048 inodos × 82 bytes = 167936 bytes
+#define INODE_SIZE 82  // Tamaño real de tu estructura packed
+#define INODES_PER_BLOCK (BLOCK_SIZE / INODE_SIZE)  // 1024/82 = 12 inodos por bloque
+#define INODE_TABLE_START (BLOCK_BITMAP_START + BLOCK_BITMAP_BLOCKS)  // = 4
+#define INODE_TABLE_BLOCKS ((TOTAL_I_NODES + INODES_PER_BLOCK - 1) / INODES_PER_BLOCK)  // ceil(2048/12) = 171 bloques
 
-// Directorio de archivos
-#define FILE_DIRECTORY_START (INODE_TABLE_START + INODE_TABLE_BLOCKS)
+// Directorio de archivos: 2048 × 32 bytes = 65536 bytes = 64 bloques
+#define FILE_DIRECTORY_START (INODE_TABLE_START + INODE_TABLE_BLOCKS)  // = 175
 #define FILE_ENTRY_SIZE 32
-#define FILE_DIRECTORY_BLOCKS BLOCKS_NEEDED(TOTAL_I_NODES * FILE_ENTRY_SIZE)
+#define FILE_DIRECTORY_BLOCKS BLOCKS_NEEDED(TOTAL_I_NODES * FILE_ENTRY_SIZE)  // 64 bloques
 #define MAX_FILES TOTAL_I_NODES
 
 // Bloques de datos: todo lo que sobra
-#define DATA_BLOCKS_START (FILE_DIRECTORY_START + FILE_DIRECTORY_BLOCKS)
-#define TOTAL_DATA_BLOCKS (TOTAL_BLOCK - DATA_BLOCKS_START)
+#define DATA_BLOCKS_START (FILE_DIRECTORY_START + FILE_DIRECTORY_BLOCKS)  // = 239
+#define TOTAL_DATA_BLOCKS (TOTAL_BLOCK - DATA_BLOCKS_START)  // 16384 - 239 = 16145 bloques
 
 // Constantes para cálculos de indirección
-#define POINTERS_PER_BLOCK (BLOCK_SIZE / sizeof(uint32_t))  // 64 punteros por bloque
+#define POINTERS_PER_BLOCK (BLOCK_SIZE / sizeof(uint32_t))  // 256 punteros por bloque
 
 // Rangos de bloques:
-// Directos: 0-11 (12 bloques)
-// Indirecto simple: 12-75 (64 bloques)
-// Indirecto doble: 76-4171 (64*64 = 4096 bloques)
+// Directos: 0-11 (12 bloques = 12 KB)
+// Indirecto simple: 12-267 (256 bloques = 256 KB)
+// Indirecto doble: 268-65803 (256×256 = 65536 bloques = 64 MB)
 #define MAX_DIRECT_BLOCKS TOTAL_DIRECT_POINTERS  // 12
-#define MAX_SINGLE_INDIRECT_BLOCKS (MAX_DIRECT_BLOCKS + POINTERS_PER_BLOCK)  // 76
-#define MAX_DOUBLE_INDIRECT_BLOCKS (MAX_SINGLE_INDIRECT_BLOCKS + POINTERS_PER_BLOCK * POINTERS_PER_BLOCK)  // 4172
+#define MAX_SINGLE_INDIRECT_BLOCKS (MAX_DIRECT_BLOCKS + POINTERS_PER_BLOCK)  // 268
+#define MAX_DOUBLE_INDIRECT_BLOCKS (MAX_SINGLE_INDIRECT_BLOCKS + POINTERS_PER_BLOCK * POINTERS_PER_BLOCK)  // 65804
+
 
 /**
  * @brief Estructura que contiene la información presente en el bloque 0 del file system
@@ -138,15 +139,15 @@ typedef struct __attribute__((packed)) iNode {
     uint32_t userId;
     uint32_t groupId;
 
-    // Usamos int64 en lugar de time_t para consistencia de tamaño
-    uint64_t creationTime;
-    uint64_t lastModifiedTime;
-    uint64_t lastAccessTime;  
+    // Usamos int32 en lugar de time_t para consistencia de tamaño
+    uint32_t creationTime;
+    uint32_t lastModifiedTime;
+    uint32_t lastAccessTime;  
 
     uint32_t directBlocks[TOTAL_DIRECT_POINTERS];
     uint32_t singleIndirectPointer;
     uint32_t doubleIndirectPointer;
-    // 94 bytes
+    // 82 bytes
 } iNode;
 
 /**
@@ -180,7 +181,8 @@ inline iNode initInode() {
 typedef struct File {
     char fileName[FILE_NAME_LENGTH];
     uint16_t iNodePointer;
-    uint16_t filler;
+    uint8_t isOpen;
+    uint8_t type;
     // 32 bytes
 } File;
 

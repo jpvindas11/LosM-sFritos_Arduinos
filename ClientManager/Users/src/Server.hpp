@@ -37,6 +37,10 @@ class Server : public virtual Thread {
     this->message = message;
   }
 
+  std::string getMessage() {
+    return this->message;
+  }
+
   void checkMessage() {
     this->canCheckMessage.signal();
   }
