@@ -2,11 +2,13 @@
 
 #include <iostream>
 #include <vector>
+#include "VirtualMemoryManager.hpp"
 
 #define PAGE_SIZE = 256; // 8 bits para offset
 #define PAGE_TABLE_SIZE = 256; // 8 bits para page number
 
 int main() {
+  /*
   std::vector<int> address_list = {1, 256, 32768, 32769, 128, 65534, 33153};
 
   std::cout << "Address"  << '\t'
@@ -24,5 +26,7 @@ int main() {
               << offset          << '\t'
               << std::endl;
   }
-  return 0;
+  */
+  VirtualMemoryManager MMV = VirtualMemoryManager();
+   return 0;
 }

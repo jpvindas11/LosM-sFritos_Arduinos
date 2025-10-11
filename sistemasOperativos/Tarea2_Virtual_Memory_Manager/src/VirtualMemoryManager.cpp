@@ -21,12 +21,14 @@ void VirtualMemoryManager::initializeManager() {
     this->pageTable[index] = -1;
     this->timeTable[index] = -1;
   }
-  this->time_counter = 0;
+  this->timeCounter = 0;
+  this->pageFaults = 0;
+  this->tableHits = 0;
+  this->framesContent.resize(FRAME_COUNT);
   uint32_t file_size = this->disk->getFileSize("correspondenceTable.bin") + 1;
   char tableContent[file_size];
   this->disk->readFile("correspondenceTable.bin", tableContent, file_size);
   std::vector<std::string> pages;
-  std::cout<<tableContent<<std::endl;
   this->proccessFileCorrespondenceTable(tableContent, pages);
   this->fillCorrespondanceTable(pages);
 } 
@@ -44,7 +46,7 @@ void VirtualMemoryManager::proccessFileCorrespondenceTable(char* tableContent,
   }
 }
 
-void VirtualMemoryManager:: fillCorrespondanceTable(
+void VirtualMemoryManager::fillCorrespondanceTable(
                                               std::vector<std::string>& pages) {
   for (const auto& pair: pages) {
     size_t commaPostion = pair.find(',');
@@ -56,4 +58,53 @@ void VirtualMemoryManager:: fillCorrespondanceTable(
       }
     }
   }
+}
+
+int64_t VirtualMemoryManager::getFreePage() {
+  for (int64_t index = 0; index < FRAME_COUNT; index++){
+    if (this->pageTable[index] == -1) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+bool VirtualMemoryManager::checkPageInTable(int64_t page) {
+  for (int64_t index = 0; index < FRAME_COUNT; index++){
+    if (this->pageTable[index] == page) {
+      return true;
+    }
+  }
+  return false;
+}
+
+int64_t VirtualMemoryManager::getPhysicalPage(std::string& logicalPage) {
+  for (const auto& pair: this->correspondanceTable) {
+    if (pair.first == logicalPage) {
+      return std::stoll(pair.second);
+    }
+  }
+  return -1;
+}
+
+int VirtualMemoryManager::allocatePage(std::string& requestedPage,
+                                                    int64_t storingFrameIndex) {
+  int64_t physicalPage = this->getPhysicalPage(requestedPage);
+  if (physicalPage == -1) {
+    return EXIT_FAILURE;
+  }
+  try {
+    int64_t numericPage = std::stoll(requestedPage);
+    this->pageTable[storingFrameIndex] = numericPage;
+    this->timeTable[storingFrameIndex] = this->timeCounter;
+    this->timeCounter++;
+    this->disk->readBlock(
+                          (uint64_t)physicalPage, 
+                          static_cast<void*>
+                          (this->framesContent[storingFrameIndex].data));
+  } catch (const std::exception& e) {
+    std::cerr<<"ERROR: Página no númerica"<<std::endl;
+    return EXIT_FAILURE;
+  }
+  return EXIT_SUCCESS;
 }
