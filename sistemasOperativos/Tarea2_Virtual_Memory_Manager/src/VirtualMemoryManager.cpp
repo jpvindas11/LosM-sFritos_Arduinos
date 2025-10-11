@@ -91,13 +91,13 @@ int VirtualMemoryManager::allocatePage(std::string& requestedPage,
                                                     int64_t storingFrameIndex) {
   int64_t physicalPage = this->getPhysicalPage(requestedPage);
   if (physicalPage == -1) {
+    std::cerr<<"ERROR: La página "<< requestedPage<<" no existe"<<std::endl;
     return EXIT_FAILURE;
   }
   try {
     int64_t numericPage = std::stoll(requestedPage);
     this->pageTable[storingFrameIndex] = numericPage;
     this->timeTable[storingFrameIndex] = this->timeCounter;
-    this->timeCounter++;
     this->disk->readBlock(
                           (uint64_t)physicalPage, 
                           static_cast<void*>
@@ -107,4 +107,76 @@ int VirtualMemoryManager::allocatePage(std::string& requestedPage,
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
+}
+
+void VirtualMemoryManager:: getReferencedPages(std::string& referenceString){
+  
+  std::stringstream ss(referenceString);
+  std::string logicalPage;
+  while (std::getline(ss, logicalPage, ',')) {
+    if (!logicalPage.empty()) {
+      if (!this->checkPageInTable(std::stoll(logicalPage))) {
+        this->pageFaults++;
+        this->LRUBringPage(logicalPage);
+      } else {
+          this->tableHits++;
+          std::cout<<"La página "<<logicalPage<<" ya fue añadida a la tabla"
+                   << std::endl;
+      }
+      this->timeCounter++;
+    }
+  } 
+}
+
+int VirtualMemoryManager::LRUBringPage(std::string& requestedPage) {
+  int64_t emptyPage = this->getFreePage();
+  if (emptyPage == -1) {
+    emptyPage = this->LRUSelectVictimFrame();
+  }
+  this->allocatePage(requestedPage, emptyPage);
+  std::cout<<"Página: "<<requestedPage<<" cargada en "<<emptyPage<<std::endl;
+  //std::cout<<this->framesContent[emptyPage].data<<std::endl;
+  return EXIT_SUCCESS;
+}
+
+int64_t VirtualMemoryManager:: LRUSelectVictimFrame() {
+  int64_t frameIndex = this->getOldestFrame();
+  this->cleanFrame(frameIndex);
+  return frameIndex;
+}
+
+int64_t VirtualMemoryManager::getOldestFrame(){
+  int64_t oldestTime = this->timeTable[0];
+  int64_t frameIndex = 0;
+  for (int64_t index = 0; index < FRAME_COUNT; index++){
+    if (this->timeTable[index] < oldestTime) {
+      oldestTime = this->timeTable[index];
+      frameIndex = index; 
+    }
+  }
+  return frameIndex;
+}
+
+void VirtualMemoryManager::cleanFrame(int64_t frameNumber) {
+  this->pageTable[frameNumber] = -1;
+  this->timeTable[frameNumber] = -1;
+  memset(this->framesContent[frameNumber].data,'\0', 
+                                 sizeof(this->framesContent[frameNumber].data));
+}
+
+void VirtualMemoryManager::printStatics() {
+  double pageFaultPercentage = 0;
+  double tableHitsPercentage = 0;
+  if (this->timeCounter != 0) {
+    pageFaultPercentage = 
+                       ((double)this->pageFaults/(double)this->timeCounter)*100;
+    tableHitsPercentage = 
+                       ((double)this->tableHits/(double)this->timeCounter)*100;
+  }
+  std::cout<<"Cantidad de page faults: "<<this->pageFaults
+           <<". "<<pageFaultPercentage<<"\% de las solicitudes realizadas"
+           <<std::endl;
+  std::cout<<"Cantidad de table hits: "<<this->tableHits
+           <<". "<<tableHitsPercentage<<"\% de las solicitudes realizadas"
+           <<std::endl;
 }

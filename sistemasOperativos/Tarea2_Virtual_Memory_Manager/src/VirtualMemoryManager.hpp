@@ -34,6 +34,7 @@ class VirtualMemoryManager {
    VirtualMemoryManager();
    ~VirtualMemoryManager();
    void getReferencedPages(std::string& referenceString);
+   void printStatics();
 
 
  private:
@@ -45,6 +46,12 @@ class VirtualMemoryManager {
   int64_t getFreePage();
   bool checkPageInTable(int64_t page);
   int allocatePage(std::string& requestedPage, int64_t storingFrameIndex);
+  int LRUBringPage(std::string& requestedPage);
+  int64_t LRUSelectVictimFrame();
+  void cleanFrame(int64_t frameNumber);
+  int64_t getOldestFrame();
+
+
 };
 
 #endif // VIRTUALMEMORYMANGER

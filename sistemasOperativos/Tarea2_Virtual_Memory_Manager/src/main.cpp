@@ -28,5 +28,8 @@ int main() {
   }
   */
   VirtualMemoryManager MMV = VirtualMemoryManager();
+  std::string references = "31,30,29,28,31,30,27,26,25,24,5,6,7";
+  MMV.getReferencedPages(references);
+  MMV.printStatics();
    return 0;
 }
