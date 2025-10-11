@@ -186,13 +186,18 @@ typedef struct File {
     // 32 bytes
 } File;
 
-/**
- * @brief Estructura del directorio que contiene los archivos
- * 
- * Maneja un arreglo de archivos existentes
- */
-typedef struct Directory {
-    File entries[TOTAL_I_NODES];
-} Directory;
+typedef struct FileLocation {
+    File file;
+    uint32_t blockNum;
+    uint32_t offset;
+    bool found;
+} FileLocation;
+
+typedef enum FileType {
+    FT_FILE,
+    FT_FOLDER,
+} FileType;
+
+
 
 #endif
