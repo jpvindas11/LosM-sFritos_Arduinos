@@ -5,15 +5,12 @@
 #include <vector>
 #include "VirtualMemoryManager.hpp"
 
-VirtualMemoryManager::VirtualMemoryManager()
-    : nextFreeFrame(0)
+VirtualMemoryManager::VirtualMemoryManager(const char* backingStorePtr)
+    : backingStoreMem(backingStorePtr)
+    , nextFreeFrame(0)
     , pageFaults(0)
     , totalAccesses(0) {
   std::memset(pageTable, -1, sizeof(pageTable));
-  // Inicializa el backing store en memoria con algún patrón
-  for (int i = 0; i < PHYSICAL_MEMORY_SIZE; ++i) {
-    backingStoreMem[i] = static_cast<char>(i % 128);
-  }
 }
 
 void VirtualMemoryManager::handlePageFault(int pageNum) {
@@ -53,7 +50,6 @@ void VirtualMemoryManager::translateAddresses(
               << " Value: " << static_cast<int>(value) << std::endl;
   }
 }
-
 
 void VirtualMemoryManager::printStatics() const {
   std::cout << "Page-fault rate: "
