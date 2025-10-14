@@ -1,8 +1,6 @@
 #ifndef VIRTUALMEMORYMANGER
 #define VIRTUALMEMORYMANGER
 
-#pragma once
-
 #include <vector>
 #include <string>
 #include <cstring>
@@ -52,6 +50,20 @@ class VirtualMemoryManager {
   int64_t getOldestFrame();
 
 
+  
 };
+
+/// Método para traducir direcciones lógicas, no forma parte de la clase
+inline std::string translateAddress(const std::vector<int>& addresses) {
+  std::ostringstream oss;
+  bool first = true;
+  for (int address : addresses) {
+    int page_number = (address >> 12) & 0xFF;
+    if (!first) oss << ",";
+    oss << page_number;
+    first = false;
+  }
+  return oss.str();
+}
 
 #endif // VIRTUALMEMORYMANGER
