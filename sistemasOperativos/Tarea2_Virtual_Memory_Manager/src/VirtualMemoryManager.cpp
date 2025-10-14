@@ -5,20 +5,48 @@
 #include <vector>
 #include "VirtualMemoryManager.hpp"
 
-VirtualMemoryManager::VirtualMemoryManager(const char* backingStorePtr)
-    : backingStoreMem(backingStorePtr)
-    , nextFreeFrame(0)
+VirtualMemoryManager::VirtualMemoryManager(const std::string& backingStorePath)
+    : nextFreeFrame(0)
     , pageFaults(0)
-    , totalAccesses(0) {
+    , totalAccesses(0)
+    , timeCounter(0) {
   std::memset(pageTable, -1, sizeof(pageTable));
+  std::memset(lastUsed, 0, sizeof(lastUsed));
+  backingStore.open(backingStorePath, std::ios::binary);
+  if (!backingStore.is_open()) {
+    std::cerr << "No se pudo abrir el archivo de backing store\n";
+    std::exit(1);
+  }
 }
 
 void VirtualMemoryManager::handlePageFault(int pageNum) {
-  std::memcpy(&physicalMemory[nextFreeFrame * FRAME_SIZE]
-            , &backingStoreMem[pageNum   * PAGE_SIZE]
-            , PAGE_SIZE);
-  pageTable[pageNum] = nextFreeFrame;
-  this->nextFreeFrame++;
+  int frameToUse;
+  if (nextFreeFrame < NUM_FRAMES) {
+    frameToUse = nextFreeFrame++;
+  } else {
+    int lruFrame = 0;
+    int minTime = lastUsed[0];
+    for (int i = 1; i < NUM_FRAMES; ++i) {
+      if (lastUsed[i] < minTime) {
+        minTime = lastUsed[i];
+        lruFrame = i;
+      }
+    }
+    frameToUse = lruFrame;
+    backingStore.seekg(pageNum * PAGE_SIZE, std::ios::beg);
+    backingStore.read(&physicalMemory[frameToUse * FRAME_SIZE], PAGE_SIZE);
+    for (int i = 0; i < PAGE_TABLE_SIZE; ++i) {
+      if (pageTable[i] == frameToUse) {
+        pageTable[i] = -1;
+        break;
+      }
+    }
+  }
+  std::memcpy(&physicalMemory[frameToUse * FRAME_SIZE],
+              &backingStoreMem[pageNum * PAGE_SIZE],
+              PAGE_SIZE);
+  pageTable[pageNum] = frameToUse;
+  lastUsed[frameToUse] = timeCounter++;
 }
 
 int VirtualMemoryManager::getFrame(int pageNum) {

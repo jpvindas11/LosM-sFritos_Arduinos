@@ -3,9 +3,10 @@
 #ifndef VIRTUALMEMORYMANGER
 #define VIRTUALMEMORYMANGER
 
-#include <string>
 #include <cstring>
 #include <cstdlib>
+#include <fstream>
+#include <string>
 #include <iostream>
 #include <vector>
 
@@ -16,6 +17,8 @@ class VirtualMemoryManager {
   DISABLE_COPY(VirtualMemoryManager);
 
  private:
+  ///
+  std::ifstream backingStore;
   ///
   int pageTable[PAGE_TABLE_SIZE];
   ///
@@ -28,9 +31,13 @@ class VirtualMemoryManager {
   int pageFaults;
   ///
   int totalAccesses;
+  ///
+  int lastUsed[NUM_FRAMES];
+  ///
+  int timeCounter;
  public:
   ///
-  explicit VirtualMemoryManager(const char* backingStorePtr);
+  explicit VirtualMemoryManager(const std::string& backingStorePath);
   ///
   ~VirtualMemoryManager() = default;
   ///

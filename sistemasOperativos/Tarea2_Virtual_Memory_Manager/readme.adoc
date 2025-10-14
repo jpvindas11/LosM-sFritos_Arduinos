@@ -124,10 +124,12 @@ program is correctly translating logical to physical addresses.
 
 == Statistics
 After completion, your program is to report the following statistics:
+
 1. Page-fault rate—The percentage of address references that resulted in
 page faults.
 2. TLB hit rate—The percentage of address references that were resolved in
 the TLB.
+
 Since the logical addresses in addresses.txt were generated randomly and
 do not reflect any memory access locality, do not expect to have a high TLB hit
 rate.
