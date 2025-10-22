@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 #include <cstring>
 #include <cstdlib>
 #include <unordered_map>
@@ -101,14 +102,14 @@ class VirtualMemoryManager {
    * @return true Si la página se encuentra en memoria
    * @return false En caso contrario
    */
-  bool checkPageInTable(int64_t page);
+  int64_t checkPageInTable(int64_t page);
   /**
    * @brief Carga el bloque del backingStorage correspondiente a la página solicitada en la memoria principal
    * 
    * @param requestedPage Página solicitada
    * @param storingFrameIndex índice de la pageTable donde se colocará la página
-   * @return EXIT_FAILURE si la página solicitada no existe
-   * @return EXIT_SUCCES en cas contrario
+   * @return int64_t indice de la página solicitada si existe
+   * @return -1 en caso contrario
    */
   int allocatePage(std::string& requestedPage, int64_t storingFrameIndex);
   /**

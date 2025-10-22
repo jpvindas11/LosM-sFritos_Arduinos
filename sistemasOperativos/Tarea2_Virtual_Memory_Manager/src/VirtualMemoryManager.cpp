@@ -1,4 +1,3 @@
-#include <sstream>
 #include "VirtualMemoryManager.hpp"
 
 
@@ -91,14 +90,14 @@ int64_t VirtualMemoryManager::getFreePage() {
   return -1;
 }
 
-bool VirtualMemoryManager::checkPageInTable(int64_t page) {
+int64_t VirtualMemoryManager::checkPageInTable(int64_t page) {
   for (int64_t index = 0; index < FRAME_COUNT; index++){
     if (this->pageTable[index] == page) {
-      // se retorna verdadero si se encuentra la página
-      return true;
+      // se retorna el indice si se encuentra la página
+      return index;
     }
   }
-  return false;
+  return -1;
 }
 
 int64_t VirtualMemoryManager::getPhysicalPage(std::string& logicalPage) {
@@ -148,7 +147,7 @@ void VirtualMemoryManager:: getReferencedPages(std::string& referenceString){
   while (std::getline(ss, logicalPage, ',')) {
     if (!logicalPage.empty()) {
       // revisar si la página se encuentra en la memoria principal
-      if (!this->checkPageInTable(std::stoll(logicalPage))) {
+      if (this->checkPageInTable(std::stoll(logicalPage))==-1) {
         // aumentar la cantidad de pageFaults si no es el caso
         this->pageFaults++;
         // proceder a carga la página
@@ -159,6 +158,9 @@ void VirtualMemoryManager:: getReferencedPages(std::string& referenceString){
           this->tableHits++;
           std::cout<<"La página "<<logicalPage<<" ya fue añadida a la tabla"
                    << std::endl;
+          // actualizar el contador para la página a la que se accedió
+          this->timeTable[this->checkPageInTable(std::stoll(logicalPage))]
+                                                            = this->timeCounter; 
       }
       // aumentar el contador tras cada procesamiento de la cadena de referencias
       this->timeCounter++;
