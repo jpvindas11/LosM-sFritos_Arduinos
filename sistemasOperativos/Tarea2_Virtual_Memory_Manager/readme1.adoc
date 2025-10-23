@@ -1,0 +1,108 @@
+:experimental:
+:nofooter:
+:source-highlighter: pygments
+:sectnums:
+:stem: latexmath
+:toc:
+:xrefstyle: short
+
+= Virtual Memory Manager - Los Más Fritos
+
+Este proyecto implementa un simulador de gestión de memoria virtual que traduce direcciones lógicas a físicas usando paginación por demanda y el algoritmo de reemplazo LRU (Least Recently Used).
+
+== Arquitectura del Sistema
+
+=== Especificaciones del VirtualMemoryManager
+* **Marcos de página físicos**: 8 (FRAME_COUNT = 8)
+* **Tamaño de página/marco**: 1024 bytes (FRAME_SIZE = 1024)
+* **Memoria física total**: 8 KB (8 marcos × 1024 bytes)
+* **Algoritmo de reemplazo**: LRU (Least Recently Used)
+* **Backing Store**: Sistema de archivos virtual (disk.bin)
+
+
+=== Estructura de Direcciones (VirtualMemoryManager)
+```cpp
+// Extracción de número de página desde dirección lógica
+int page_number = (address >> 12) & 0xFF;  // 12 bits de desplazamiento para 1024 bytes
+```
+
+== Componentes Principales
+
+=== VirtualMemoryManager
+Implementación principal que maneja:
+
+* ** Traducción de direcciones lógicas a físicas**
+* ** Gestión de la tabla de páginas**
+* ** Manejo de fallos de página usando LRU**
+
+== Estructura de Archivos
+
+=== Archivos de Implementación Principal
+* `src/VirtualMemoryManager.hpp/cpp`: Gestor principal de memoria virtual
+* `src/FileSystem.hpp/cpp`: Sistema de archivos virtual para backing store
+* `src/main.cpp`: Programa principal con casos de prueba
+
+=== Archivos de Datos
+* `src/FileSystem/disk.bin`: Backing store virtual
+* `correspondenceTable.bin`: Tabla de correspondencia página→bloque, se encuentra dentro de `disk.bin`
+
+
+== Casos de Prueba Implementados
+
+=== 1. Acceso Secuencial
+```cpp
+Referencias: "1,2,3,4,5,6,7,8,9,10"
+```
+Prueba el llenado inicial de los 8 marcos disponibles.
+
+=== 2. Acceso con Repeticiones
+```cpp
+Referencias: "5,5,5,10,10,15,5,10,20,20"
+```
+Verifica el comportamiento de hits y el algoritmo LRU.
+
+=== 3. Acceso Aleatorio
+```cpp
+Referencias: "15,3,28,9,1,30,7,15,3,27"
+```
+Simula patrones de acceso no secuencial.
+
+== Compilación y Ejecución
+
+### Ejecución
+Ejecutar el siguiente comando en la terminal para ver las opciones disponibles:
+```bash
+make help
+```
+Ejecutar el siguiente comando en la terminal para compilar y correr el 
+programa:
+```bash
+make run
+```
+
+== Estadísticas del Sistema
+
+### Métricas Reportadas
+* **Page Faults**: Número total de fallos de página.
+* **Table Hits**: Número de accesos exitosos.
+* **Porcentaje de Page Faults**: Porcentaje de fallos sobre total de solicitudes.
+* **Porcentaje de Table Hits**: Porcentaje de aciertos sobre total de solicitudes.
+
+### Ejemplo de Salida
+```
+=== Test: Acceso Secuencial ===
+Referencias: 1,2,3,4,5,6,7,8,9,10
+Página: 1 cargada en 0
+Página: 2 cargada en 1
+...
+Página: 9 cargada en 0  // Reemplazo LRU
+Página: 10 cargada en 1 // Reemplazo LRU
+
+Cantidad de page faults: 10. 100% de las solicitudes realizadas
+Cantidad de table hits: 0. 0% de las solicitudes realizadas
+```
+== Autores
+
+**Los Más Fritos** - 2025
+
+Copyright © Los Más Fritos. Todos los derechos reservados.

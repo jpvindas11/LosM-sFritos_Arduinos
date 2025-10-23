@@ -31,6 +31,7 @@ void testRandomAccess(){
   MMV.getReferencedPages(references);
   MMV.printStatics();
 }
+
 int main() {
   /*
   std::vector<int> address_list = {1, 256, 32768, 32769, 128, 65534, 33153};
