@@ -30,6 +30,7 @@ SOURCES += \
     ../ClientManager/FileSystem/src/FileSystem.cpp \
     ../ClientManager/Users/src/arduinoSimulation.cpp \
     ../ClientManager/Users/src/Master.cpp \
+    ../ClientManager/Util/Socket.cpp \
     usermenumanager.cpp
 
 HEADERS += \
@@ -47,6 +48,7 @@ HEADERS += \
     ../ClientManager/FileSystem/src/FileSystem.hpp \
     ../ClientManager/Users/src/arduinoSimulation.hpp \
     ../ClientManager/Users/src/Master.hpp \
+    ../ClientManager/Util/Socket.hpp \
     usermenumanager.h
 
 FORMS += \

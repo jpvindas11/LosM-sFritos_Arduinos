@@ -1,13 +1,10 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "menuwindow.h"
-#include "FileSystem.hpp"
-#include "AuthenticationServer.hpp"
 
 
-MainWindow::MainWindow(AuthenticationServer* authServer, Master* masterServer, QWidget *parent)
+MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
-    , authServer(authServer), masterServer(masterServer)
 {
     ui->setupUi(this);
 }
@@ -56,3 +53,20 @@ void MainWindow::on_pushButton_clicked()
     ui->lineEdit_user->clear();
     ui->lineEdit_pass->clear();
 }
+
+void MainWindow::on_pushButton_ip_clicked()
+{
+    QString ip = ui->lineEdit_IP->text();
+    QString port = ui->lineEdit_PORT->text();
+
+    // Iniciar el socket y enviar un mensaje a dicho IP y Puerto, para verificar que el servidor exista
+    this->socket->create();
+
+    if (!this->socket->connectToServer(ip.toStdString(), port.toInt())) {
+        // No se encontró el servidor
+
+        ui->lineEdit_IP->clear();
+        ui->lineEdit_PORT->clear();
+    }
+}
+
