@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
     
     std::cout << "Conexión establecida" << std::endl;
     
-    /*
+    
     // Pedir usuario
     std::string username, password;
     std::cout << "\n=== Sistema de Login ===" << std::endl;
@@ -95,18 +95,11 @@ int main(int argc, char* argv[]) {
         socket.closeSocket();
         return -1;
     }
-    */
-
-    genMessage message;
-    message.MID = static_cast<uint8_t>(MessageType::SEN_FILE_METD_REQ);
-    auto& content = message.content.emplace<genSenFileReq>();
-    content.id_token = 1234;
     
     std::cout << "\nEnviando solicitud de login..." << std::endl;
     
     // Enviar mensaje
-    //ssize_t bytesSent = send(socket.getSocketFD(), sendBuffer, messageSize, 0);
-    ssize_t bytesSent = socket.bSendData(socket.getSocketFD(), message);
+    ssize_t bytesSent = send(socket.getSocketFD(), sendBuffer, messageSize, 0);
     if (bytesSent <= 0) {
         std::cerr << "Error: No se pudo enviar el mensaje" << std::endl;
         socket.closeSocket();
@@ -116,17 +109,12 @@ int main(int argc, char* argv[]) {
     std::cout << "Mensaje enviado (" << bytesSent << " bytes)" << std::endl;
     
     // Recibir respuesta
-    //char recvBuffer[BUFFER_SIZE];
-    //memset(recvBuffer, 0, BUFFER_SIZE);
+    char recvBuffer[BUFFER_SIZE];
+    memset(recvBuffer, 0, BUFFER_SIZE);
     
-    //ssize_t bytesReceived = socket.receiveData(socket.getSocketFD(), recvBuffer, BUFFER_SIZE - 1);
-    
-    genMessage message1;
-    ssize_t bytesReceived = socket.bReceiveData(socket.getSocketFD(), message1);
+    ssize_t bytesReceived = socket.receiveData(socket.getSocketFD(), recvBuffer, BUFFER_SIZE - 1);
 
-    if (bytesReceived <= 0) {return EXIT_FAILURE;}
-
-    /*if (bytesReceived > 0) {
+    if (bytesReceived > 0) {
         std::cout << "\n=== Respuesta del Servidor ===" << std::endl;
         
         int messageID = getMessageID(recvBuffer, bytesReceived);
@@ -156,14 +144,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Servidor cerró la conexión" << std::endl;
     } else {
         std::cerr << "Error al recibir respuesta del servidor" << std::endl;
-    }*/
-
-    senFileMetDRes newMessage = getMessageContent<senFileMetDRes>(message1);
-
-    std::cout<<newMessage.fileName.sensorType<<std::endl;
-    std::cout<<newMessage.size<<std::endl;
-    std::cout<<newMessage.lastAccessTime<<std::endl;
-    
+    }    
     socket.closeSocket();
     std::cout << "\nConexión cerrada" << std::endl;
 
