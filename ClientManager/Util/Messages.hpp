@@ -23,7 +23,8 @@ enum class MessageType : uint8_t {
     SEN_FILE_BLOCKNUM_REQ,
     SEN_FILE_BLOCKNUM_RES,
     SEN_FILE_BLOCK_REQ,
-    SEN_FILE_BLOCK_RESP
+    SEN_FILE_BLOCK_RESP,
+    SEN_ADD_LOG
 };
 
 struct token {
@@ -91,11 +92,16 @@ struct senFileBlockRes {
   std::string secondBlock;
 };
 
+struct senAddLog {
+  sensorFileName fileName;
+  std::string data;
+};
+
 struct genMessage {
   uint8_t MID;
   std::variant< GenNumReq, fileNumberResp, senFileNamesRes,
                 genSenFileReq, senFileMetDRes, senFileBlockNumRes,
-                senFileBlockRes
+                senFileBlockRes, senAddLog
               > content;
 };
 
@@ -175,6 +181,12 @@ namespace bitsery {
       s.object(m.fileName);
       s.text1b(m.firstBlock, 1024);
       s.text1b(m.secondBlock, 1024);
+  }
+
+  template <typename S>
+  void serialize(S& s, senAddLog& m) {
+      s.object(m.fileName);
+      s.text1b(m.data, 256);
   }
 
   template <typename S>

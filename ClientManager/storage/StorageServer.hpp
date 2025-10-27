@@ -11,7 +11,7 @@
 
 
 class StorageServer {
- private:
+ protected:
   std::string serverIP;
   int listeningPort;
   std::string masterIP;
@@ -31,7 +31,10 @@ class StorageServer {
 
   void acceptAllConnections();
 
-  void handleClientConnection(int client);
+  // Do nothing on base class
+  virtual void handleClientConnection(int client) {
+    (void)client;
+  }
 
   void listenForever(std::string ip, int port);
 };
