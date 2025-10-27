@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <cstring>
 
+#include "Messages.hpp"
+
 class Socket {
 protected:
     int sockfd;
@@ -29,6 +31,11 @@ public:
     bool connectToServer(const std::string& ip, int port);
     ssize_t sendData(int clientSocket, const std::string& data);
     ssize_t receiveData(int clientSocket, char* buffer, size_t length);
+
+    // using bitsery to serialize/deserialize the messages 
+    ssize_t bSendData(int clientSocket, const genMessage& data);
+    ssize_t bReceiveData(int clientSocket, genMessage& message);
+
     void closeSocket(int fd = -1);
 
     int getSocketFD() const;

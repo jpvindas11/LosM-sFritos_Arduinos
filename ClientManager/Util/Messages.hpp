@@ -2,11 +2,12 @@
 #define MESSAGES_HPP
 
 #include <bitsery/bitsery.h>
-#include <bitsery/adapter/stream.h>
+#include <bitsery/adapter/buffer.h>
 #include <bitsery/traits/string.h>
 #include <bitsery/traits/vector.h>
 #include <bitsery/traits/array.h>
 #include <bitsery/brief_syntax/bitset.h>
+#include <bitsery/ext/std_variant.h>
 
 #include <stdexcept>
 #include <variant>
@@ -27,14 +28,14 @@ enum class MessageType : uint8_t {
 
 struct token {
     uint32_t id;
-    char name[20];
+    std::string name;
     uint8_t userType;
     uint8_t hour;
     uint8_t minute;
 };
 
 struct sensorFileName {
-    char sensorType [3];
+    std::string sensorType;
     uint16_t id;
     uint16_t year;
     uint8_t month;
@@ -65,19 +66,19 @@ struct genSenFileReq {
 };
 
 struct senFileMetDRes {
-    sensorFileName fileName;
-    uint32_t size;
-    uint16_t permissions;
-    uint32_t userId;
-    uint32_t groupId;
-    uint32_t creationTime;
-    uint32_t lastModifiedTime;
-    uint32_t lastAccessTime; 
+  sensorFileName fileName;
+  uint32_t size;
+  uint16_t permissions;
+  uint32_t userId;
+  uint32_t groupId;
+  uint32_t creationTime;
+  uint32_t lastModifiedTime;
+  uint32_t lastAccessTime; 
 };
 
 struct senFileBlockNumRes {
   sensorFileName fileName;
-  uint_fast32_t blocks;
+  uint32_t blocks;
 };
 
 
@@ -86,12 +87,12 @@ struct senFileBlockRes {
   uint32_t totalPages;
   uint8_t usedBlocks;
   sensorFileName fileName;
-  char firstBlock [1024];
-  char secondBlock[1024];
+  std::string firstBlock;
+  std::string secondBlock;
 };
 
 struct genMessage {
-  MessageType MID;
+  uint8_t MID;
   std::variant< GenNumReq, fileNumberResp, senFileNamesRes,
                 genSenFileReq, senFileMetDRes, senFileBlockNumRes,
                 senFileBlockRes
@@ -178,8 +179,9 @@ namespace bitsery {
 
   template <typename S>
   void serialize(S& s, genMessage& m) {
-      s.value1b(static_cast<uint8_t>(m.MID));
-      s.variant(m.content);
+      auto& mid = m.MID;   // referencia explícita
+      s.value1b(mid);
+      s.ext(m.content, bitsery::ext::StdVariant{});
   }
 
 }
