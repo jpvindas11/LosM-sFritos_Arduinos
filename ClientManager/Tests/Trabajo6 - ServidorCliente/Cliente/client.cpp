@@ -65,6 +65,7 @@ int main(int argc, char* argv[]) {
     
     std::cout << "Conexión establecida" << std::endl;
     
+    
     // Pedir usuario
     std::string username, password;
     std::cout << "\n=== Sistema de Login ===" << std::endl;
@@ -112,7 +113,7 @@ int main(int argc, char* argv[]) {
     memset(recvBuffer, 0, BUFFER_SIZE);
     
     ssize_t bytesReceived = socket.receiveData(socket.getSocketFD(), recvBuffer, BUFFER_SIZE - 1);
-    
+
     if (bytesReceived > 0) {
         std::cout << "\n=== Respuesta del Servidor ===" << std::endl;
         
@@ -143,8 +144,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Servidor cerró la conexión" << std::endl;
     } else {
         std::cerr << "Error al recibir respuesta del servidor" << std::endl;
-    }
-    
+    }    
     socket.closeSocket();
     std::cout << "\nConexión cerrada" << std::endl;
 

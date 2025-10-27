@@ -72,6 +72,59 @@ ssize_t Socket::receiveData(int clientSocket, char* buffer, size_t length) {
     return read(clientSocket, buffer, length);
 }
 
+ssize_t Socket::bSendData(int clientSocket, const genMessage& data) {
+    std::vector<uint8_t> buffer;
+    buffer.reserve(1024);
+
+    bitsery::Serializer<bitsery::OutputBufferAdapter
+                                            <std::vector<uint8_t>>> ser(buffer);
+    ser.object(data);
+    ser.adapter().flush();
+
+    // send the message size first
+
+    uint32_t messageSize = static_cast<uint32_t>(buffer.size());
+    if(send(clientSocket, &messageSize, sizeof(messageSize), 0) == -1) {
+        std::cerr<<"ERROR: Could not send the message size"<<std::endl;
+        return -1;
+    }
+
+    // send the message
+    ssize_t sentBytes = send(clientSocket, buffer.data(), buffer.size(), 0);
+    if (sentBytes == -1) {
+        std::cerr<<"ERROR: Could not send the message"<<std::endl;
+    }
+    return messageSize;
+}
+
+ssize_t Socket::bReceiveData(int clientSocket, genMessage& message) {
+    uint32_t messageSize;
+
+    // wait until the last bit was received
+    ssize_t bytesRead = recv(clientSocket, &messageSize, 
+                                            sizeof(messageSize), MSG_WAITALL);
+    if (bytesRead <=0) {
+        std::cerr<<
+                  "ERROR: Could not receive the client message size"<<std::endl;
+        return bytesRead;
+    }
+
+    std::vector<uint8_t> buffer(messageSize);
+    
+    bytesRead = recv(clientSocket, buffer.data(), messageSize, MSG_WAITALL);
+    if (bytesRead <=0) {
+        std::cerr<<
+                  "ERROR: Could not receive the client message"<<std::endl;
+        return bytesRead;
+    }
+
+    bitsery::Deserializer<bitsery::InputBufferAdapter<std::vector<uint8_t>>> 
+                                              des(buffer.begin(), buffer.end());    
+    des.object(message);
+
+    return bytesRead;
+}
+
 void Socket::closeSocket(int fd) {
     // close the listening socket if no 
     // specific socket file descriptor was provided
