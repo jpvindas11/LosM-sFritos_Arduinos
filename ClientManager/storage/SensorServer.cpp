@@ -1,5 +1,43 @@
 #include "SensorServer.hpp"
 
+SensorServer::SensorServer(){
+}
+
+SensorServer& SensorServer::getInstance() {
+  static SensorServer server;
+  return server;
+}
+
+int SensorServer::startServer(std::string serverIP, int listeningPort, 
+                                          std::string masterIP, int materPort) {
+  this->serverIP = serverIP;
+  this->listeningPort = listeningPort;
+  this->masterIP = masterIP;
+  this->materPort = materPort;
+  if (!this->storage.mount("disks/sensorStorage.bin")) {
+    return EXIT_FAILURE;
+  }
+  this->listenForever(this->serverIP, this->listeningPort);
+  return EXIT_SUCCESS;
+}
+
+void SensorServer::stopServer() {  
+  this->storage.unmount();
+}
+
+void SensorServer::run(std::string serverIP, int listeningPort, 
+                                          std::string masterIP, int materPort){
+  try{
+    if (this->startServer(serverIP, listeningPort, masterIP, materPort) ==
+                                                                 EXIT_SUCCESS) {
+      this->acceptAllConnections();
+    }
+  } catch(const std::runtime_error& error) {
+    std::cerr<<error.what()<<std::endl;
+  }
+  this->stopServer();
+}
+
 void SensorServer::handleClientConnection(int clientSocket) {
   genMessage clientRequest;
   this->listeningSocket.bReceiveData(clientSocket, clientRequest);

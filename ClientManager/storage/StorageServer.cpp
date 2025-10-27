@@ -51,5 +51,4 @@ void StorageServer::acceptAllConnections(){
 void StorageServer::listenForever(std::string ip, int port) {
   this->listenForConnections(ip, port);
   this->acceptAllConnections();
-
 }
