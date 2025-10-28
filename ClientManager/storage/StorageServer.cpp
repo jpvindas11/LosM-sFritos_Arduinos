@@ -2,6 +2,9 @@
 
 #include "StorageServer.hpp"
 
+StorageServer::StorageServer(){
+}
+
 int StorageServer::openConnectionRequestSocket(std::string ip, int port){
   if (!this->listeningSocket.create()) {
     std::cerr<<"ERROR: Could not set the listening socket"<<std::endl;
@@ -51,5 +54,4 @@ void StorageServer::acceptAllConnections(){
 void StorageServer::listenForever(std::string ip, int port) {
   this->listenForConnections(ip, port);
   this->acceptAllConnections();
-
 }

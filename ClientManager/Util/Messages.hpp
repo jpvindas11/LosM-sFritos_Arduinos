@@ -26,6 +26,7 @@ enum class MessageType : uint8_t {
     SEN_FILE_BLOCKNUM_RES,
     SEN_FILE_BLOCK_REQ,
     SEN_FILE_BLOCK_RESP,
+    SEN_ADD_LOG
     AUTH_LOGIN_REQ,
     AUTH_LOGIN_SUCCESS,
     ERR_COMMOM_MSG,
@@ -96,6 +97,9 @@ struct senFileBlockRes {
   std::string secondBlock;
 };
 
+struct senAddLog {
+  sensorFileName fileName;
+  std::string data;
 struct authLoginReq {
   std::string user;
   std::string pass;
@@ -113,7 +117,8 @@ struct genMessage {
   uint8_t MID;
   std::variant< GenNumReq, fileNumberResp, senFileNamesRes,
                 genSenFileReq, senFileMetDRes, senFileBlockNumRes,
-                senFileBlockRes, authLoginReq, authLoginSuccess, errorCommonMsg
+                senAddLog, senFileBlockRes, authLoginReq, authLoginSuccess, 
+                errorCommonMsg
               > content;
 };
 
@@ -196,6 +201,9 @@ namespace bitsery {
   }
 
   template <typename S>
+  void serialize(S& s, senAddLog& m) {
+      s.object(m.fileName);
+      s.text1b(m.data, 256);
   void serialize(S& s, authLoginReq& m) {
       s.text1b(m.user, 28);
       s.text1b(m.pass, 28);
