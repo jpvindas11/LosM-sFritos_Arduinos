@@ -21,7 +21,7 @@ class StorageServer {
 
  public:
   StorageServer();
-  ~StorageServer();
+  ~StorageServer() = default;
 
   int openConnectionRequestSocket(std::string ip, int port);
 
