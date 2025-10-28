@@ -13,6 +13,8 @@
 #include <variant>
 #include <vector>
 
+#define MAX_ERR_MSG_LENGTH 32
+
 enum class MessageType : uint8_t {
     FILE_NUMBER_REQ,
     FILE_NUMBER_REP,
@@ -23,7 +25,10 @@ enum class MessageType : uint8_t {
     SEN_FILE_BLOCKNUM_REQ,
     SEN_FILE_BLOCKNUM_RES,
     SEN_FILE_BLOCK_REQ,
-    SEN_FILE_BLOCK_RESP
+    SEN_FILE_BLOCK_RESP,
+    AUTH_LOGIN_REQ,
+    AUTH_LOGIN_SUCCESS,
+    ERR_COMMOM_MSG,
 };
 
 struct token {
@@ -91,11 +96,24 @@ struct senFileBlockRes {
   std::string secondBlock;
 };
 
+struct authLoginReq {
+  std::string user;
+  std::string pass;
+};
+
+struct authLoginSuccess {
+  token token;
+};
+
+struct errorCommonMsg {
+  std::string message;
+};
+
 struct genMessage {
   uint8_t MID;
   std::variant< GenNumReq, fileNumberResp, senFileNamesRes,
                 genSenFileReq, senFileMetDRes, senFileBlockNumRes,
-                senFileBlockRes
+                senFileBlockRes, authLoginReq, authLoginSuccess, errorCommonMsg
               > content;
 };
 
@@ -175,6 +193,22 @@ namespace bitsery {
       s.object(m.fileName);
       s.text1b(m.firstBlock, 1024);
       s.text1b(m.secondBlock, 1024);
+  }
+
+  template <typename S>
+  void serialize(S& s, authLoginReq& m) {
+      s.text1b(m.user, 28);
+      s.text1b(m.pass, 28);
+  }
+
+  template <typename S>
+  void serialize(S& s, authLoginSuccess& m) {
+      s.object(m.token);
+  }
+
+  template <typename S>
+  void serialize(S& s, errorCommonMsg& m) {
+      s.text1b(m.message, MAX_ERR_MSG_LENGTH);
   }
 
   template <typename S>

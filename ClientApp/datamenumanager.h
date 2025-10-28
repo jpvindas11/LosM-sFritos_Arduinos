@@ -2,7 +2,6 @@
 #define DATAMENUMANAGER_H
 
 #include <vector>
-#include "arduinoSimulation.hpp"
 #include <QListWidget>
 #include <QListWidgetItem>
 
@@ -11,7 +10,7 @@ class dataMenuManager
 public:
     dataMenuManager();
 
-    void setPointers(std::vector<ArduinoSimulation>* arduinos, QListWidget* user_list);
+    void setPointers(QListWidget* user_list);
 
     void updateList();
 
@@ -22,7 +21,6 @@ public:
     void getData();
 
 private:
-    std::vector<ArduinoSimulation>* p_arduinos;
     QListWidget* user_list;
     QListWidgetItem* selectedArduino;
 };

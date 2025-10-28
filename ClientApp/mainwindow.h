@@ -2,7 +2,6 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "autenticatorqt.h"
 #include "userdataqt.h"
 #include "Socket.hpp"
 
@@ -26,7 +25,6 @@ private slots:
 private:
     Ui::MainWindow *ui;
     userDataQt currentData;
-    autenticatorQt autenticate;
     Socket* socket;
 
 

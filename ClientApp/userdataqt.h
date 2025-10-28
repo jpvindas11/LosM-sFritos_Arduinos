@@ -17,14 +17,19 @@ public:
     userDataQt();
 
     void setData(std::string user, std::string password, char rank);
+    void setNetwork(std::string IP, int port);
 
     std::string getUser();
     std::string getPass();
+    std::string getIP();
+    int getPort();
     int getRank();
 
 private:
     std::string user;
     std::string password;
+    std::string IP;
+    int port;
     int rank;
 };
 

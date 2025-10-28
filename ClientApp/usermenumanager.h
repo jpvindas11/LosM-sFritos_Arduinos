@@ -3,7 +3,6 @@
 
 #include <QListWidgetItem>
 #include "userdataqt.h"
-#include "AuthenticationServer.hpp"
 #include <QPushButton>
 
 
@@ -13,13 +12,11 @@ public:
     userMenuManager();
 
     void setPointers(QListWidget* user_list,
-    std::unordered_map<std::string, AuthUser>* users,
     userDataQt* current);
 
     void updateUserList();
 
     void setSelectedUser(QListWidgetItem* user);
-    AuthUser* getSelectedAuthUser();
 
     QListWidgetItem* getSelectedUser();
 
@@ -27,7 +24,6 @@ public:
 
 private:
     QListWidget* user_list;
-    std::unordered_map<std::string, AuthUser>* users;
     userDataQt* currentUser;
     QListWidgetItem* selectedUser;
 };

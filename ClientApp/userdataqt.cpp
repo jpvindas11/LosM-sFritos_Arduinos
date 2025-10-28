@@ -19,6 +19,13 @@ void userDataQt::setData(std::string user, std::string password, char rank) {
     }
 }
 
+void userDataQt::setNetwork(std::string IP, int port) {
+    this->IP = IP;
+    this->port = port;
+}
+
 std::string userDataQt::getUser() { return this->user; }
 std::string userDataQt::getPass() { return this->password; }
+std::string userDataQt::getIP() { return this->IP; }
+int userDataQt::getPort() { return this->port; }
 int userDataQt::getRank() { return this->rank; }

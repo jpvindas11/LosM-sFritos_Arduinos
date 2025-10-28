@@ -5,9 +5,8 @@
 #include <QListWidgetItem>
 #include "confirmdeleteuserdialog.h"
 
-MenuWindow::MenuWindow(AuthenticationServer* authServer, Master* masterServer,QWidget *parent) :
+MenuWindow::MenuWindow(QWidget *parent) :
     QMainWindow(parent), ui(new Ui::MenuWindow),
-    authServer(authServer), masterServer(masterServer)
 {
     ui->setupUi(this);
 

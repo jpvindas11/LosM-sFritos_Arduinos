@@ -19,10 +19,11 @@ void MainWindow::on_pushButton_clicked()
     QString user = ui->lineEdit_user->text();
     QString pass = ui->lineEdit_pass->text();
 
+    /*
     if (this->autenticate.tryLogin(user.toStdString(), pass.toStdString(), authServer)) {
        ui->login_info->setText("Ingreso exitoso");
 
-       MenuWindow* menu = new MenuWindow(this->authServer, this->masterServer);
+       MenuWindow* menu = new MenuWindow();
        // Obtener el mapa de usuarios
        auto* userMap = authServer->getUserMap();
 
@@ -49,6 +50,7 @@ void MainWindow::on_pushButton_clicked()
     } else {
         ui->login_info->setText("El usuario o contraseña son incorrectos");
     }
+    */
 
     ui->lineEdit_user->clear();
     ui->lineEdit_pass->clear();
@@ -67,6 +69,12 @@ void MainWindow::on_pushButton_ip_clicked()
 
         ui->lineEdit_IP->clear();
         ui->lineEdit_PORT->clear();
+        return;
     }
+
+    // Iniciar network
+    this->socket->bindSocket(ip.toStdString(), port.toInt());
+    this->currentData.setNetwork(ip.toStdString(), port.toInt());
+
 }
 

@@ -1,13 +1,11 @@
 #ifndef MENUWINDOW_H
 #define MENUWINDOW_H
 
-#include "autenticatorqt.h"
 #include "usermenumanager.h"
 #include "datamenumanager.h"
 #include "changepassdialog.h"
 #include "arduinomenumanager.h"
 #include "setrankdialog.h"
-#include "Master.hpp"
 #include <QMainWindow>
 #include <QPushButton>
 #include <QString>
@@ -21,7 +19,7 @@ class MenuWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MenuWindow(AuthenticationServer* authServer, Master* masterServer,QWidget *parent = nullptr);
+    explicit MenuWindow(QWidget *parent = nullptr);
     ~MenuWindow();
 
     void setCurrentUser(userDataQt user);
@@ -61,10 +59,6 @@ private:
     void hideFuctionsForRanks(int rank);
 
     void hideMenuWidgets();
-
-    AuthenticationServer* authServer;
-
-    Master* masterServer;
 
     userMenuManager userMenu;
 
