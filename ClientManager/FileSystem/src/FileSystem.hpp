@@ -23,7 +23,7 @@ protected:
     SuperBlock superBlock;
 
     // Directorio del file system donde se contienen los archivos
-    Directory directory;
+    // Directory directory;
 
     // Disco del file system
     std::fstream diskFile;
@@ -165,9 +165,9 @@ protected:
     /**
      * @brief Busca un archivo en el directorio
      * @param fileName Nombre del archivo
-     * @return Índice del archivo en el directorio, -1 si no existe
+     * @return Estructura con información del archivo, FileLocation.found = false si no existe
      */
-    int64_t findFileInDirectory(const std::string& fileName);
+    FileLocation findFileInDirectory(const std::string& fileName);
 
     /**
      * @brief Agrega un archivo al directorio
@@ -195,18 +195,6 @@ protected:
      * @brief True si se cargaron correctamente, False en caso contrario
      */
     bool loadBitmaps();
-
-    /**
-     * @brief Lee y carga el directorio del disco
-     * @brief True si se cargaron correctamente, False en caso contrario
-     */
-    bool readDirectoryFromDisk();
-
-    /**
-     * @brief Actualiza el estado del directorio al disco
-     * @brief True si se guardaron correctamente, False en caso contrario
-     */
-    bool writeDirectoryToDisk();
 
     /**
      * @brief Obtiene el número de bloque físico correspondiente a un índice lógico.

@@ -5,15 +5,10 @@
 #include <QListWidgetItem>
 #include "confirmdeleteuserdialog.h"
 
-MenuWindow::MenuWindow(AuthenticationServer* authServer, Master* masterServer,QWidget *parent) :
-    QMainWindow(parent), ui(new Ui::MenuWindow),
-    authServer(authServer), masterServer(masterServer)
+MenuWindow::MenuWindow(QWidget *parent) :
+    QMainWindow(parent), ui(new Ui::MenuWindow)
 {
     ui->setupUi(this);
-
-    this->userMenu.setPointers(this->ui->user_list, authServer->getUserMap(), &this->currentUser);
-    this->arduinoMenu.setPointers(&masterServer->getAllArduinos(), this->ui->arduino_list);
-    this->dataMenu.setPointers(&masterServer->getAllArduinos(), this->ui->data_list);
 }
 
 MenuWindow::~MenuWindow()
@@ -31,6 +26,10 @@ void MenuWindow::setCurrentUser(userDataQt user) {
 
     this->hideMenuWidgets();
     this->hideFuctionsForRanks(user.getRank());
+}
+
+void MenuWindow::setSocket(Socket* socket) {
+    this->socket = socket;
 }
 
 void MenuWindow::hideFuctionsForRanks(int rank) {
@@ -57,8 +56,8 @@ void MenuWindow::hideFuctionsForRanks(int rank) {
         case UR_OWNER:
             // OWNER tiene acceso a todo
             this->ui->b_consulta->move(0, 30);
-            this->ui->b_usuarios->move(0, 60);    // Ajusta las posiciones
-            this->ui->b_arduinos->move(0, 90);    // según tu diseño
+            this->ui->b_usuarios->move(0, 60);
+            this->ui->b_arduinos->move(0, 90);
             this->ui->b_nodos->move(0, 120);
             break;
         default:
@@ -85,7 +84,7 @@ void MenuWindow::on_b_usuarios_clicked()
 {
     setActiveMenu(ui->b_usuarios, "Usuarios");
 
-    this->userMenu.setSelectedUser(nullptr);
+    // this->userMenu.setSelectedUser(nullptr);
 
     // Scroll list
     this->ui->user_list->move(280,30);
@@ -105,7 +104,7 @@ void MenuWindow::on_b_usuarios_clicked()
     // Rank button
     this->ui->user_change_rank->move(170, 170);
 
-    this->userMenu.updateUserList();
+    // this->userMenu.updateUserList();
 }
 
 
@@ -120,14 +119,15 @@ void MenuWindow::on_b_arduinos_clicked()
     this->ui->arduino_turn->move(170, 30);
     this->ui->b_consultar->move(-170, 90);
 
-    this->arduinoMenu.setSelectedArduino(nullptr);
+    // this->arduinoMenu.setSelectedArduino(nullptr);
 
-    this->arduinoMenu.updateList();
+    // this->arduinoMenu.updateList();
 }
 
 
 void MenuWindow::on_b_cerrarSesion_clicked()
 {
+    /*
     std::string logoutMessage = "LOGOUT " + currentUser.getUser();
     authServer->setMessage(logoutMessage);
     authServer->processMessage();
@@ -135,12 +135,13 @@ void MenuWindow::on_b_cerrarSesion_clicked()
     MainWindow* login = new MainWindow(this->authServer, this->masterServer);
     login->show();
     this->hide();
+    */
 }
 
 void MenuWindow::on_user_list_itemClicked(QListWidgetItem *item)
 {
-    this->userMenu.setSelectedUser(item);
-    userMenu.hideDeleteButton(ui->user_delete);
+    // this->userMenu.setSelectedUser(item);
+    // userMenu.hideDeleteButton(ui->user_delete);
 }
 
 
@@ -156,23 +157,18 @@ void MenuWindow::on_user_add_clicked()
 
         char rank = dialog.getRank();
 
-        this->authServer->addUser(user, pass, rank, rank);
+        /*
+         * Enviar MID para agregar un usuario
+        */
 
-        this->userMenu.updateUserList();
+        // this->userMenu.updateUserList();
     }
 }
 
 
 void MenuWindow::on_user_delete_clicked()
 {
-    AuthUser* userDel = this->userMenu.getSelectedAuthUser();
-
-    // Has to have something selected
-    if (!userDel) return;
-
-    // Cannot delete self
-    if (userDel->username == currentUser.getUser()) return;
-
+    /*
     confirmDeleteUserDialog dialog(this);
 
     QString message = QString("¿Estás seguro de querer eliminar a %1?")
@@ -185,6 +181,7 @@ void MenuWindow::on_user_delete_clicked()
     if (dialog.exec() == QDialog::Accepted) {
         authServer->deleteUser(userDel->username);
     }
+    */
 }
 
 void MenuWindow::hideMenuWidgets() {
@@ -203,6 +200,7 @@ void MenuWindow::hideMenuWidgets() {
 
 void MenuWindow::on_user_change_pass_clicked()
 {
+    /*
     AuthUser* userPass = this->userMenu.getSelectedAuthUser();
 
     // Has to have something selected
@@ -223,10 +221,12 @@ void MenuWindow::on_user_change_pass_clicked()
             authServer->changePassword(userPass->username , dialog.getFirstPass().toStdString());
         }
     }
+*/
 }
 
 void MenuWindow::on_user_change_rank_clicked()
 {
+    /*
     AuthUser* userRank = this->userMenu.getSelectedAuthUser();
 
     // Has to have something selected
@@ -251,6 +251,7 @@ void MenuWindow::on_user_change_rank_clicked()
             userRank->rank = dialog.getRank();
         }
     }
+*/
 }
 
 
@@ -266,13 +267,13 @@ void MenuWindow::on_b_consulta_clicked()
 
     // Scroll list
     this->ui->data_list->move(150,30);
-    this->dataMenu.updateList();
+    // this->dataMenu.updateList();
 }
 
 
 void MenuWindow::on_arduino_list_itemClicked(QListWidgetItem *item)
 {
-    this->arduinoMenu.setSelectedArduino(item);
+    // this->arduinoMenu.setSelectedArduino(item);
 }
 
 
@@ -283,6 +284,6 @@ void MenuWindow::on_arduino_turn_clicked()
 
 void MenuWindow::on_arduino_consultar_Clicked(){
     // setActiveMenu("")
-    this->dataMenu.getData();
-    this->dataMenu.updateList();
+    // this->dataMenu.getData();
+    // this->dataMenu.updateList();
 }

@@ -1,13 +1,10 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "menuwindow.h"
-#include "FileSystem.hpp"
-#include "AuthenticationServer.hpp"
 
 
-MainWindow::MainWindow(AuthenticationServer* authServer, Master* masterServer, QWidget *parent)
+MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
-    , authServer(authServer), masterServer(masterServer)
 {
     ui->setupUi(this);
 }
@@ -17,42 +14,114 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::on_pushButton_ip_clicked()
+{
+    QString ip = ui->lineEdit_IP->text();
+    QString port = ui->lineEdit_PORT->text();
+
+    // Validar que los campos no estén vacíos
+    if (ip.isEmpty() || port.isEmpty()) {
+        QMessageBox::warning(this, "Error", "Por favor ingrese IP y Puerto");
+        return;
+    }
+
+    // Crear el socket
+    if (!socket->create()) {
+        QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+        return;
+    }
+
+    // Conectar al servidor
+    if (!socket->connectToServer(ip.toStdString(), port.toInt())) {
+        QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
+        ui->lineEdit_IP->clear();
+        ui->lineEdit_PORT->clear();
+        isConnected = false;
+        return;
+    }
+
+    isConnected = true;
+    this->currentData.setNetwork(ip.toStdString(), port.toInt());
+
+    QMessageBox::information(this, "Éxito", "Conectado al servidor");
+}
+
 void MainWindow::on_pushButton_clicked()
 {
+    if (!isConnected) {
+        QMessageBox::warning(this, "Error", "Primero debe conectarse al servidor");
+        return;
+    }
+
     QString user = ui->lineEdit_user->text();
     QString pass = ui->lineEdit_pass->text();
 
-    if (this->autenticate.tryLogin(user.toStdString(), pass.toStdString(), authServer)) {
-       ui->login_info->setText("Ingreso exitoso");
+    if (user.isEmpty() || pass.isEmpty()) {
+        QMessageBox::warning(this, "Error", "Por favor ingrese usuario y contraseña");
+        return;
+    }
 
-       MenuWindow* menu = new MenuWindow(this->authServer, this->masterServer);
-       // Obtener el mapa de usuarios
-       auto* userMap = authServer->getUserMap();
+    // Crear mensaje de login usando Bitsery
+    genMessage loginRequest;
+    loginRequest.MID = static_cast<uint8_t>(MessageType::AUTH_LOGIN_REQ);
 
-       // Buscar el usuario en el mapa
-       auto it = userMap->find(user.toStdString());
+    authLoginReq authReq;
+    authReq.user = user.toStdString();
+    authReq.pass = pass.toStdString();
+    loginRequest.content = authReq;
 
-       char userRank = 'c';
-       if (it != userMap->end()) {
-           userRank = it->second.rank;
-           std::cout << "Usuario encontrado: " << it->second.username << std::endl;
-           std::cout << "Rank (int): " << static_cast<int>(userRank) << std::endl;
-           std::cout << "Rank (char): '" << userRank << "'" << std::endl;
-           std::cout << "Rank (hex): 0x" << std::hex << static_cast<int>(userRank) << std::dec << std::endl;
-       } else {
-           std::cout << "Usuario no encontrado en el mapa" << std::endl;
-       }
+    // Enviar solicitud de login
+    ssize_t sent = socket->bSendData(socket->getSocketFD(), loginRequest);
+    if (sent <= 0) {
+        QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de login");
+        ui->lineEdit_user->clear();
+        ui->lineEdit_pass->clear();
+        return;
+    }
 
-       userDataQt login;
-       login.setData(user.toStdString(), pass.toStdString(), userRank);
-       menu->setCurrentUser(login);
-       menu->show();
-       this->hide();
+    // Recibir respuesta
+    genMessage response;
+    ssize_t received = socket->bReceiveData(socket->getSocketFD(), response);
 
-    } else {
-        ui->login_info->setText("El usuario o contraseña son incorrectos");
+    if (received <= 0) {
+        QMessageBox::critical(this, "Error", "No se pudo recibir respuesta del servidor");
+        ui->lineEdit_user->clear();
+        ui->lineEdit_pass->clear();
+        return;
+    }
+
+    // Verificar tipo de respuesta
+    if (response.MID == static_cast<uint8_t>(MessageType::AUTH_LOGIN_SUCCESS)) {
+        try {
+            authLoginSuccess loginSuccess = getMessageContent<authLoginSuccess>(response);
+
+            ui->login_info->setText("Ingreso exitoso");
+
+            // Configurar datos del usuario
+            userDataQt login;
+            login.setData(user.toStdString(), pass.toStdString(), loginSuccess.Token.userType);
+
+            // Crear y mostrar ventana de menú
+            MenuWindow* menu = new MenuWindow();
+            menu->setCurrentUser(login);
+            // menu->setSocket(socket.get()); // Pasar el socket al menú
+            menu->show();
+            this->hide();
+
+        } catch (const std::runtime_error& e) {
+            QMessageBox::critical(this, "Error", "Error al procesar respuesta del servidor");
+        }
+    }
+    else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+        try {
+            errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
+            ui->login_info->setText("Error: " + QString::fromStdString(errorMsg.message));
+        } catch (const std::runtime_error& e) {
+            ui->login_info->setText("El usuario o contraseña son incorrectos");
+        }
     }
 
     ui->lineEdit_user->clear();
     ui->lineEdit_pass->clear();
 }
+

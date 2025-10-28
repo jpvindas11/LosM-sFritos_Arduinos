@@ -2,9 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "autenticatorqt.h"
+#include <QMessageBox>
 #include "userdataqt.h"
-#include "Master.hpp"
+#include "Socket.hpp"
+#include "Messages.hpp"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -15,18 +16,18 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(AuthenticationServer* authServer, Master* masterServer, QWidget *parent = nullptr);
+    MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
     void on_pushButton_clicked();
 
+    void on_pushButton_ip_clicked();
+
 private:
     Ui::MainWindow *ui;
     userDataQt currentData;
-    autenticatorQt autenticate;
-    AuthenticationServer* authServer;
-    Master* masterServer;
-
+    Socket* socket;
+    bool isConnected;
 };
 #endif // MAINWINDOW_H
