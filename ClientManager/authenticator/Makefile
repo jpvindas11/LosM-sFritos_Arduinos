@@ -1,7 +1,7 @@
 # Compilador y banderas
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
-INCLUDES = -I../Util -I../FileSystem/src -Isrc
+INCLUDES = -I../Util -I../FileSystem/src -Isrc -I../../common/bitsery/include
 
 # Directorios
 UTIL_DIR = ../Util

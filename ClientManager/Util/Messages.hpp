@@ -1,13 +1,13 @@
 #ifndef MESSAGES_HPP
 #define MESSAGES_HPP
 
-#include "../../common/bitsery/include/bitsery/bitsery.h"
-#include <../../common/bitsery/include/bitsery/adapter/buffer.h>
-#include <../../common/bitsery/include/bitsery/traits/string.h>
-#include <../../common/bitsery/include/bitsery/traits/vector.h>
-#include <../../common/bitsery/include/bitsery/traits/array.h>
-#include <../../common/bitsery/include/bitsery/brief_syntax/bitset.h>
-#include <../../common/bitsery/include/bitsery/ext/std_variant.h>
+#include <bitsery/bitsery.h>
+#include <bitsery/adapter/buffer.h>
+#include <bitsery/traits/string.h>
+#include <bitsery/traits/vector.h>
+#include <bitsery/traits/array.h>
+#include <bitsery/brief_syntax/bitset.h>
+#include <bitsery/ext/std_variant.h>
 
 #include <stdexcept>
 #include <variant>
