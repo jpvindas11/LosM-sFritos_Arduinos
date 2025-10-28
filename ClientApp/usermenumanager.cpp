@@ -3,15 +3,7 @@ userMenuManager::userMenuManager()
 {
 
 }
-
-void userMenuManager::setPointers(QListWidget* user_list,
-std::unordered_map<std::string, AuthUser>* users,
-userDataQt* current) {
-    this->user_list = user_list;
-    this->users = users;
-    this->currentUser = current;
-}
-
+/*
 void userMenuManager::updateUserList() {
     user_list->clear();
 
@@ -59,3 +51,4 @@ AuthUser* userMenuManager::getSelectedAuthUser() {
 
     return nullptr;
 }
+*/

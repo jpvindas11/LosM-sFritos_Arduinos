@@ -102,7 +102,7 @@ struct authLoginReq {
 };
 
 struct authLoginSuccess {
-  token token;
+  token Token;
 };
 
 struct errorCommonMsg {
@@ -203,7 +203,7 @@ namespace bitsery {
 
   template <typename S>
   void serialize(S& s, authLoginSuccess& m) {
-      s.object(m.token);
+      s.object(m.Token);
   }
 
   template <typename S>

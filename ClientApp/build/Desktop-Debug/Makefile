@@ -17,7 +17,7 @@ CXX           = g++
 DEFINES       = -DQT_QML_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB
 CFLAGS        = -pipe -g -Wall -Wextra -D_REENTRANT -fPIC $(DEFINES)
 CXXFLAGS      = -pipe -g -std=gnu++1z -Wall -Wextra -D_REENTRANT -fPIC $(DEFINES)
-INCPATH       = -I../../../ClientApp -I. -I../../../ClientManager/Users/src -I../../../ClientManager/FileSystem/src -I../../../ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
+INCPATH       = -I../../../ClientApp -I. -I../../../ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
 QMAKE         = /usr/lib/qt5/bin/qmake
 DEL_FILE      = rm -f
 CHK_DIR_EXISTS= test -d
@@ -52,8 +52,7 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../../autenticatorqt.cpp \
-		../../changepassdialog.cpp \
+SOURCES       = ../../changepassdialog.cpp \
 		../../confirmdeleteuserdialog.cpp \
 		../../datamenumanager.cpp \
 		../../newuserdialog.cpp \
@@ -63,20 +62,14 @@ SOURCES       = ../../autenticatorqt.cpp \
 		../../mainwindow.cpp \
 		../../menuwindow.cpp \
 		../../arduinomenumanager.cpp \
-		../../../ClientManager/Util/Semaphore.cpp \
-		../../../ClientManager/Util/Thread.cpp \
-		../../../ClientManager/Users/src/AuthenticationServer.cpp \
-		../../../ClientManager/FileSystem/src/FileSystem.cpp \
-		../../../ClientManager/Users/src/arduinoSimulation.cpp \
-		../../../ClientManager/Users/src/Master.cpp \
+		../../../ClientManager/Util/Socket.cpp \
 		../../usermenumanager.cpp moc_changepassdialog.cpp \
 		moc_confirmdeleteuserdialog.cpp \
 		moc_mainwindow.cpp \
 		moc_menuwindow.cpp \
 		moc_newuserdialog.cpp \
 		moc_setrankdialog.cpp
-OBJECTS       = autenticatorqt.o \
-		changepassdialog.o \
+OBJECTS       = changepassdialog.o \
 		confirmdeleteuserdialog.o \
 		datamenumanager.o \
 		newuserdialog.o \
@@ -86,12 +79,7 @@ OBJECTS       = autenticatorqt.o \
 		mainwindow.o \
 		menuwindow.o \
 		arduinomenumanager.o \
-		Semaphore.o \
-		Thread.o \
-		AuthenticationServer.o \
-		FileSystem.o \
-		arduinoSimulation.o \
-		Master.o \
+		Socket.o \
 		usermenumanager.o \
 		moc_changepassdialog.o \
 		moc_confirmdeleteuserdialog.o \
@@ -177,8 +165,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/lex.prf \
-		../../../../arduinos_app.pro ../../autenticatorqt.h \
-		../../changepassdialog.h \
+		../../../../arduinos_app.pro ../../changepassdialog.h \
 		../../confirmdeleteuserdialog.h \
 		../../datamenumanager.h \
 		../../mainwindow.h \
@@ -187,12 +174,10 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../../setrankdialog.h \
 		../../userdataqt.h \
 		../../arduinomenumanager.h \
-		../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp \
-		../../../ClientManager/Users/src/Master.hpp \
-		../../usermenumanager.h ../../autenticatorqt.cpp \
-		../../changepassdialog.cpp \
+		../../../ClientManager/Util/Socket.hpp \
+		../../../ClientManager/Util/Messages.hpp \
+		../../../ClientManager/Util/User.hpp \
+		../../usermenumanager.h ../../changepassdialog.cpp \
 		../../confirmdeleteuserdialog.cpp \
 		../../datamenumanager.cpp \
 		../../newuserdialog.cpp \
@@ -202,12 +187,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../../mainwindow.cpp \
 		../../menuwindow.cpp \
 		../../arduinomenumanager.cpp \
-		../../../ClientManager/Util/Semaphore.cpp \
-		../../../ClientManager/Util/Thread.cpp \
-		../../../ClientManager/Users/src/AuthenticationServer.cpp \
-		../../../ClientManager/FileSystem/src/FileSystem.cpp \
-		../../../ClientManager/Users/src/arduinoSimulation.cpp \
-		../../../ClientManager/Users/src/Master.cpp \
+		../../../ClientManager/Util/Socket.cpp \
 		../../usermenumanager.cpp
 QMAKE_TARGET  = arduinos_app
 DESTDIR       = 
@@ -394,8 +374,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../../autenticatorqt.h ../../changepassdialog.h ../../confirmdeleteuserdialog.h ../../datamenumanager.h ../../mainwindow.h ../../menuwindow.h ../../newuserdialog.h ../../setrankdialog.h ../../userdataqt.h ../../arduinomenumanager.h ../../../ClientManager/Users/src/AuthenticationServer.hpp ../../../ClientManager/FileSystem/src/FileSystem.hpp ../../../ClientManager/Users/src/arduinoSimulation.hpp ../../../ClientManager/Users/src/Master.hpp ../../usermenumanager.h $(DISTDIR)/
-	$(COPY_FILE) --parents ../../autenticatorqt.cpp ../../changepassdialog.cpp ../../confirmdeleteuserdialog.cpp ../../datamenumanager.cpp ../../newuserdialog.cpp ../../setrankdialog.cpp ../../userdataqt.cpp ../../main.cpp ../../mainwindow.cpp ../../menuwindow.cpp ../../arduinomenumanager.cpp ../../../ClientManager/Util/Semaphore.cpp ../../../ClientManager/Util/Thread.cpp ../../../ClientManager/Users/src/AuthenticationServer.cpp ../../../ClientManager/FileSystem/src/FileSystem.cpp ../../../ClientManager/Users/src/arduinoSimulation.cpp ../../../ClientManager/Users/src/Master.cpp ../../usermenumanager.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../../changepassdialog.h ../../confirmdeleteuserdialog.h ../../datamenumanager.h ../../mainwindow.h ../../menuwindow.h ../../newuserdialog.h ../../setrankdialog.h ../../userdataqt.h ../../arduinomenumanager.h ../../../ClientManager/Util/Socket.hpp ../../../ClientManager/Util/Messages.hpp ../../../ClientManager/Util/User.hpp ../../usermenumanager.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../../changepassdialog.cpp ../../confirmdeleteuserdialog.cpp ../../datamenumanager.cpp ../../newuserdialog.cpp ../../setrankdialog.cpp ../../userdataqt.cpp ../../main.cpp ../../mainwindow.cpp ../../menuwindow.cpp ../../arduinomenumanager.cpp ../../../ClientManager/Util/Socket.cpp ../../usermenumanager.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents ../../changepassdialog.ui ../../confirmdeleteuserdialog.ui ../../mainwindow.ui ../../menuwindow.ui ../../newuserdialog.ui ../../setrankdialog.ui $(DISTDIR)/
 
 
@@ -434,61 +414,45 @@ compiler_moc_header_clean:
 moc_changepassdialog.cpp: ../../changepassdialog.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Users/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/FileSystem/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../changepassdialog.h -o moc_changepassdialog.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../changepassdialog.h -o moc_changepassdialog.cpp
 
 moc_confirmdeleteuserdialog.cpp: ../../confirmdeleteuserdialog.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Users/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/FileSystem/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../confirmdeleteuserdialog.h -o moc_confirmdeleteuserdialog.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../confirmdeleteuserdialog.h -o moc_confirmdeleteuserdialog.cpp
 
 moc_mainwindow.cpp: ../../mainwindow.h \
-		../../autenticatorqt.h \
 		../../userdataqt.h \
-		../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp \
-		../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp \
-		../../../ClientManager/Users/src/Server.hpp \
-		../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Users/src/User.hpp \
-		../../../ClientManager/Users/src/Master.hpp \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp \
+		../../../ClientManager/Util/User.hpp \
+		../../../ClientManager/Util/Socket.hpp \
+		../../../ClientManager/Util/Messages.hpp \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Users/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/FileSystem/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../mainwindow.h -o moc_mainwindow.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../mainwindow.h -o moc_mainwindow.cpp
 
 moc_menuwindow.cpp: ../../menuwindow.h \
-		../../autenticatorqt.h \
-		../../userdataqt.h \
-		../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp \
-		../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp \
-		../../../ClientManager/Users/src/Server.hpp \
-		../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Users/src/User.hpp \
 		../../usermenumanager.h \
+		../../userdataqt.h \
+		../../../ClientManager/Util/User.hpp \
 		../../datamenumanager.h \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp \
 		../../changepassdialog.h \
 		../../arduinomenumanager.h \
 		../../setrankdialog.h \
-		../../../ClientManager/Users/src/Master.hpp \
+		../../../ClientManager/Util/Socket.hpp \
+		../../../ClientManager/Util/Messages.hpp \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Users/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/FileSystem/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../menuwindow.h -o moc_menuwindow.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../menuwindow.h -o moc_menuwindow.cpp
 
 moc_newuserdialog.cpp: ../../newuserdialog.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Users/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/FileSystem/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../newuserdialog.h -o moc_newuserdialog.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../newuserdialog.h -o moc_newuserdialog.cpp
 
 moc_setrankdialog.cpp: ../../setrankdialog.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Users/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/FileSystem/src -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../setrankdialog.h -o moc_setrankdialog.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../setrankdialog.h -o moc_setrankdialog.cpp
 
 compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
@@ -531,18 +495,6 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean compiler_ui
 
 ####### Compile
 
-autenticatorqt.o: ../../autenticatorqt.cpp ../../autenticatorqt.h \
-		../../userdataqt.h \
-		../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp \
-		../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp \
-		../../../ClientManager/Users/src/Server.hpp \
-		../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Users/src/User.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o autenticatorqt.o ../../autenticatorqt.cpp
-
 changepassdialog.o: ../../changepassdialog.cpp ../../changepassdialog.h \
 		ui_changepassdialog.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o changepassdialog.o ../../changepassdialog.cpp
@@ -551,8 +503,7 @@ confirmdeleteuserdialog.o: ../../confirmdeleteuserdialog.cpp ../../confirmdelete
 		ui_confirmdeleteuserdialog.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o confirmdeleteuserdialog.o ../../confirmdeleteuserdialog.cpp
 
-datamenumanager.o: ../../datamenumanager.cpp ../../datamenumanager.h \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp
+datamenumanager.o: ../../datamenumanager.cpp ../../datamenumanager.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o datamenumanager.o ../../datamenumanager.cpp
 
 newuserdialog.o: ../../newuserdialog.cpp ../../newuserdialog.h \
@@ -563,37 +514,22 @@ setrankdialog.o: ../../setrankdialog.cpp ../../setrankdialog.h \
 		ui_setrankdialog.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o setrankdialog.o ../../setrankdialog.cpp
 
-userdataqt.o: ../../userdataqt.cpp ../../userdataqt.h
+userdataqt.o: ../../userdataqt.cpp ../../userdataqt.h \
+		../../../ClientManager/Util/User.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o userdataqt.o ../../userdataqt.cpp
 
 main.o: ../../main.cpp ../../mainwindow.h \
-		../../autenticatorqt.h \
 		../../userdataqt.h \
-		../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp \
-		../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp \
-		../../../ClientManager/Users/src/Server.hpp \
-		../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Users/src/User.hpp \
-		../../../ClientManager/Users/src/Master.hpp \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp
+		../../../ClientManager/Util/User.hpp \
+		../../../ClientManager/Util/Socket.hpp \
+		../../../ClientManager/Util/Messages.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../../main.cpp
 
 mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
-		../../autenticatorqt.h \
 		../../userdataqt.h \
-		../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp \
-		../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp \
-		../../../ClientManager/Users/src/Server.hpp \
-		../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Users/src/User.hpp \
-		../../../ClientManager/Users/src/Master.hpp \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp \
+		../../../ClientManager/Util/User.hpp \
+		../../../ClientManager/Util/Socket.hpp \
+		../../../ClientManager/Util/Messages.hpp \
 		ui_mainwindow.h \
 		../../menuwindow.h \
 		../../usermenumanager.h \
@@ -604,72 +540,31 @@ mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mainwindow.o ../../mainwindow.cpp
 
 menuwindow.o: ../../menuwindow.cpp ../../menuwindow.h \
-		../../autenticatorqt.h \
-		../../userdataqt.h \
-		../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp \
-		../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp \
-		../../../ClientManager/Users/src/Server.hpp \
-		../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Users/src/User.hpp \
 		../../usermenumanager.h \
+		../../userdataqt.h \
+		../../../ClientManager/Util/User.hpp \
 		../../datamenumanager.h \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp \
 		../../changepassdialog.h \
 		../../arduinomenumanager.h \
 		../../setrankdialog.h \
-		../../../ClientManager/Users/src/Master.hpp \
+		../../../ClientManager/Util/Socket.hpp \
+		../../../ClientManager/Util/Messages.hpp \
 		../../mainwindow.h \
 		ui_menuwindow.h \
 		../../newuserdialog.h \
 		../../confirmdeleteuserdialog.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o menuwindow.o ../../menuwindow.cpp
 
-arduinomenumanager.o: ../../arduinomenumanager.cpp ../../arduinomenumanager.h \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp
+arduinomenumanager.o: ../../arduinomenumanager.cpp ../../arduinomenumanager.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o arduinomenumanager.o ../../arduinomenumanager.cpp
 
-Semaphore.o: ../../../ClientManager/Util/Semaphore.cpp ../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Semaphore.o ../../../ClientManager/Util/Semaphore.cpp
-
-Thread.o: ../../../ClientManager/Util/Thread.cpp ../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Util/common.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Thread.o ../../../ClientManager/Util/Thread.cpp
-
-AuthenticationServer.o: ../../../ClientManager/Users/src/AuthenticationServer.cpp ../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp \
-		../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp \
-		../../../ClientManager/Users/src/Server.hpp \
-		../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Users/src/User.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o AuthenticationServer.o ../../../ClientManager/Users/src/AuthenticationServer.cpp
-
-FileSystem.o: ../../../ClientManager/FileSystem/src/FileSystem.cpp ../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o FileSystem.o ../../../ClientManager/FileSystem/src/FileSystem.cpp
-
-arduinoSimulation.o: ../../../ClientManager/Users/src/arduinoSimulation.cpp ../../../ClientManager/Users/src/arduinoSimulation.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o arduinoSimulation.o ../../../ClientManager/Users/src/arduinoSimulation.cpp
-
-Master.o: ../../../ClientManager/Users/src/Master.cpp ../../../ClientManager/Users/src/Master.hpp \
-		../../../ClientManager/Users/src/arduinoSimulation.hpp
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Master.o ../../../ClientManager/Users/src/Master.cpp
+Socket.o: ../../../ClientManager/Util/Socket.cpp ../../../ClientManager/Util/Socket.hpp \
+		../../../ClientManager/Util/Messages.hpp
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Socket.o ../../../ClientManager/Util/Socket.cpp
 
 usermenumanager.o: ../../usermenumanager.cpp ../../usermenumanager.h \
 		../../userdataqt.h \
-		../../../ClientManager/Users/src/AuthenticationServer.hpp \
-		../../../ClientManager/FileSystem/src/FileSystem.hpp \
-		../../../ClientManager/FileSystem/src/FileSystemStructures.hpp \
-		../../../ClientManager/Util/Semaphore.hpp \
-		../../../ClientManager/Util/common.hpp \
-		../../../ClientManager/Users/src/Server.hpp \
-		../../../ClientManager/Util/Thread.hpp \
-		../../../ClientManager/Users/src/User.hpp
+		../../../ClientManager/Util/User.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o usermenumanager.o ../../usermenumanager.cpp
 
 moc_changepassdialog.o: moc_changepassdialog.cpp 

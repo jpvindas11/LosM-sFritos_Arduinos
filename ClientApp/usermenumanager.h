@@ -11,9 +11,6 @@ class userMenuManager
 public:
     userMenuManager();
 
-    void setPointers(QListWidget* user_list,
-    userDataQt* current);
-
     void updateUserList();
 
     void setSelectedUser(QListWidgetItem* user);

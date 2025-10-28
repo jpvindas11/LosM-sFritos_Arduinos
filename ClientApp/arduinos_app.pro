@@ -36,6 +36,7 @@ HEADERS += \
     arduinomenumanager.h \
     ../ClientManager/Util/Socket.hpp \
     ../ClientManager/Util/Messages.hpp \
+    ../ClientManager/Util/User.hpp \
     usermenumanager.h
 
 FORMS += \

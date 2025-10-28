@@ -10,11 +10,11 @@ void userDataQt::setData(std::string user, std::string password, char rank) {
     this->password = password;
 
     switch(rank) {
-        case 'o' : this->rank = UR_OWNER; break;
-        case 'h' : this->rank = UR_HARDWAREMANAGER; break;
-        case 's' : this->rank = UR_SOFTWAREMANAGER; break;
-        case 'u' : this->rank = UR_USERMANAGER; break;
-        case 'c' : this->rank = UR_CONSULTANT; break;
+        case USER_OWNER : this->rank = UR_OWNER; break;
+        case USER_HARDWAREMANAGER : this->rank = UR_HARDWAREMANAGER; break;
+        case USER_SOFTWAREMANAGER : this->rank = UR_SOFTWAREMANAGER; break;
+        case USER_USERMANAGER : this->rank = UR_USERMANAGER; break;
+        case USER_CONSULTANT : this->rank = UR_CONSULTANT; break;
         default: break;
     }
 }
@@ -28,4 +28,4 @@ std::string userDataQt::getUser() { return this->user; }
 std::string userDataQt::getPass() { return this->password; }
 std::string userDataQt::getIP() { return this->IP; }
 int userDataQt::getPort() { return this->port; }
-int userDataQt::getRank() { return this->rank; }
+uint8_t userDataQt::getRank() { return this->rank; }
