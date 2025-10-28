@@ -69,6 +69,61 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
       this->listeningSocket.closeSocket(clientSocket);
       break;
     }
+    case MessageType::SEN_FILE_NAMES_REQ: {
+      genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      senFileNamesRes res;
+      // Rellenar mensaje
+      genMessage reply;
+      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
+      reply.content = res;
+      this->listeningSocket.bSendData(clientSocket, reply);
+      this->listeningSocket.closeSocket(clientSocket);
+      break;
+    }
+    case MessageType::SEN_FILE_METD_REQ: {
+      genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      senFileMetDRes res{};
+      // Rellenar mensaje
+      genMessage reply;
+      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_METD_RES);
+      reply.content = res;
+      this->listeningSocket.bSendData(clientSocket, reply);
+      this->listeningSocket.closeSocket(clientSocket);
+      break;
+    }
+    case MessageType::SEN_FILE_BLOCKNUM_REQ: {
+      genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      senFileBlockNumRes res{};
+      // Rellenar mensaje
+      genMessage reply;
+      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCKNUM_RES);
+      reply.content = res;
+      this->listeningSocket.bSendData(clientSocket, reply);
+      this->listeningSocket.closeSocket(clientSocket);
+      break;
+    }
+    case MessageType::SEN_FILE_BLOCK_REQ: {
+      genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      senFileBlockRes res{};
+      // Rellenar mensaje
+      genMessage reply;
+      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
+      reply.content = res;
+      this->listeningSocket.bSendData(clientSocket, reply);
+      this->listeningSocket.closeSocket(clientSocket);
+      break;
+    }
+    case MessageType::AUTH_LOGIN_REQ: {
+      authLoginReq messageContent = getMessageContent<authLoginReq>(clientRequest);
+      authLoginSuccess res{};
+      // Rellenar mensaje
+      genMessage reply;
+      reply.MID = static_cast<uint8_t>(MessageType::AUTH_LOGIN_SUCCESS);
+      reply.content = res;
+      this->listeningSocket.bSendData(clientSocket, reply);
+      this->listeningSocket.closeSocket(clientSocket);
+      break;
+    }
     default: {
       std::cerr<<"ERROR: MID non recognized"<<std::endl;
       break;
