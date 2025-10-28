@@ -1,7 +1,7 @@
 # === Configuración general ===
 CXX := g++
 CXXFLAGS := -Wall -Wextra -g -std=c++17 \
-    -I. -I../Util -I../FileSystem/src -I../Datagrams
+    -I. -I../Util -I../FileSystem/src -I../Datagrams -I../../common/bitsery/include
 LDFLAGS := 
 TARGET := bin/storage
 
