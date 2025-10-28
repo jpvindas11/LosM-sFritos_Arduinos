@@ -70,7 +70,7 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
                                                     messageContent.data.size());
 }
 
-std::string getSensorFileName(sensorFileName& name) {
+std::string SensorServer::getSensorFileName(sensorFileName& name) {
   std::stringstream ss;
   ss<<name.sensorType<<"_"<<name.id<<"_"<<name.year<<name.month<<name.day;
   return ss.str();
