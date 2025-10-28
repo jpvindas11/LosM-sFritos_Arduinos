@@ -46,7 +46,7 @@ void SensorServer::handleClientConnection(int clientSocket) {
   genMessage clientRequest;
   this->listeningSocket.bReceiveData(clientSocket, clientRequest);
   // TODO: in the future use threads to handle the client´s message, so use a queue to
-  // enquee the client message
+  // enqueue the client message
   this->serveClient(clientSocket, clientRequest);
 }
 
@@ -55,6 +55,17 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
     case MessageType::SEN_ADD_LOG: {
       senAddLog messageContent = getMessageContent<senAddLog>(clientRequest);
       this->addToSensorLog(messageContent);
+      this->listeningSocket.closeSocket(clientSocket);
+      break;
+    }
+    case MessageType::FILE_NUMBER_REQ: {
+      GenNumReq messageContent = getMessageContent<GenNumReq>(clientRequest);
+      fileNumberResp resp;
+      // resp.totalFiles = 0;  de donde obtengo el total de archivos?
+      genMessage reply;
+      reply.MID = static_cast<uint8_t>(MessageType::FILE_NUMBER_REP);
+      reply.content = resp;
+      this->listeningSocket.bSendData(clientSocket, reply);
       this->listeningSocket.closeSocket(clientSocket);
       break;
     }
