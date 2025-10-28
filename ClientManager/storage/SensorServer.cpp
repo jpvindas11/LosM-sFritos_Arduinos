@@ -66,6 +66,7 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
 }
 
 void SensorServer::addToSensorLog(senAddLog& messageContent) {
+  std::string fileName = this->getSensorFileName(messageContent.fileName);
   if (!this->storage.fileExists(fileName)) {
     this->storage.createFile(fileName);
   }

@@ -1,4 +1,3 @@
-// Copyright [2025] <Isaac Shih, Luis Eduardo Valverde, Stephannie Montanaro>
 #include <iostream>
 
 #include "Handler.hpp"
