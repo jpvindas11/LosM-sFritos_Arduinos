@@ -122,7 +122,8 @@ std::string SensorServer::getSensorFileName(sensorFileName& name) {
   std::string yearS (year);
   std::string monthS (month);
   std::string dayS (day);
-  return name.sensorType + "_" + idS + "_" + yearS + monthS + dayS;
+  return name.sensorType + "_" + idS + "_" + yearS + "/" + 
+         monthS + "/" + dayS + ".log";
 }
 
 void SensorServer::sendFileNumber(int clientSocket, genSenFileReq messageContent) {
