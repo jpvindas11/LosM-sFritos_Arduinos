@@ -58,21 +58,19 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
       this->listeningSocket.closeSocket(clientSocket);
       break;
     }
+
     case MessageType::FILE_NUMBER_REQ: {
+      // Cliente solicita cantidad de archivos
       GenNumReq messageContent = getMessageContent<GenNumReq>(clientRequest);
       fileNumberResp resp;
-      // resp.totalFiles = 0;  de donde obtengo el total de archivos?
-      genMessage reply;
-      reply.MID = static_cast<uint8_t>(MessageType::FILE_NUMBER_REP);
-      reply.content = resp;
-      this->listeningSocket.bSendData(clientSocket, reply);
-      this->listeningSocket.closeSocket(clientSocket);
       break;
     }
+
     case MessageType::SEN_FILE_NAMES_REQ: {
+      // Cliente pide nombres de archivos (paginado)
       genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
       senFileNamesRes res;
-      // Rellenar mensaje
+      // TODO rellenar respuesta
       genMessage reply;
       reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
       reply.content = res;
@@ -80,50 +78,23 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
       this->listeningSocket.closeSocket(clientSocket);
       break;
     }
+
     case MessageType::SEN_FILE_METD_REQ: {
       genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
-      senFileMetDRes res{};
-      // Rellenar mensaje
-      genMessage reply;
-      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_METD_RES);
-      reply.content = res;
-      this->listeningSocket.bSendData(clientSocket, reply);
-      this->listeningSocket.closeSocket(clientSocket);
+      this->sendSensorFileMetadata(clientSocket, messageContent);
       break;
     }
+
     case MessageType::SEN_FILE_BLOCKNUM_REQ: {
-      genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
-      senFileBlockNumRes res{};
-      // Rellenar mensaje
-      genMessage reply;
-      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCKNUM_RES);
-      reply.content = res;
-      this->listeningSocket.bSendData(clientSocket, reply);
-      this->listeningSocket.closeSocket(clientSocket);
+      genSenFileReq req = getMessageContent<genSenFileReq>(clientRequest);
       break;
     }
+
     case MessageType::SEN_FILE_BLOCK_REQ: {
-      genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
-      senFileBlockRes res{};
-      // Rellenar mensaje
-      genMessage reply;
-      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
-      reply.content = res;
-      this->listeningSocket.bSendData(clientSocket, reply);
-      this->listeningSocket.closeSocket(clientSocket);
+      genSenFileReq req = getMessageContent<genSenFileReq>(clientRequest);
       break;
     }
-    case MessageType::AUTH_LOGIN_REQ: {
-      authLoginReq messageContent = getMessageContent<authLoginReq>(clientRequest);
-      authLoginSuccess res{};
-      // Rellenar mensaje
-      genMessage reply;
-      reply.MID = static_cast<uint8_t>(MessageType::AUTH_LOGIN_SUCCESS);
-      reply.content = res;
-      this->listeningSocket.bSendData(clientSocket, reply);
-      this->listeningSocket.closeSocket(clientSocket);
-      break;
-    }
+
     default: {
       std::cerr<<"ERROR: MID non recognized"<<std::endl;
       break;
@@ -144,7 +115,7 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   std::cout<<"Received for file -> "<<fileName<<"\n"<<buffer<<std::endl;
 }
 
-std::string SensorServer:: getSensorFileName(sensorFileName& name) {
+std::string SensorServer::getSensorFileName(sensorFileName& name) {
   char id [65535];
   char year [10000];
   char month [12];
@@ -158,4 +129,35 @@ std::string SensorServer:: getSensorFileName(sensorFileName& name) {
   std::string monthS (month);
   std::string dayS (day);
   return name.sensorType + "_" + idS + "_" + yearS + monthS + dayS;
+}
+
+void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messageContent) {
+  // Crea la respuesta
+  genMessage reply;
+  // Obtiene el nombre del sensor
+  std::string filename = this->getSensorFileName(messageContent.fileName);
+  iNode inode;
+  // Trata de buscar los metadatos
+  if (this->storage.getFileInfo(filename, &inode)) {
+    senFileMetDRes res;
+    res.fileName = messageContent.fileName;
+    res.size = this->storage.getFileSize(filename);
+    res.permissions = inode.permissions;
+    res.userId = inode.userId;
+    res.groupId = inode.groupId;
+    res.creationTime = inode.creationTime;
+    res.lastModifiedTime = inode.lastModifiedTime;
+    res.lastAccessTime = inode.lastAccessTime;
+    // Llena la respuesta si hay éxito
+    reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_METD_RES);
+    reply.content = res;
+  } else {
+    // Crea un mensaje de error si no
+    errorCommonMsg err;
+    err.message = "No se pudo obtener los metadatos del archivo " + filename;
+    reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+    reply.content = err;
+  }
+  this->listeningSocket.bSendData(clientSocket, reply);
+  this->listeningSocket.closeSocket(clientSocket);
 }
