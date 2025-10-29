@@ -1,6 +1,6 @@
 # Configuración del compilador
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g
+CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g -I. -I../Util
 LDFLAGS = -pthread
 
 # Directorios
@@ -12,11 +12,11 @@ BIN_DIR = bin
 # Archivos
 TARGET = $(BIN_DIR)/proxy
 SOURCES = main.cpp Proxy.cpp
-UTIL_SOURCES = $(UTIL_DIR)/Socket.cpp
+UTIL_SOURCES = $(UTIL_DIR)/Socket.cpp $(UTIL_DIR)/Semaphore.cpp
 
 # Objetos
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
-UTIL_OBJECTS = $(OBJ_DIR)/Socket.o
+UTIL_OBJECTS = $(UTIL_SOURCES:../Util/%.cpp=$(OBJ_DIR)/%.o)
 
 ALL_OBJECTS = $(OBJECTS) $(UTIL_OBJECTS)
 
@@ -43,6 +43,9 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 # Compilar archivos objeto de utilidades
 $(OBJ_DIR)/Socket.o: $(UTIL_DIR)/Socket.cpp
+	@echo "Compiling $<..."
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+$(OBJ_DIR)/Semaphore.o: $(UTIL_DIR)/Semaphore.cpp
 	@echo "Compiling $<..."
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
