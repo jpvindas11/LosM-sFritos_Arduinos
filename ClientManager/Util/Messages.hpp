@@ -48,8 +48,12 @@ struct sensorFileName {
     uint8_t day;
 };
 
+struct forNamesRequest {
+  std::string Filename;
+};
+
 struct sensorNamesVector {
-    std::vector<sensorFileName> names;
+  std::vector<forNamesRequest> names;
 };
 
 struct GenNumReq {
@@ -68,11 +72,11 @@ struct senFileNamesRes {
 
 struct genSenFileReq {
     uint32_t id_token;
-    sensorFileName fileName;
+    forNamesRequest fileName;
 };
 
 struct senFileMetDRes {
-    sensorFileName fileName;
+    forNamesRequest fileName;
     uint32_t size;
     uint16_t permissions;
     uint32_t userId;
@@ -83,7 +87,7 @@ struct senFileMetDRes {
 };
 
 struct senFileBlockNumRes {
-    sensorFileName fileName;
+    forNamesRequest fileName;
     uint32_t blocks;
 };
 
@@ -91,7 +95,7 @@ struct senFileBlockRes {
     uint32_t page;
     uint32_t totalPages;
     uint8_t usedBlocks;
-    sensorFileName fileName;
+    forNamesRequest fileName;
     std::string firstBlock;
     std::string secondBlock;
 };
@@ -152,8 +156,13 @@ namespace bitsery {
     }
 
     template <typename S>
+    void serialize(S& s, forNamesRequest& fnr) {
+        s.text1b(fnr.Filename, 25);
+    }
+
+    template <typename S>
     void serialize(S& s, sensorNamesVector& snv) {
-        s.container(snv.names, 93);
+        s.container(snv.names, 50);
     }
 
     template <typename S>
