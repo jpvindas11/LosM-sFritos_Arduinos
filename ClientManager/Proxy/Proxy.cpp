@@ -1,7 +1,7 @@
 #include "Proxy.hpp"
 #include <stdexcept>
 
-Proxy::Proxy() : storageSocketFD(-1), running(false) {}
+Proxy::Proxy() : running(false), messageQueue(100) {}
 
 Proxy::~Proxy() {
     stopProxy();
@@ -10,23 +10,6 @@ Proxy::~Proxy() {
 Proxy& Proxy::getInstance() {
   static Proxy proxy;
   return proxy;
-}
-
-bool Proxy::connectToStorageServer() {
-  if (!storageSocket.create()) {
-    std::cerr << "ERROR: Could not create storage socket\n";
-    return false;
-  }
-  
-  if (!storageSocket.connectToServer(storageServerIP, storageServerPort)) {
-    std::cerr << "ERROR: Could not connect to storage server\n";
-    return false;
-  }
-  
-  storageSocketFD = storageSocket.getSocketFD();
-  std::cout << "Connected to storage server at " << storageServerIP
-    << ":" << storageServerPort << std::endl;
-  return true;
 }
 
 int Proxy::listenForConnections(std::string ip, int port) {
@@ -53,25 +36,26 @@ int Proxy::listenForConnections(std::string ip, int port) {
   return EXIT_SUCCESS;
 }
 
-int Proxy::acceptConnectionRequest() {
-  int arduinoSocket = listeningSocket.acceptConnection();
-  
-  if (arduinoSocket == -1) {
-    throw std::runtime_error("Could not accept Arduino connection");
-  }
-  
-  std::cout << "Arduino connected\n";
-  handleArduinoConnection(arduinoSocket);
-  
-  return arduinoSocket;
-}
-
 void Proxy::acceptAllConnections() {
-  while (running && listeningSocket.getSocketFD() >= 0) {
+  while (running.load() && listeningSocket.getSocketFD() >= 0) {
     try {
-      acceptConnectionRequest();
+      int arduinoSocket = listeningSocket.acceptConnection();
+      
+      if (arduinoSocket == -1) {
+        if (running.load()) {
+          std::cerr << "Could not accept Arduino connection\n";
+        }
+        continue;
+      }
+      
+      std::cout << "Arduino connected (socket: " << arduinoSocket << ")\n";
+      
+      // Crear thread para manejar esta conexión
+      std::lock_guard<std::mutex> lock(threadsMutex);
+      clientThreads.emplace_back(&Proxy::handleArduinoConnection, this, arduinoSocket);
+      
     } catch (const std::runtime_error& error) {
-      if (running) {
+      if (running.load()) {
         std::cerr << error.what() << std::endl;
       }
     }
@@ -79,35 +63,77 @@ void Proxy::acceptAllConnections() {
 }
 
 void Proxy::handleArduinoConnection(int arduinoSocket) {
+  std::cout << "Thread started for Arduino socket: " << arduinoSocket << std::endl;
+  
+  // Solo leer UN mensaje por conexión (los Arduinos cierran después de enviar)
   genMessage sensorData;
   
-  // Recibir datos del Arduino
   ssize_t bytesReceived = listeningSocket.bReceiveData(arduinoSocket, sensorData);
   
   if (bytesReceived > 0) {
-    // Retransmitir al servidor de almacenamiento
-    forwardSensorData(arduinoSocket, sensorData);
+    std::cout << "Received data from Arduino (socket: " << arduinoSocket 
+              << ", MID: " << static_cast<int>(sensorData.MID) << ")\n";
+    
+    // Encolar el mensaje para procesamiento
+    QueuedMessage queuedMsg = {arduinoSocket, sensorData};
+    messageQueue.enqueue(queuedMsg);
   } else {
-    std::cerr << "ERROR: Could not receive data from Arduino\n";
+    std::cout << "Could not receive data from Arduino (socket: " << arduinoSocket << ")\n";
   }
   
+  // Cerrar la conexión después de procesar el mensaje
   listeningSocket.closeSocket(arduinoSocket);
-  std::cout << "Arduino disconnected\n";
+  std::cout << "Arduino disconnected (socket: " << arduinoSocket << ")\n";
 }
 
-void Proxy::forwardSensorData(int arduinoSocket, genMessage& sensorData) {
-  // Reenviar el mensaje al servidor de almacenamiento
-  ssize_t bytesSent = storageSocket.bSendData(storageSocketFD, sensorData);
+void Proxy::processMessageQueue() {
+  std::cout << "Storage handler thread started\n";
+  
+  while (running.load()) {
+    try {
+      QueuedMessage queuedMsg = messageQueue.dequeue();
+      
+      if (!running.load()) break;
+      
+      if (queuedMsg.arduinoSocket < 0) {
+        continue;
+      }
+      
+      forwardSensorData(queuedMsg.message);
+      
+    } catch (const std::exception& e) {
+      if (running.load()) {
+        std::cerr << "Error processing message queue: " << e.what() << std::endl;
+      }
+    }
+  }
+  
+  std::cout << "Storage handler thread stopped\n";
+}
+
+void Proxy::forwardSensorData(genMessage& sensorData) {
+  // Crear nueva conexión temporal para cada mensaje
+  Socket tempStorageSocket;
+  
+  if (!tempStorageSocket.create()) {
+    std::cerr << "ERROR: Could not create storage socket\n";
+    return;
+  }
+  
+  if (!tempStorageSocket.connectToServer(storageServerIP, storageServerPort)) {
+    std::cerr << "ERROR: Could not connect to storage server\n";
+    return;
+  }
+  
+  ssize_t bytesSent = tempStorageSocket.bSendData(tempStorageSocket.getSocketFD(), sensorData);
   
   if (bytesSent > 0) {
     std::cout << "Data forwarded to storage server (MID: " << static_cast<int>(sensorData.MID) << ")\n";
-    genMessage response;
-    storageSocket.bReceiveData(storageSocketFD, response);
-    
-    listeningSocket.bSendData(arduinoSocket, response);
   } else {
     std::cerr << "ERROR: Could not forward data to storage server\n";
   }
+  
+  tempStorageSocket.closeSocket();
 }
 
 int Proxy::startProxy(std::string proxyIP, int proxyPort, std::string storageIP, int storagePort) {
@@ -116,15 +142,15 @@ int Proxy::startProxy(std::string proxyIP, int proxyPort, std::string storageIP,
   this->storageServerIP = storageIP;
   this->storageServerPort = storagePort;
   
-  if (!connectToStorageServer()) {
-    return EXIT_FAILURE;
-  }
-  
   if (listenForConnections(this->proxyIP, this->proxyPort) == EXIT_FAILURE) {
     return EXIT_FAILURE;
   }
   
-  running = true;
+  running.store(true);
+  
+  // Iniciar thread para procesar la cola de mensajes
+  storageHandlerThread = std::thread(&Proxy::processMessageQueue, this);
+  
   std::cout << "Proxy started on " << this->proxyIP 
     << ":" << this->proxyPort << std::endl;
   
@@ -143,8 +169,28 @@ void Proxy::run(std::string proxyIP, int proxyPort, std::string storageIP, int s
 }
 
 void Proxy::stopProxy() {
-    running = false;
-    storageSocket.closeSocket();
-    listeningSocket.closeSocket();
-    std::cout << "Proxy stopped\n";
+  std::cout << "Stopping proxy...\n";
+  running.store(false);
+  
+  try {
+    QueuedMessage dummyMsg = {-1, genMessage{}};
+    messageQueue.enqueue(dummyMsg);
+  } catch (...) {}
+  
+  if (storageHandlerThread.joinable()) {
+    storageHandlerThread.join();
+  }
+  
+  {
+    std::lock_guard<std::mutex> lock(threadsMutex);
+    for (auto& thread : clientThreads) {
+      if (thread.joinable()) {
+        thread.join();
+      }
+    }
+    clientThreads.clear();
+  }
+  
+  listeningSocket.closeSocket();
+  std::cout << "Proxy stopped\n";
 }

@@ -3,13 +3,20 @@
 
 #include <sstream>
 #include <cstdio>
+#include <thread>
+#include <mutex>
+#include <atomic>
 
 #include "StorageServer.hpp"
 
 
 class SensorServer : public StorageServer {
  private:
-  /* data */
+  std::atomic<bool> running;
+  std::mutex storageMutex; // Para acceso thread-safe al filesystem
+
+  void processClientInThread(int clientSocket);
+
  public:
   static SensorServer& getInstance();
   void run(std::string serverIP, int listeningPort, 
