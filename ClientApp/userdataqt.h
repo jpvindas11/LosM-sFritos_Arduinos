@@ -2,6 +2,8 @@
 #define USERDATAQT_H
 
 #include <string>
+#include "inttypes.h"
+#include "User.hpp"
 
 enum USER_RANK {
     UR_CONSULTANT,
@@ -17,15 +19,20 @@ public:
     userDataQt();
 
     void setData(std::string user, std::string password, char rank);
+    void setNetwork(std::string IP, int port);
 
     std::string getUser();
     std::string getPass();
-    int getRank();
+    std::string getIP();
+    int getPort();
+    uint8_t getRank();
 
 private:
     std::string user;
     std::string password;
-    int rank;
+    std::string IP;
+    int port;
+    uint8_t rank;
 };
 
 #endif // USERDATAQT_H

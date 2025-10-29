@@ -141,15 +141,15 @@ bool FileSystem::mount(const std::string& path) {
 
     // Asumimos temporalmente para manejar lecturas
     this->isMounted = true;
-    
+ 
     // Abrir en modo binario, lectura y escritura
     diskFile.open(path, std::ios::in | std::ios::out | std::ios::binary);
     
     if (!diskFile.is_open()) {
-        std::cerr << "Disco no existe, intentando crear uno nuevo" << path << std::endl;
+        std::cerr << "Disco no existe, intentando crear uno nuevo: " << path << std::endl;
 
         if (!this->format(path)) {
-            std::cerr << "No se pudo crear el disco" << path << std::endl;
+            std::cerr << "No se pudo crear el disco: " << path << std::endl;
             this->isMounted = false;
             return false;
         }
@@ -158,42 +158,34 @@ bool FileSystem::mount(const std::string& path) {
 
         diskFile.open(path, std::ios::in | std::ios::out | std::ios::binary);
     }
-    
-    // Leer superbloque (bloque 0)
-    if (!readBlock(0, &superBlock)) {
+
+    char superBlockBuffer[BLOCK_SIZE];
+    if (!readBlock(0, superBlockBuffer)) {
         std::cerr << "Error al leer superbloque" << std::endl;
         diskFile.close();
-
         this->isMounted = false;
         return false;
     }
-    
+
+    // Copiar solo lo necesario
+    memcpy(&superBlock, superBlockBuffer, sizeof(SuperBlock));
+
     // Verificar magic number
     if (superBlock.magicNumber != 0xAA55) {
         std::cerr << "Disco inválido (magic number incorrecto)" << std::endl;
         diskFile.close();
-
         this->isMounted = false;
         return false;
     }
-    
+
     // Cargar bitmaps a memoria
     if (!loadBitmaps()) {
+        std::cerr << "Error al cargar bitmaps" << std::endl;
         diskFile.close();
-
         this->isMounted = false;
         return false;
     }
-    
-    // Cargar directorio a memoria
-    if (!readDirectoryFromDisk()) {
-        diskFile.close();
 
-        this->isMounted = false;
-        return false;
-    }
-    
-    std::cout << "Disco montado exitosamente: " << path << std::endl;
     return true;
 }
 
@@ -218,12 +210,6 @@ bool FileSystem::unmount() {
     // Guardar bitmaps
     if (!saveBitmaps()) {
         std::cerr << "Error al guardar bitmaps" << std::endl;
-        return false;
-    }
-    
-    // Guardar directorio
-    if (!writeDirectoryToDisk()) {
-        std::cerr << "Error al guardar directorio" << std::endl;
         return false;
     }
     
@@ -624,32 +610,45 @@ bool FileSystem::setBlockNumber(iNode& node, uint32_t logicalBlockIndex, uint32_
     return false;
 }
 
-int64_t FileSystem::findFileInDirectory(const std::string& fileName) {
+FileLocation FileSystem::findFileInDirectory(const std::string& fileName) {
+    FileLocation result;
+    result.found = false;
+
     if (!isMounted) {
         std::cerr << "Disco no montado" << std::endl;
-        return -1;
+        return result;
     }
     
     if (fileName.empty() || fileName.length() >= FILE_NAME_LENGTH) {
         std::cerr << "Nombre de archivo inválido" << std::endl;
-        return -1;
+        return result;
     }
     
-    for (size_t i = 0; i < MAX_FILES; ++i) {
-        const File& file = this->directory.entries[i];
-        
-        // Verificar si la entrada está ocupada
-        if (file.iNodePointer == INODE_FREE_SLOT) {
-            continue;
+    uint32_t filesPerBlock = BLOCK_SIZE / sizeof(File);
+    
+    for (uint32_t block = 0; block < FILE_DIRECTORY_BLOCKS; block++) {
+        char buffer[BLOCK_SIZE];
+        if (!readBlock(FILE_DIRECTORY_START + block, buffer)) {
+            return result;
         }
-
-        if (strncmp(file.fileName, fileName.c_str(), FILE_NAME_LENGTH - 1) == 0) {
-            return i;
+        
+        for (uint32_t i = 0; i < filesPerBlock; i++) {
+            File* entry = reinterpret_cast<File*>(buffer + (i * sizeof(File)));
+            
+            if (entry->iNodePointer != INODE_FREE_SLOT &&
+                strncmp(entry->fileName, fileName.c_str(), FILE_NAME_LENGTH - 1) == 0) {
+                
+                result.file = *entry;
+                result.blockNum = FILE_DIRECTORY_START + block;
+                result.offset = i * sizeof(File);
+                result.found = true;
+                return result;
+            }
         }
     }
-
-    return -1;
+    return result;
 }
+
 bool FileSystem::addFileToDirectory(const std::string& fileName, uint16_t inodeNum) {
     if (!isMounted) {
         std::cerr << "Disco no montado" << std::endl;
@@ -663,38 +662,38 @@ bool FileSystem::addFileToDirectory(const std::string& fileName, uint16_t inodeN
     }
     
     // Verificar si el archivo ya existe
-    if (findFileInDirectory(fileName) != -1) {
+    if (findFileInDirectory(fileName).found) {
         std::cerr << "El archivo ya existe: " << fileName << std::endl;
         return false;
     }
     
     // Buscar una entrada libre en el directorio
-    int64_t freeIndex = -1;
-    for (size_t i = 0; i < MAX_FILES; ++i) {
-        if (this->directory.entries[i].iNodePointer == INODE_FREE_SLOT) {
-            freeIndex = i;
-            break;
+    uint32_t filesPerBlock = BLOCK_SIZE / sizeof(File);
+    
+    for (uint32_t block = 0; block < FILE_DIRECTORY_BLOCKS; block++) {
+        char buffer[BLOCK_SIZE];
+        if (!readBlock(FILE_DIRECTORY_START + block, buffer)) {
+            return false;
+        }
+        
+        for (uint32_t i = 0; i < filesPerBlock; i++) {
+            File* entry = reinterpret_cast<File*>(buffer + (i * sizeof(File)));
+            
+            if (entry->iNodePointer == INODE_FREE_SLOT) {
+                // Espacio libre encontrado
+                memset(entry->fileName, 0, FILE_NAME_LENGTH);
+                strncpy(entry->fileName, fileName.c_str(), FILE_NAME_LENGTH - 1);
+                entry->iNodePointer = inodeNum;
+                entry->isOpen = false;
+                entry->type = FT_FILE;
+                
+                return writeBlock(FILE_DIRECTORY_START + block, buffer);
+            }
         }
     }
     
-    if (freeIndex == -1) {
-        std::cerr << "Directorio lleno, no se puede agregar más archivos" << std::endl;
-        return false;
-    }
-    
-    // Crear entrada
-    File& file = this->directory.entries[freeIndex];
-    
-    // Copiar nombre de forma segura
-    memset(file.fileName, 0, FILE_NAME_LENGTH);
-    strncpy(file.fileName, fileName.c_str(), FILE_NAME_LENGTH - 1);
-    file.fileName[FILE_NAME_LENGTH - 1] = '\0';
-    
-    file.iNodePointer = inodeNum;
-    file.isOpen = false;
-    file.type = 0;
-    
-    return true;
+    std::cerr << "Directorio lleno" << std::endl;
+    return false;
 }
 
 bool FileSystem::removeFileFromDirectory(const std::string& fileName) {
@@ -703,55 +702,70 @@ bool FileSystem::removeFileFromDirectory(const std::string& fileName) {
         return false;
     }
     
-    int64_t fileIndex = findFileInDirectory(fileName);
-    
-    if (fileIndex == -1) {
+    FileLocation location = findFileInDirectory(fileName);
+    if (!location.found) {
         std::cerr << "El archivo no existe: " << fileName << std::endl;
         return false;
     }
     
-    // Limpiar la entrada completamente
-    File& file = this->directory.entries[fileIndex];
-    memset(file.fileName, 0, FILE_NAME_LENGTH);
-    file.iNodePointer = INODE_FREE_SLOT;
-    file.isOpen = false;
-    file.type = 0;
+    // Leer el bloque
+    char buffer[BLOCK_SIZE];
+    if (!readBlock(location.blockNum, buffer)) {
+        return false;
+    }
     
-    return true;
+    // Acceder a la entrada y limpiarla
+    File* entry = reinterpret_cast<File*>(buffer + location.offset);
+    memset(entry->fileName, 0, FILE_NAME_LENGTH);
+    entry->iNodePointer = INODE_FREE_SLOT;
+    entry->isOpen = false;
+    entry->type = 0;
+    
+    return writeBlock(location.blockNum, buffer);
 } 
 
 bool FileSystem::readBlock(uint32_t blockNum, void* buffer) {
-    if (!isMounted && blockNum != 0) {  // Permitir leer bloque 0 en mount
-        std::cerr << "Disco no montado" << std::endl;
+    if (!isMounted && blockNum != 0) {
+        std::cerr << "    ERROR: Disco no montado" << std::endl;
         return false;
     }
     
     if (blockNum >= TOTAL_BLOCK) {
-        std::cerr << "Número de bloque inválido: " << blockNum << std::endl;
+        std::cerr << "    ERROR: Número de bloque inválido: " << blockNum << std::endl;
+        return false;
+    }
+    
+    if (!diskFile.is_open()) {
+        std::cerr << "    ERROR: diskFile NO está abierto!" << std::endl;
         return false;
     }
     
     // Calcular posición en el archivo
     std::streampos position = static_cast<std::streampos>(blockNum) * BLOCK_SIZE;
-    
     // Mover puntero de lectura
     diskFile.seekg(position);
     
     if (diskFile.fail()) {
-        std::cerr << "Error al posicionar puntero de lectura" << std::endl;
+        std::cerr << "    ERROR: Error al posicionar puntero de lectura" << std::endl;
+        diskFile.clear(); // Limpiar flags de error
         return false;
     }
+    
+    // Obtener posición actual para verificar
+    std::streampos actualPos = diskFile.tellg();
     
     // Leer bloque completo
     diskFile.read(static_cast<char*>(buffer), BLOCK_SIZE);
-    
+
     if (diskFile.fail()) {
-        std::cerr << "Error al leer bloque " << blockNum << std::endl;
+        std::cerr << "    ERROR: Error al leer bloque " << blockNum << std::endl;
+        diskFile.clear(); // Limpiar flags de error
         return false;
     }
-    
+
     return true;
 }
+
 
 bool FileSystem::writeBlock(uint32_t blockNum, const void* buffer) {
     if (!isMounted && blockNum != 0) {
@@ -790,22 +804,23 @@ bool FileSystem::writeBlock(uint32_t blockNum, const void* buffer) {
 }
 
 bool FileSystem::loadBitmaps() {
-    // Cargar bitmap de inodos
     char* inodeBitmapPtr = reinterpret_cast<char*>(inodeBitmap);
     for (uint32_t i = 0; i < INODE_BITMAP_BLOCKS; i++) {
+        
         if (!readBlock(INODE_BITMAP_START + i, inodeBitmapPtr + (i * BLOCK_SIZE))) {
+            std::cerr << "ERROR: False en inodos, bloque: " << (INODE_BITMAP_START + i) << std::endl;
             return false;
         }
     }
-    
-    // Cargar bitmap de bloques
+
     char* blockBitmapPtr = reinterpret_cast<char*>(blockBitmap);
     for (uint32_t i = 0; i < BLOCK_BITMAP_BLOCKS; i++) {
         if (!readBlock(BLOCK_BITMAP_START + i, blockBitmapPtr + (i * BLOCK_SIZE))) {
+            std::cerr << "ERROR: False en bloques, bloque: " << (BLOCK_BITMAP_START + i) << std::endl;
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -874,82 +889,6 @@ bool FileSystem::writeInode(uint16_t inodeNum, const iNode* inode) {
     return result;
 }
 
-bool FileSystem::readDirectoryFromDisk() {
-    if (!isMounted) {
-        std::cerr << "Disco no montado" << std::endl;
-        return false;
-    }
-    
-    // Limpiar directorio primero
-    memset(&directory, 0, sizeof(Directory));
-    
-    // Calcular cuántos archivos caben por bloque
-    uint32_t filesPerBlock = BLOCK_SIZE / sizeof(File);
-    
-    // Leer todos los bloques del directorio
-    for (uint32_t block = 0; block < FILE_DIRECTORY_BLOCKS; block++) {
-        char buffer[BLOCK_SIZE];
-        
-        if (!readBlock(FILE_DIRECTORY_START + block, buffer)) {
-            std::cerr << "Error al leer bloque del directorio: " << block << std::endl;
-            return false;
-        }
-        
-        // Copiar archivos del buffer al directorio
-        for (uint32_t i = 0; i < filesPerBlock; i++) {
-            uint32_t fileIndex = block * filesPerBlock + i;
-            
-            if (fileIndex >= MAX_FILES) {
-                break;
-            }
-            
-            memcpy(&directory.entries[fileIndex], 
-                   buffer + (i * sizeof(File)), 
-                   sizeof(File));
-        }
-    }
-    
-    return true;
-}
-
-bool FileSystem::writeDirectoryToDisk() {
-    if (!isMounted) {
-        std::cerr << "Disco no montado" << std::endl;
-        return false;
-    }
-    
-    // Calcular cuántos archivos caben por bloque
-    uint32_t filesPerBlock = BLOCK_SIZE / sizeof(File);
-    
-    // Escribir todos los bloques del directorio
-    for (uint32_t block = 0; block < FILE_DIRECTORY_BLOCKS; block++) {
-        char buffer[BLOCK_SIZE];
-        memset(buffer, 0, BLOCK_SIZE);
-        
-        // Copiar archivos del directorio al buffer
-        for (uint32_t i = 0; i < filesPerBlock; i++) {
-            uint32_t fileIndex = block * filesPerBlock + i;
-            
-            if (fileIndex >= MAX_FILES) {
-                break;
-            }
-            
-            memcpy(buffer + (i * sizeof(File)), 
-                   &directory.entries[fileIndex], 
-                   sizeof(File));
-        }
-        
-        if (!writeBlock(FILE_DIRECTORY_START + block, buffer)) {
-            std::cerr << "Error al escribir bloque del directorio: " << block << std::endl;
-            return false;
-        }
-    }
-
-    diskFile.flush();
-    
-    return true;
-}
-
 bool FileSystem::createFile(const std::string& fileName, uint16_t permissions) {
     if (!isMounted) {
         std::cerr << "Disco no montado" << std::endl;
@@ -963,7 +902,7 @@ bool FileSystem::createFile(const std::string& fileName, uint16_t permissions) {
     }
 
     // Verificar que el archivo no exista
-    if (findFileInDirectory(fileName) != -1) {
+    if (findFileInDirectory(fileName).found) {
         std::cerr << "El archivo ya existe: " << fileName << std::endl;
         return false;
     }
@@ -1022,19 +961,10 @@ bool FileSystem::createFile(const std::string& fileName, uint16_t permissions) {
         return false;
     }
 
-    // Guardar directorio
-    if (!writeDirectoryToDisk()) {
-        std::cerr << "Error al guardar directorio al disco" << std::endl;
-        removeFileFromDirectory(fileName);
-        freeInode(inodeNum);
-        return false;
-    }
-
     // actualizar bitmaps
     if (!saveBitmaps()) {
         std::cerr << "Error al guardar bitmaps" << std::endl;
         removeFileFromDirectory(fileName);
-        writeDirectoryToDisk();  // Revertir directorio
         freeInode(inodeNum);
         return false;
     }
@@ -1062,13 +992,13 @@ bool FileSystem::writeFile(const std::string& fileName, const char* data, uint32
         return false;
     }
     
-    int64_t fileIndex = findFileInDirectory(fileName);
-    if (fileIndex == -1) {
+    FileLocation fileIndex = findFileInDirectory(fileName);
+    if (!fileIndex.found) {
         std::cerr << "Archivo no encontrado: " << fileName << std::endl;
         return false;
     }
 
-    uint16_t inodeNum = directory.entries[fileIndex].iNodePointer;
+    uint16_t inodeNum = fileIndex.file.iNodePointer;
     
     iNode node;
     if (!readInode(inodeNum, &node)) {
@@ -1178,13 +1108,13 @@ bool FileSystem::appendFile(const std::string& fileName, const char* data, uint3
         return false;
     }
     
-    int64_t fileIndex = findFileInDirectory(fileName);
-    if (fileIndex == -1) {
+    FileLocation fileIndex = findFileInDirectory(fileName);
+    if (!fileIndex.found) {
         std::cerr << "Archivo no encontrado: " << fileName << std::endl;
         return false;
     }
 
-    uint16_t inodeNum = directory.entries[fileIndex].iNodePointer;
+    uint16_t inodeNum = fileIndex.file.iNodePointer;
     
     iNode node;
     if (!readInode(inodeNum, &node)) {
@@ -1303,23 +1233,17 @@ bool FileSystem::appendFile(const std::string& fileName, const char* data, uint3
 }
 
 bool FileSystem::fileExists(const std::string& fileName) {
-    return findFileInDirectory(fileName) != -1;
+    return findFileInDirectory(fileName).found;
 }
 
 uint32_t FileSystem::getFileSize(const std::string& fileName) {
-    int64_t fileIndex = findFileInDirectory(fileName);
+    FileLocation loc = findFileInDirectory(fileName);
+    if (!loc.found) return 0;
 
-    // No file found
-    if (fileIndex == -1) return 0;
-
-    File& file = this->directory.entries[fileIndex];
     iNode node;
-
-    if (!readInode(file.iNodePointer, &node)) {
-        std::cerr << "No se pudo leer el inodo" << std::endl;
+    if (!readInode(loc.file.iNodePointer, &node)) {
         return 0;
     }
-
     return node.size;
 }
 
@@ -1334,13 +1258,13 @@ bool FileSystem::readFile(const std::string& fileName, char* buffer, uint32_t& s
         return false;
     }
     
-    int64_t fileIndex = findFileInDirectory(fileName);
-    if (fileIndex == -1) {
+    FileLocation fileIndex = findFileInDirectory(fileName);
+    if (!fileIndex.found) {
         std::cerr << "Archivo no encontrado: " << fileName << std::endl;
         return false;
     }
-    
-    uint16_t inodeNum = directory.entries[fileIndex].iNodePointer;
+
+    uint16_t inodeNum = fileIndex.file.iNodePointer;
     
     iNode node;
     if (!readInode(inodeNum, &node)) {
@@ -1394,13 +1318,13 @@ bool FileSystem::deleteFile(const std::string& fileName) {
         return false;
     }
     
-    int64_t fileIndex = findFileInDirectory(fileName);
-    if (fileIndex == -1) {
+    FileLocation fileIndex = findFileInDirectory(fileName);
+    if (!fileIndex.found) {
         std::cerr << "Archivo no encontrado: " << fileName << std::endl;
         return false;
     }
-    
-    uint16_t inodeNum = directory.entries[fileIndex].iNodePointer;
+
+    uint16_t inodeNum = fileIndex.file.iNodePointer;
     
     iNode node;
     if (!readInode(inodeNum, &node)) {
@@ -1436,7 +1360,6 @@ bool FileSystem::deleteFile(const std::string& fileName) {
     }
     
     // Persistir cambios
-    writeDirectoryToDisk();
     saveBitmaps();
     
     char superBlockBuffer[BLOCK_SIZE] = {0};
@@ -1453,13 +1376,13 @@ bool FileSystem::getFileInfo(const std::string& fileName, iNode* info) {
         return false;
     }
     
-    int64_t fileIndex = findFileInDirectory(fileName);
-    if (fileIndex == -1) {
+    FileLocation fileIndex = findFileInDirectory(fileName);
+    if (!fileIndex.found) {
         std::cerr << "Archivo no encontrado: " << fileName << std::endl;
         return false;
     }
 
-    uint16_t inodeNum = directory.entries[fileIndex].iNodePointer;
+    uint16_t inodeNum = fileIndex.file.iNodePointer;
     
     iNode node;
     if (!readInode(inodeNum, &node)) {
@@ -1474,18 +1397,34 @@ bool FileSystem::getFileInfo(const std::string& fileName, iNode* info) {
 
 std::vector<std::string> FileSystem::listFiles() {
     std::vector<std::string> list;
-
+    
     if (!isMounted) {
         std::cerr << "Disco no montado" << std::endl;
         return list;
     }
     
-    for (uint32_t i = 0; i < MAX_FILES; ++i) {
-        if (directory.entries[i].iNodePointer != INODE_FREE_SLOT) {
-            list.push_back(directory.entries[i].fileName);
+    uint32_t filesPerBlock = BLOCK_SIZE / sizeof(File);
+    
+    // Recorrer todos los bloques del directorio
+    for (uint32_t block = 0; block < FILE_DIRECTORY_BLOCKS; block++) {
+        char buffer[BLOCK_SIZE];
+        
+        if (!readBlock(FILE_DIRECTORY_START + block, buffer)) {
+            std::cerr << "Error al leer bloque del directorio: " << block << std::endl;
+            continue;  // Continuar con el siguiente bloque
+        }
+        
+        // Revisar cada archivo en este bloque
+        for (uint32_t i = 0; i < filesPerBlock; i++) {
+            File* entry = reinterpret_cast<File*>(buffer + (i * sizeof(File)));
+            
+            // Si la entrada está ocupada, agregar a la lista
+            if (entry->iNodePointer != INODE_FREE_SLOT) {
+                list.push_back(entry->fileName);
+            }
         }
     }
-
+    
     return list;
 }
 
@@ -1502,19 +1441,19 @@ bool FileSystem::renameFile(const std::string& oldName, const std::string& newNa
     }
 
     // New name ya existe
-    if (findFileInDirectory(newName) != -1) {
+    if (findFileInDirectory(newName).found) {
         std::cerr << "Cambio de nombre de archivo a uno que ya existe" << std::endl;
         return false;
     }
 
     
-    int64_t fileIndex = findFileInDirectory(oldName);
-    if (fileIndex == -1) {
+    FileLocation fileIndex = findFileInDirectory(oldName);
+    if (!fileIndex.found) {
         std::cerr << "Archivo no encontrado: " << oldName << std::endl;
         return false;
     }
 
-    uint16_t inodeNum = directory.entries[fileIndex].iNodePointer;
+    uint16_t inodeNum = fileIndex.file.iNodePointer;
     
     iNode node;
     if (!readInode(inodeNum, &node)) {
@@ -1523,9 +1462,9 @@ bool FileSystem::renameFile(const std::string& oldName, const std::string& newNa
     }
 
     // Colocar nombre
-    memset(directory.entries[fileIndex].fileName, 0, FILE_NAME_LENGTH);
-    strncpy(directory.entries[fileIndex].fileName, newName.c_str(), FILE_NAME_LENGTH - 1);
-    directory.entries[fileIndex].fileName[FILE_NAME_LENGTH - 1] = '\0';
+    memset(fileIndex.file.fileName, 0, FILE_NAME_LENGTH);
+    strncpy(fileIndex.file.fileName, newName.c_str(), FILE_NAME_LENGTH - 1);
+    fileIndex.file.fileName[FILE_NAME_LENGTH - 1] = '\0';
 
     // Actualizar tiempo de modificacion y acceso
     node.lastAccessTime = time(nullptr);
@@ -1545,13 +1484,13 @@ bool FileSystem::changePermissions(const std::string& fileName, uint16_t permiss
         return false;
     }
     
-    int64_t fileIndex = findFileInDirectory(fileName);
-    if (fileIndex == -1) {
+    FileLocation fileIndex = findFileInDirectory(fileName);
+    if (!fileIndex.found) {
         std::cerr << "Archivo no encontrado: " << fileName << std::endl;
         return false;
     }
 
-    uint16_t inodeNum = directory.entries[fileIndex].iNodePointer;
+    uint16_t inodeNum = fileIndex.file.iNodePointer;
     
     iNode node;
     if (!readInode(inodeNum, &node)) {

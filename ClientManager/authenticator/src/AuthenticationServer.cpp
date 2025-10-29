@@ -9,8 +9,7 @@
 #include <iomanip>
 #include <vector>
 
-AuthenticationServer::AuthenticationServer()
-    : Server(), connectedUsersCount(0), counterMutex(1) {
+AuthenticationServer::AuthenticationServer() : connectedUsersCount(0), counterMutex(1) {
     this->fs = new FileSystem();
     this->fs->mount("diskAuth.bin");
 }
@@ -41,6 +40,110 @@ int AuthenticationServer::initialize() {
 
     return 0;
 }
+
+int AuthenticationServer::openConnectionRequestSocket(std::string ip, int port) {
+    if (!this->listeningSocket.create()) {
+        std::cerr << "ERROR: Could not create the listening socket" << std::endl;
+        return EXIT_FAILURE;
+    }
+    if (!this->listeningSocket.setReuseAddr()) {
+        std::cerr << "ERROR: Could not set reuse address on listening socket" << std::endl;
+        return EXIT_FAILURE;
+    }
+    if (!this->listeningSocket.bindSocket(ip, port)) {
+        std::cerr << "ERROR: Could not bind socket to port " << port << std::endl;
+        return EXIT_FAILURE;
+    }
+    
+    this->serverIP = ip;
+    this->listeningPort = port;
+    
+    return EXIT_SUCCESS;
+}
+
+int AuthenticationServer::listenForConnections(std::string ip, int port) {
+    if (this->openConnectionRequestSocket(ip, port) == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
+    if (!this->listeningSocket.listenSocket()) {
+        std::cerr << "ERROR: Could not listen for connections" << std::endl;
+        return EXIT_FAILURE;
+    }
+    std::cout << "AuthenticationServer listening on " << ip << ":" << port << std::endl;
+    return EXIT_SUCCESS;
+}
+
+int AuthenticationServer::acceptConnectionRequest() {
+    int clientSocket = this->listeningSocket.acceptConnection();
+
+    if (clientSocket == -1) {
+        throw std::runtime_error("Could not accept client connection");
+    }
+
+    std::cout << "Client connected on socket " << clientSocket << std::endl;
+    this->handleClientConnection(clientSocket);
+
+    return clientSocket;
+}
+
+void AuthenticationServer::acceptAllConnections() {
+    while (this->listeningSocket.getSocketFD() >= 0) {
+        try {
+            this->acceptConnectionRequest();
+        } catch (const std::exception& e) {
+            std::cerr << "Error accepting connection: " << e.what() << std::endl;
+        }
+    }
+}
+
+void AuthenticationServer::handleClientConnection(int clientSocket) {
+    genMessage receivedMsg;
+
+    ssize_t bytesRead = this->listeningSocket.bReceiveData(clientSocket, receivedMsg);
+    
+    if (bytesRead <= 0) {
+        std::cerr << "Error al recibir datos o conexión cerrada" << std::endl;
+        this->listeningSocket.closeSocket(clientSocket);
+        return;
+    }
+
+    genMessage response;
+    MessageType msgType = static_cast<MessageType>(receivedMsg.MID);
+    
+    try {
+        switch (msgType) {
+            case MessageType::AUTH_LOGIN_REQ: {
+                auto req = getMessageContent<authLoginReq>(receivedMsg);
+                response = processLoginRequest(req);
+                break;
+            }
+            default: {
+                response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+                response.content = errorCommonMsg{"Comando no reconocido"};
+                break;
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error procesando mensaje: " << e.what() << std::endl;
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Error interno servidor"};
+    }
+
+    ssize_t bytesSent = this->listeningSocket.bSendData(clientSocket, response);
+    
+    if (bytesSent <= 0) {
+        std::cerr << "Error enviando respuesta al cliente" << std::endl;
+    }
+    
+    this->listeningSocket.closeSocket(clientSocket);
+}
+
+
+void AuthenticationServer::listenForever(std::string ip, int port) {
+    this->listenForConnections(ip, port);
+    this->acceptAllConnections();
+}
+
 
 void AuthenticationServer::generateSalt(unsigned char* salt) {
     randombytes_buf(salt, crypto_pwhash_SALTBYTES);
@@ -78,81 +181,57 @@ bool AuthenticationServer::verifyPassword(const std::string& password,
     return sodium_memcmp(hash, storedHash.c_str(), 32) == 0;
 }
 
-bool AuthenticationServer::parseMessage(const std::string& message,
-                                       std::string& command,
-                                       std::string& username,
-                                       std::string& password) {
-    std::istringstream iss(message);
-    
-    if (!(iss >> command)) {
-        return false;
-    }
-    
-    if (command == "LOGIN") {
-        if (!(iss >> username >> password)) {
-            return false;
-        }
-    } else if (command == "LOGOUT") {
-        if (!(iss >> username)) {
-            return false;
-        }
-    } else {
-        return false;
-    }
-    return true;
-}
-
-std::string AuthenticationServer::processLogin(const std::string& username,
-                                              const std::string& password) {
+genMessage AuthenticationServer::processLoginRequest(const authLoginReq& req) {
     std::lock_guard<std::mutex> lock(usersMutex);
+    genMessage response;
     
-    auto it = users.find(username);
+    auto it = users.find(req.user);
     if (it == users.end()) {
-        return "ERROR Usuario no existe";
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
     }
     
     if (it->second.isConnected) {
-        return "ERROR Usuario ya conectado";
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario ya conectado"};
+        return response;
     }
     
-    if (!verifyPassword(password, it->second.passwordHash, it->second.salt)) {
-        return "ERROR Contraseña incorrecta";
+    if (!verifyPassword(req.pass, it->second.passwordHash, it->second.salt)) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Contraseña incorrecta"};
+        return response;
     }
-    
+
     it->second.isConnected = true;
     counterMutex.wait();
     connectedUsersCount++;
     counterMutex.signal();
     
-    return "SUCCESS";
+    // Crear token
+    token userToken;
+    userToken.id = connectedUsersCount;
+    userToken.name = req.user;
+    userToken.userType = it->second.rank;
+    
+    time_t now = time(nullptr);
+    struct tm* tm_info = localtime(&now);
+    userToken.hour = tm_info->tm_hour;
+    userToken.minute = tm_info->tm_min;
+    
+    response.MID = static_cast<uint8_t>(MessageType::AUTH_LOGIN_SUCCESS);
+    response.content = authLoginSuccess{userToken};
+    
+    std::cout << "Login exitoso: " << req.user << std::endl;
+    return response;
 }
 
-std::string AuthenticationServer::processLogout(const std::string& username) {
-    std::lock_guard<std::mutex> lock(usersMutex);
-    
-    auto it = users.find(username);
-    if (it == users.end()) {
-        return "ERROR Usuario no existe";
-    }
-    
-    if (!it->second.isConnected) {
-        return "ERROR Usuario no está conectado";
-    }
-    
-    it->second.isConnected = false;
-    counterMutex.wait();
-    if (connectedUsersCount > 0) {
-        connectedUsersCount--;
-    }
-    counterMutex.signal();
-    
-    return "SUCCESS Logout exitoso";
-}
 
 bool AuthenticationServer::registerUser(const std::string& username,
-                                       const std::string& password,
-                                       char type,
-                                       char permission) {
+                                               const std::string& password,
+                                               char type,
+                                               char permission) {
     std::lock_guard<std::mutex> lock(usersMutex);
     
     if (users.find(username) != users.end()) {
@@ -161,69 +240,57 @@ bool AuthenticationServer::registerUser(const std::string& username,
     }
     
     if (password.length() < 4) {
-        std::cout << "Error: Contraseña muy corta para usuario '" 
-                  << username << "' (mínimo 4 caracteres)" << std::endl;
+        std::cout << "Error: Contraseña muy corta (mínimo 4 caracteres)" << std::endl;
         return false;
     }
     
-    // Generar salt único
     unsigned char salt[crypto_pwhash_SALTBYTES];
     generateSalt(salt);
     
-    // Hashear contraseña
     unsigned char hash[32];
     if (!hashPassword(password, salt, hash)) {
-        std::cout << "Error: No se pudo hashear la contraseña para usuario '" 
-                  << username << "'" << std::endl;
+        std::cout << "Error: No se pudo hashear la contraseña" << std::endl;
         return false;
     }
     
-    // Crear estructura user_t para guardar en el filesystem
+    // Crear estructura user_t
     user_t user;
     memset(&user, 0, sizeof(user_t));
     
     user.isUsed = '1';
     
-    // Copiar nombre y rellenar con FILLER
     memset(user.name, FILLER, USER_NAME_SIZE);
     size_t nameLen = std::min(username.length(), (size_t)USER_NAME_SIZE);
     memcpy(user.name, username.c_str(), nameLen);
     
-    // Convertir hash y salt a hexadecimal
     hexLiterals(hash, 32, user.hash, USER_HASH_SIZE);
     hexLiterals(salt, crypto_pwhash_SALTBYTES, user.salt, USER_SALT_SIZE);
     
     user.type = type;
     user.permissions = permission;
     
-    // Timestamp
     time_t now = time(nullptr);
     struct tm* tm_info = localtime(&now);
     
     char buf[12];
     sprintf(buf, "%02d", tm_info->tm_mday);
     memcpy(user.day, buf, 2);
-    
     sprintf(buf, "%02d", tm_info->tm_mon + 1);
     memcpy(user.month, buf, 2);
-    
     sprintf(buf, "%02d", tm_info->tm_hour);
     memcpy(user.hour, buf, 2);
-    
     sprintf(buf, "%02d", tm_info->tm_min);
     memcpy(user.minute, buf, 2);
     
     user.separator = '/';
     
-    // Agregar usuario al archivo usando el nuevo FileSystem
-    if (!fs->appendFile("user_data.csv", 
-                       reinterpret_cast<const char*>(&user), 
+    if (!fs->appendFile("user_data.csv", reinterpret_cast<const char*>(&user), 
                        sizeof(user_t))) {
         std::cout << "Error: No se pudo escribir usuario en el filesystem" << std::endl;
         return false;
     }
     
-    // Crear usuario en memoria
+    // Agregar a memoria
     AuthUser newUser;
     newUser.username = username;
     newUser.passwordHash.assign(reinterpret_cast<char*>(hash), 32);
@@ -233,43 +300,49 @@ bool AuthenticationServer::registerUser(const std::string& username,
     
     users[username] = newUser;
     
-    std::cout << "Usuario '" << username 
-              << "' registrado exitosamente" << std::endl;
-    
+    std::cout << "Usuario '" << username << "' registrado exitosamente" << std::endl;
     return true;
 }
 
-std::string AuthenticationServer::processGetConnectedUsers() {
-    counterMutex.wait();
-    int count = connectedUsersCount;
-    counterMutex.signal();
-    return "CONNECTED_USERS " + std::to_string(count);
-}
-
-void AuthenticationServer::processMessage() {
-    std::string command, username, password;
-    std::string response;
+bool AuthenticationServer::updateUserInFile(const std::string& username,
+                                           std::function<void(user_t*)> updateFn) {
+    uint32_t fileSize = fs->getFileSize("user_data.csv");
+    if (fileSize == 0) return false;
     
-    std::cout << "Procesando mensaje: " << message << std::endl;
+    uint32_t numUsers = fileSize / sizeof(user_t);
     
-    if (!parseMessage(message, command, username, password)) {
-        response = "ERROR Formato de mensaje inválido";
-    } else {
-        if (command == "LOGIN") {
-            response = processLogin(username, password);
-        } else if (command == "LOGOUT") {
-            response = processLogout(username);
-        } else {
-            response = "ERROR Comando no reconocido";
+    char* buffer = new char[fileSize];
+    uint32_t bytesRead = fileSize;
+    
+    if (!fs->readFile("user_data.csv", buffer, bytesRead)) {
+        delete[] buffer;
+        return false;
+    }
+    
+    bool found = false;
+    for (uint32_t i = 0; i < numUsers; i++) {
+        user_t* userRecord = reinterpret_cast<user_t*>(buffer + (i * sizeof(user_t)));
+        
+        if (userRecord->isUsed != '1') continue;
+        
+        std::string recordName(userRecord->name, USER_NAME_SIZE);
+        recordName.erase(std::remove(recordName.begin(), recordName.end(), FILLER),
+                        recordName.end());
+        
+        if (recordName == username) {
+            updateFn(userRecord);
+            found = true;
+            break;
         }
     }
     
-    message = response;
-    std::cout << "Respuesta: " << response << std::endl;
-}
-
-void AuthenticationServer::sendMessage() {
-    std::cout << "Enviando respuesta al cliente: " << message << std::endl;
+    bool success = false;
+    if (found) {
+        success = fs->writeFile("user_data.csv", buffer, fileSize);
+    }
+    
+    delete[] buffer;
+    return success;
 }
 
 bool AuthenticationServer::addUser(const std::string& username,
@@ -277,28 +350,6 @@ bool AuthenticationServer::addUser(const std::string& username,
                                    char type,
                                    char permission) {
     return registerUser(username, password, type, permission);
-}
-
-std::string AuthenticationServer::getUserSaltHex(const std::string& username) {
-    std::lock_guard<std::mutex> lock(usersMutex);
-    
-    auto it = users.find(username);
-    if (it == users.end()) {
-        return "";
-    }
-    
-    std::stringstream ss;
-    for (size_t i = 0; i < it->second.salt.length() && 
-         i < crypto_pwhash_SALTBYTES; ++i) {
-        ss << std::hex << std::setfill('0') << std::setw(2)
-           << static_cast<unsigned int>(
-               static_cast<unsigned char>(it->second.salt[i]));
-    }
-    return ss.str();
-}
-
-bool AuthenticationServer::status() {
-    return (message == "SUCCESS");
 }
 
 std::unordered_map<std::string, AuthUser>* AuthenticationServer::getUserMap() {
@@ -398,50 +449,6 @@ void AuthenticationServer::loadUsers() {
     delete[] buffer;
     
     std::cout << "Total de usuarios cargados: " << users.size() << std::endl;
-}
-
-void AuthenticationServer::processUsers(std::vector<std::string>& processUser,
-                                       std::string& user) {
-    // Esta función ya no es necesaria con el nuevo sistema
-    // pero la mantengo por compatibilidad
-    std::string username = user.substr(1, 20);
-    username.erase(std::remove(username.begin(), username.end(), '*'), 
-                  username.end());
-    processUser.push_back(username);
-    
-    std::string hash = user.substr(21, 64);
-    processUser.push_back(hash);
-    
-    std::string salt = user.substr(85, 32);
-    processUser.push_back(salt);
-    
-    std::string type = user.substr(117, 1);
-    processUser.push_back(type);
-    
-    std::string typePermissions = user.substr(118, 1);
-    processUser.push_back(typePermissions);
-}
-
-void AuthenticationServer::printUsers() {
-    std::cout << "\n=== USUARIOS REGISTRADOS ===" << std::endl;
-    std::cout << "Total: " << users.size() << std::endl;
-    std::cout << "Conectados: " << connectedUsersCount << std::endl;
-    std::cout << "----------------------------" << std::endl;
-    
-    for (const auto& pair : users) {
-        const AuthUser& user = pair.second;
-        std::cout << "Usuario: " << user.username 
-                  << " | Tipo: " << user.rank
-                  << " | Estado: " << (user.isConnected ? "Conectado" : "Desconectado")
-                  << std::endl;
-    }
-    std::cout << "============================\n" << std::endl;
-}
-
-void AuthenticationServer::saveUsers() {
-    // El nuevo FileSystem maneja la persistencia automáticamente
-    // Esta función ya no es necesaria, pero la mantengo por compatibilidad
-    std::cout << "FileSystem guardado automáticamente" << std::endl;
 }
 
 void AuthenticationServer::changePassword(std::string& username,

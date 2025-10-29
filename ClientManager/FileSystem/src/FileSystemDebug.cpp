@@ -8,6 +8,7 @@
 #include <ctime>
 
 void FileSystem::inspectDisk() {
+    /*
     if (!isMounted) {
         std::cerr << "Disco no montado" << std::endl;
         return;
@@ -66,9 +67,11 @@ void FileSystem::inspectDisk() {
     }
     
     std::cout << std::string(80, '=') << std::endl;
+    */
 }
 
 void FileSystem::printFileDetails(const std::string& fileName) {
+    /*
     if (!isMounted) {
         std::cerr << "Disco no montado" << std::endl;
         return;
@@ -147,9 +150,11 @@ uint32_t singleIndirectBlocks = std::min<uint32_t>(blocksNeeded - MAX_DIRECT_BLO
     }
     
     std::cout << std::string(80, '=') << std::endl;
+    */
 }
 
 void FileSystem::printAllFiles() {
+    /*
     if (!isMounted) {
         std::cerr << "Disco no montado" << std::endl;
         return;
@@ -188,6 +193,7 @@ void FileSystem::printAllFiles() {
     
     std::cout << std::string(80, '=') << std::endl;
     std::cout << "Total de archivos: " << fileCount << std::endl;
+    */
 }
 
 void FileSystem::printInodeDetails(uint16_t inodeNum) {

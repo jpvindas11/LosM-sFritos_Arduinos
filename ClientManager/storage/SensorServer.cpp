@@ -14,7 +14,7 @@ int SensorServer::startServer(std::string serverIP, int listeningPort,
   this->listeningPort = listeningPort;
   this->masterIP = masterIP;
   this->materPort = materPort;
-  if (!this->storage.mount("disks/sensorStorage.bin")) {
+  if (!this->storage.mount("sensorStorage.bin")) {
     return EXIT_FAILURE;
   }
   this->listenForever(this->serverIP, this->listeningPort);
@@ -23,6 +23,10 @@ int SensorServer::startServer(std::string serverIP, int listeningPort,
 
 void SensorServer::stopServer() {  
   this->storage.unmount();
+}
+
+void SensorServer::closeListeningSocket() {
+  this->listeningSocket.closeSocket();
 }
 
 void SensorServer::run(std::string serverIP, int listeningPort, 
@@ -68,10 +72,24 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   }
   this->storage.appendFile(fileName, messageContent.data.data(), 
                                                     messageContent.data.size());
+  char buffer [256];
+  uint32_t size = 256;
+  this->storage.readFile(fileName, buffer, size);
+  std::cout<<"Received for file -> "<<fileName<<"\n"<<buffer<<std::endl;
 }
 
-std::string SensorServer::getSensorFileName(sensorFileName& name) {
-  std::stringstream ss;
-  ss<<name.sensorType<<"_"<<name.id<<"_"<<name.year<<name.month<<name.day;
-  return ss.str();
+std::string SensorServer:: getSensorFileName(sensorFileName& name) {
+  char id [65535];
+  char year [10000];
+  char month [12];
+  char day [32];
+  sprintf(id, "%u", name.id);
+  sprintf(year, "%u", name.year);
+  sprintf(month, "%u", name.month);
+  sprintf(day, "%u", name.day);
+  std::string idS (id);
+  std::string yearS (year);
+  std::string monthS (month);
+  std::string dayS (day);
+  return name.sensorType + "_" + idS + "_" + yearS + monthS + dayS;
 }
