@@ -58,7 +58,7 @@ rebuild: clean all
 # Ejecutar el proxy con parámetros por defecto
 run: all
 	@echo "Running proxy..."
-	./$(TARGET) 0.0.0.0 8080 127.0.0.1 9000
+	./$(TARGET) 0.0.0.0 8080 127.0.0.1 9090
 
 # Ejecutar con argumentos personalizados
 run-custom: all

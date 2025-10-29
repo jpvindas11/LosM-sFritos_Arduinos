@@ -101,12 +101,9 @@ void Proxy::forwardSensorData(int arduinoSocket, genMessage& sensorData) {
   
   if (bytesSent > 0) {
     std::cout << "Data forwarded to storage server (MID: " << static_cast<int>(sensorData.MID) << ")\n";
-    
-    // Opcionalmente recibir confirmación del servidor
     genMessage response;
     storageSocket.bReceiveData(storageSocketFD, response);
     
-    // Reenviar respuesta al Arduino si es necesario
     listeningSocket.bSendData(arduinoSocket, response);
   } else {
     std::cerr << "ERROR: Could not forward data to storage server\n";

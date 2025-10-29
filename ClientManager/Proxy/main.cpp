@@ -6,10 +6,13 @@
 volatile sig_atomic_t stopRequested = 0;
 
 void signalHandler(int signal) {
-    if (signal == SIGINT || signal == SIGTERM) {
-        std::cout << "\nShutdown signal received..." << std::endl;
-        stopRequested = 1;
-    }
+  // report the recived signal and calls stop from server
+  if (signal == 2) {
+    std::cerr <<"  Ctrl+C  " <<std::endl;
+  } else if (signal == 15) {
+    std::cerr <<"  kill PID  " <<std::endl;
+  }
+  return Proxy::getInstance().stopProxy();
 }
 
 void printUsage(const char* programName) {

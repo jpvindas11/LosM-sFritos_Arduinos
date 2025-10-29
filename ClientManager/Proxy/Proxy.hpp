@@ -37,6 +37,7 @@ class Proxy {
            std::string storageIP, int storagePort);
   void stopProxy();
   void handleArduinoConnection(int arduinoSocket);
+
 };
 
 #endif //PROXY_HPP
