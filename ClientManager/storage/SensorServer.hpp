@@ -34,5 +34,18 @@ class SensorServer : public StorageServer {
                                           std::string masterIP, int materPort);
   SensorServer();
   ~SensorServer() = default;
+  ///
+  int startServer(std::string serverIP, int listeningPort
+                , std::string masterIP, int materPort);
+  /// Envía la cantidad de archivos en el sistema
+  void sendFileNumber(int clientSocket, GenNumReq messageContent);
+  /// Envía los nombres de los archivos en sistema
+  void sendFileNames(int clientSocket, GenNumReq messageContent);
+  /// Envía metadatos del sensor solicitados
+  void sendSensorFileMetadata(int clientSocket, genSenFileReq messageContent);
+  /// Envía el tamaño del bloque solicitado
+  void sendFileBlockNumber(int clientSocket, genSenFileReq messageContent);
+  /// Envía los datos del archivo en bloques
+  void sendFileBlock(int clientSocket, genSenFileReq messageContent);
 };
 #endif // SENSORSERVER_HPP
