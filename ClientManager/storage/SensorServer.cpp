@@ -138,6 +138,24 @@ void SensorServer::sendFileNumber(int clientSocket, genSenFileReq messageContent
 }
 
 void SensorServer::sendFileNames(int clientSocket, genSenFileReq messageContent) {
+  genMessage reply;
+  senFileNamesRes resp;
+  std::vector<std::string> files = this->storage.listFiles();
+  resp.page = 0;
+  resp.totalPages = 1;
+  for (std::string file : files){
+    ++resp.page;  // ?
+    if (file.size() >= 4 && file.rfind(".log") == file.size() - 4) {
+      forNamesRequest nameReq;
+      nameReq.Filename = file;
+      resp.fileNames.names.push_back(nameReq);
+      ++resp.totalPages;  // ?
+    }
+  }
+  reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
+  reply.content = resp;
+  this->listeningSocket.bSendData(clientSocket, reply);
+  this->listeningSocket.closeSocket(clientSocket);
 }
 
 void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messageContent) {
@@ -157,7 +175,7 @@ void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messag
     reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_METD_RES);
     reply.content = res;
   } else {
-    // Crea un mensaje de error si no
+    // mensaje de error
     errorCommonMsg err;
     err.message = "No se pudo obtener los metadatos del archivo " + filename;
     reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
@@ -189,11 +207,33 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageCo
 void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
   std::string fileName = this->getSensorFileName(req.fileName);
-  senFileBlockRes res;
-  res.fileName = messageContent.fileName;
-  //...
-  reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
-  reply.content = res;
+  iNode inode;
+  if (this->storage.getFileInfo(fileName, &inode)) {
+    senFileBlockRes res;
+    res.fileName = messageContent.fileName;
+    res.usedBlocks = sizeof(inode.directBlocks) / sizeof(uint32_t);
+    char* firstBuffer;
+    char* secondBuffer;
+    if (this->storage.readFile(fileName, firstBuffer, BLOCK_SIZE)) {
+      res.firstBlock = firstBuffer;
+      if (this->storage.readFile(fileName, secondBuffer, BLOCK_SIZE)) {
+        res.secondBlock = secondBuffer;
+      }
+    }
+
+    res.page = 0;  // ???
+    uint32_t totalPages = (inode.size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    res.totalPages = totalPages;
+    reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
+    reply.content = res;
+  } else {
+    // mensaje de error
+    errorCommonMsg err;
+    err.message = "No se pudo obtener los metadatos del archivo " + fileName;
+    reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+    reply.content = err;
+  }
+
   this->listeningSocket.bSendData(clientSocket, reply);
   this->listeningSocket.closeSocket(clientSocket);
 }
