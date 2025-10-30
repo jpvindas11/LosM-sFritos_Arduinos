@@ -80,10 +80,10 @@ void SensorServer::processClientInThread(int clientSocket) {
 
 void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
   switch (static_cast<MessageType>(clientRequest.MID)) {
+    
     case MessageType::SEN_ADD_LOG: {
       senAddLog messageContent = getMessageContent<senAddLog>(clientRequest);
       this->addToSensorLog(messageContent);
-      this->listeningSocket.closeSocket(clientSocket);
       break;
     }
 
@@ -94,7 +94,7 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
     }
 
     case MessageType::SEN_FILE_NAMES_REQ: {
-      GenNumReq messageContent = getMessageContent<GenNumReq>(clientRequest);
+      genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
       this->sendFileNames(clientSocket, messageContent);
       break;
     }
@@ -116,6 +116,7 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
       this->sendFileBlock(clientSocket, messageContent);
       break;
     }
+
     default: {
       std::cerr<<"ERROR: MID non recognized"<<std::endl;
       break;
@@ -145,7 +146,7 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   std::cout<<"Received for file -> "<<fileName<<"\n"<<buffer<<std::endl;
 }
 
-std::string SensorServer:: getSensorFileName(sensorFileName& name) {
+std::string SensorServer::getSensorFileName(sensorFileName& name) {
   char id [65535];
   char year [10000];
   char month [12];
@@ -170,10 +171,9 @@ void SensorServer::sendFileNumber(int clientSocket, GenNumReq messageContent) {
   reply.MID = static_cast<uint8_t>(MessageType::FILE_NUMBER_REP);
   reply.content = resp;
   this->listeningSocket.bSendData(clientSocket, reply);
-  this->listeningSocket.closeSocket(clientSocket);
 }
 
-void SensorServer::sendFileNames(int clientSocket, GenNumReq messageContent) {
+void SensorServer::sendFileNames(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
   senFileNamesRes resp;
   std::vector<std::string> files = this->storage.listFiles();
@@ -191,12 +191,11 @@ void SensorServer::sendFileNames(int clientSocket, GenNumReq messageContent) {
   reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
   reply.content = resp;
   this->listeningSocket.bSendData(clientSocket, reply);
-  this->listeningSocket.closeSocket(clientSocket);
 }
 
 void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
-  std::string filename = messageContent.fileName.Filename;
+  std::string filename = this->getSensorFileName(messageContent.fileName);
   iNode inode;
   if (this->storage.getFileInfo(filename, &inode)) {
     senFileMetDRes res;
@@ -219,12 +218,11 @@ void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messag
   }
 
   this->listeningSocket.bSendData(clientSocket, reply);
-  this->listeningSocket.closeSocket(clientSocket);
 }
 
 void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
-  std::string fileName = messageContent.fileName.Filename;
+  std::string fileName = this->getSensorFileName(messageContent.fileName);
   senFileBlockNumRes res;
   res.fileName = messageContent.fileName;
   uint32_t fsize = this->storage.getFileSize(fileName);
@@ -237,23 +235,21 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageCo
   reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCKNUM_RES);
   reply.content = res;
   this->listeningSocket.bSendData(clientSocket, reply);
-  this->listeningSocket.closeSocket(clientSocket);
 }
 
 void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
-  std::string fileName = messageContent.fileName.Filename;
+  std::string fileName = this->getSensorFileName(req.fileName);
   iNode inode;
   if (this->storage.getFileInfo(fileName, &inode)) {
     senFileBlockRes res;
     res.fileName = messageContent.fileName;
     res.usedBlocks = sizeof(inode.directBlocks) / sizeof(uint32_t);
-    uint32_t blockSize = BLOCK_SIZE;
     char* firstBuffer;
     char* secondBuffer;
-    if (this->storage.readFile(fileName, firstBuffer, blockSize)) {
+    if (this->storage.readFile(fileName, firstBuffer, BLOCK_SIZE)) {
       res.firstBlock = firstBuffer;
-      if (this->storage.readFile(fileName, secondBuffer, blockSize)) {
+      if (this->storage.readFile(fileName, secondBuffer, BLOCK_SIZE)) {
         res.secondBlock = secondBuffer;
       }
     }
@@ -272,5 +268,4 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent)
   }
 
   this->listeningSocket.bSendData(clientSocket, reply);
-  this->listeningSocket.closeSocket(clientSocket);
 }

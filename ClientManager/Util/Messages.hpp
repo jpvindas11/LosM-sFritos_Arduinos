@@ -27,6 +27,9 @@ enum class MessageType : uint8_t {
     SEN_FILE_BLOCK_REQ,
     SEN_FILE_BLOCK_RESP,
     SEN_ADD_LOG,
+    ADD_SENSOR,
+    DELETE_SENSOR,
+    MODIFY_SENSOR,
     AUTH_LOGIN_REQ,
     AUTH_LOGIN_SUCCESS,
     ERR_COMMOM_MSG,
@@ -48,8 +51,12 @@ struct sensorFileName {
     uint8_t day;
 };
 
+struct forNamesRequest {
+  std::string Filename;
+};
+
 struct sensorNamesVector {
-    std::vector<sensorFileName> names;
+  std::vector<forNamesRequest> names;
 };
 
 struct GenNumReq {
@@ -57,10 +64,12 @@ struct GenNumReq {
 };
 
 struct fileNumberResp {
+    uint32_t id_token;
     uint32_t totalFiles;
 };
 
 struct senFileNamesRes {
+    uint32_t id_token;
     uint32_t page;
     uint32_t totalPages;
     sensorNamesVector fileNames;
@@ -68,11 +77,12 @@ struct senFileNamesRes {
 
 struct genSenFileReq {
     uint32_t id_token;
-    sensorFileName fileName;
+    forNamesRequest fileName;
 };
 
 struct senFileMetDRes {
-    sensorFileName fileName;
+    uint32_t id_token;
+    forNamesRequest fileName;
     uint32_t size;
     uint16_t permissions;
     uint32_t userId;
@@ -83,15 +93,17 @@ struct senFileMetDRes {
 };
 
 struct senFileBlockNumRes {
-    sensorFileName fileName;
+    uint32_t id_token;
+    forNamesRequest fileName;
     uint32_t blocks;
 };
 
 struct senFileBlockRes {
+    uint32_t id_token;
     uint32_t page;
     uint32_t totalPages;
     uint8_t usedBlocks;
-    sensorFileName fileName;
+    forNamesRequest fileName;
     std::string firstBlock;
     std::string secondBlock;
 };
@@ -100,6 +112,42 @@ struct senAddLog {
     sensorFileName fileName;
     std::string data;
 };
+
+struct addSensor {
+    // the file should be store as "name_id.txt"
+    uint32_t id_token;
+    // 3 letters "TEM","DIS","VIB", etc
+    std::string name;
+    uint16_t id;
+    uint8_t state;
+    uint16_t addition_year;
+    uint8_t addition_moth;
+    uint8_t adittion_day;
+    uint16_t last_send_year;
+    uint8_t last_send_moth;
+    uint8_t last_send_day;
+    std::string added_by;
+};
+
+struct deleteSensor {
+    uint32_t id_token;
+    // 0 = NO, 1 = YES
+    uint8_t delete_logs;
+    std::string name;
+
+};
+
+struct modifySensorInfp {
+    uint32_t id_token;
+    // 1 = YES, 0 = NO so we modify the last time that the sensor sent data
+    uint8_t modifyState;
+    // always set to 0 those values that will not be used
+    uint8_t newState;
+    uint16_t last_send_year;
+    uint8_t last_send_moth;
+    uint8_t last_send_day;
+};
+
 
 struct authLoginReq {
     std::string user;
@@ -152,8 +200,13 @@ namespace bitsery {
     }
 
     template <typename S>
+    void serialize(S& s, forNamesRequest& fnr) {
+        s.text1b(fnr.Filename, 25);
+    }
+
+    template <typename S>
     void serialize(S& s, sensorNamesVector& snv) {
-        s.container(snv.names, 93);
+        s.container(snv.names, 50);
     }
 
     template <typename S>
@@ -163,11 +216,13 @@ namespace bitsery {
 
     template <typename S>
     void serialize(S& s, fileNumberResp& m) {
+        s.value4b(m.id_token);
         s.value4b(m.totalFiles);
     }
 
     template <typename S>
     void serialize(S& s, senFileNamesRes& m) {
+        s.value4b(m.id_token);
         s.value4b(m.page);
         s.value4b(m.totalPages);
         s.object(m.fileNames);
@@ -181,6 +236,7 @@ namespace bitsery {
 
     template <typename S>
     void serialize(S& s, senFileMetDRes& m) {
+        s.value4b(m.id_token);
         s.object(m.fileName);
         s.value4b(m.size);
         s.value2b(m.permissions);
@@ -193,12 +249,14 @@ namespace bitsery {
 
     template <typename S>
     void serialize(S& s, senFileBlockNumRes& m) {
+        s.value4b(m.id_token);
         s.object(m.fileName);
         s.value4b(m.blocks);
     }
 
     template <typename S>
     void serialize(S& s, senFileBlockRes& m) {
+        s.value4b(m.id_token);
         s.value4b(m.page);
         s.value4b(m.totalPages);
         s.value1b(m.usedBlocks);
@@ -211,6 +269,38 @@ namespace bitsery {
     void serialize(S& s, senAddLog& m) {
         s.object(m.fileName);
         s.text1b(m.data, 256);
+    }
+
+    template <typename S>
+    void serialize(S& s, addSensor& m) {
+        s.value4b(m.id_token);
+        s.text1b(m.name, 3);
+        s.value2b(m.id);
+        s.value1b(m.state);
+        s.value2b(m.addition_year);
+        s.value1b(m.addition_moth);
+        s.value1b(m.adittion_day);
+        s.value2b(m.last_send_year);
+        s.value1b(m.last_send_moth);
+        s.value1b(m.last_send_day);
+        s.text1b(m.added_by, 20);
+    }
+
+    template <typename S>
+    void serialize(S& s, deleteSensor& m) {
+        s.value4b(m.id_token);
+        s.value1b(m.delete_logs);
+        s.text1b(m.name, 15);
+    }
+
+    template <typename S>
+    void serialize(S& s, modifySensorInfp& m) {
+        s.value4b(m.id_token);
+        s.value1b(m.modifyState);
+        s.value1b(m.newState);
+        s.value2b(m.last_send_year);
+        s.value1b(m.last_send_moth);
+        s.value1b(m.last_send_day);
     }
 
     template <typename S>
