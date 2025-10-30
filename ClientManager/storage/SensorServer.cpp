@@ -226,14 +226,27 @@ void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messag
 void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
   std::string fileName = messageContent.fileName.Filename;
-  senFileBlockNumRes res;
   res.id_token = messageContent.id_token;
   res.fileName = messageContent.fileName;
-  uint32_t fsize = this->storage.getFileSize(fileName);
-  if (fsize == 0) {
+  iNode inode;
+  if (this->storage.getFileInfo(fileName, &inode)) {
+    senFileBlockNumRes res;
+    res.id_token = messageContent.id_token;
+    res.fileName = messageContent.fileName;
     res.blocks = 0;
+    for (size_t idx = 0; idx < TOTAL_DIRECT_POINTERS; ++idx) {
+      if (inode.directBlocks[idx] != BLOCK_FREE_SLOT) {
+        ++res.blocks;
+      }
+    }
+    reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCKNUM_RES);
+    reply.content = res;
   } else {
-    res.blocks = (fsize + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    // mensaje de error
+    errorCommonMsg err;
+    err.message = "No se pudo obtener los metadatos del archivo " + fileName;
+    reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+    reply.content = err;
   }
 
   reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCKNUM_RES);
@@ -245,12 +258,19 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent)
   genMessage reply;
   std::string fileName = messageContent.fileName.Filename;
   iNode inode;
+  res.page = 0;
   if (this->storage.getFileInfo(fileName, &inode)) {
     senFileBlockRes res;
     res.id_token = messageContent.id_token;
     res.fileName = messageContent.fileName;
-    res.usedBlocks = sizeof(inode.directBlocks) / sizeof(uint32_t);
+    res.usedBlocks = 0;
+    for (size_t idx = 0; idx < TOTAL_DIRECT_POINTERS; ++idx) {
+      if (inode.directBlocks[idx] != BLOCK_FREE_SLOT) {
+        ++res.usedBlocks;
+      }
+    }
     uint32_t blockSize = BLOCK_SIZE;
+    /*
     char* firstBuffer;
     char* secondBuffer;
     if (this->storage.readFile(fileName, firstBuffer, blockSize)) {
@@ -259,10 +279,10 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent)
         res.secondBlock = secondBuffer;
       }
     }
-
-    res.page = 0;  // ???
     uint32_t totalPages = (inode.size + BLOCK_SIZE - 1) / BLOCK_SIZE;
     res.totalPages = totalPages;
+    */
+  
     reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
     reply.content = res;
   } else {
