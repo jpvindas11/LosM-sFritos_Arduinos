@@ -94,7 +94,7 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
     }
 
     case MessageType::SEN_FILE_NAMES_REQ: {
-      genSenFileReq messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      GenNumReq messageContent = getMessageContent<GenNumReq>(clientRequest);
       this->sendFileNames(clientSocket, messageContent);
       break;
     }
@@ -173,7 +173,7 @@ void SensorServer::sendFileNumber(int clientSocket, GenNumReq messageContent) {
   this->listeningSocket.bSendData(clientSocket, reply);
 }
 
-void SensorServer::sendFileNames(int clientSocket, genSenFileReq messageContent) {
+void SensorServer::sendFileNames(int clientSocket, GenNumReq messageContent) {
   genMessage reply;
   senFileNamesRes resp;
   std::vector<std::string> files = this->storage.listFiles();
@@ -195,7 +195,7 @@ void SensorServer::sendFileNames(int clientSocket, genSenFileReq messageContent)
 
 void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
-  std::string filename = this->getSensorFileName(messageContent.fileName);
+  std::string filename = messageContent.fileName.Filename;
   iNode inode;
   if (this->storage.getFileInfo(filename, &inode)) {
     senFileMetDRes res;
@@ -222,7 +222,7 @@ void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messag
 
 void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
-  std::string fileName = this->getSensorFileName(messageContent.fileName);
+  std::string fileName = messageContent.fileName.Filename;
   senFileBlockNumRes res;
   res.fileName = messageContent.fileName;
   uint32_t fsize = this->storage.getFileSize(fileName);
@@ -239,17 +239,18 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageCo
 
 void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent) {
   genMessage reply;
-  std::string fileName = this->getSensorFileName(req.fileName);
+  std::string fileName = messageContent.fileName.Filename;
   iNode inode;
   if (this->storage.getFileInfo(fileName, &inode)) {
     senFileBlockRes res;
     res.fileName = messageContent.fileName;
     res.usedBlocks = sizeof(inode.directBlocks) / sizeof(uint32_t);
+    uint32_t blockSize = BLOCK_SIZE;
     char* firstBuffer;
     char* secondBuffer;
-    if (this->storage.readFile(fileName, firstBuffer, BLOCK_SIZE)) {
+    if (this->storage.readFile(fileName, firstBuffer, blockSize)) {
       res.firstBlock = firstBuffer;
-      if (this->storage.readFile(fileName, secondBuffer, BLOCK_SIZE)) {
+      if (this->storage.readFile(fileName, secondBuffer, blockSize)) {
         res.secondBlock = secondBuffer;
       }
     }

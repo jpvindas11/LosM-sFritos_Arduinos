@@ -37,12 +37,12 @@ class SensorServer : public StorageServer {
   /// Envía la cantidad de archivos en el sistema
   void sendFileNumber(int clientSocket, GenNumReq messageContent);
   /// Envía los nombres de los archivos en sistema
-  void sendFileNames(int clientSocket, genSenFileReq messageContent);
+  void sendFileNames(int clientSocket, GenNumReq messageContent);
   /// Envía metadatos del sensor solicitados
   void sendSensorFileMetadata(int clientSocket, genSenFileReq messageContent);
   /// Envía el tamaño del bloque solicitado
   void sendFileBlockNumber(int clientSocket, genSenFileReq messageContent);
-  /// Envía los datos del bloque solicitado
+  /// Envía los datos del archivo en bloques
   void sendFileBlock(int clientSocket, genSenFileReq messageContent);
 };
 #endif // SENSORSERVER_HPP
