@@ -118,7 +118,7 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
     }
 
     default: {
-      std::cerr<<"ERROR: MID non recognized"<<std::endl;
+      std::cerr << "ERROR: MID non recognized" << std::endl;
       break;
     }
   }
@@ -133,8 +133,8 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   if (!this->storage.fileExists(fileName)) {
     this->storage.createFile(fileName);
   }
-  this->storage.appendFile(fileName, messageContent.data.data(), 
-                                                    messageContent.data.size());
+  this->storage.appendFile(fileName, messageContent.data.data()
+                                   , messageContent.data.size());
   
   // Add newline for better formatting
   std::string newline = "\n";
@@ -143,7 +143,7 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   char buffer [256];
   uint32_t size = 256;
   this->storage.readFile(fileName, buffer, size);
-  std::cout<<"Received for file -> "<<fileName<<"\n"<<buffer<<std::endl;
+  std::cout << "Received for file -> " << fileName << "\n" << buffer<<std::endl;
 }
 
 std::string SensorServer::getSensorFileName(sensorFileName& name) {
@@ -159,13 +159,14 @@ std::string SensorServer::getSensorFileName(sensorFileName& name) {
   std::string yearS (year);
   std::string monthS (month);
   std::string dayS (day);
-  return name.sensorType + "_" + idS + "_" + yearS + "/" + 
-         monthS + "/" + dayS + ".log";
+  return name.sensorType + "_" + idS + "_" + yearS + "/"
+       + monthS + "/" + dayS + ".log";
 }
 
 void SensorServer::sendFileNumber(int clientSocket, GenNumReq messageContent) {
   genMessage reply;
   fileNumberResp resp;
+  resp.id_token = messageContent.id_token;
   std::vector<std::string> files = this->storage.listFiles();
   resp.totalFiles = static_cast<uint32_t>(files.size());
   reply.MID = static_cast<uint8_t>(MessageType::FILE_NUMBER_REP);
@@ -176,6 +177,7 @@ void SensorServer::sendFileNumber(int clientSocket, GenNumReq messageContent) {
 void SensorServer::sendFileNames(int clientSocket, GenNumReq messageContent) {
   genMessage reply;
   senFileNamesRes resp;
+  resp.id_token = messageContent.id_token;
   std::vector<std::string> files = this->storage.listFiles();
   resp.page = 0;
   resp.totalPages = 1;
@@ -199,6 +201,7 @@ void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messag
   iNode inode;
   if (this->storage.getFileInfo(filename, &inode)) {
     senFileMetDRes res;
+    res.id_token = messageContent.id_token;
     res.fileName = messageContent.fileName;
     res.size = this->storage.getFileSize(filename);
     res.permissions = inode.permissions;
@@ -224,6 +227,7 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageCo
   genMessage reply;
   std::string fileName = messageContent.fileName.Filename;
   senFileBlockNumRes res;
+  res.id_token = messageContent.id_token;
   res.fileName = messageContent.fileName;
   uint32_t fsize = this->storage.getFileSize(fileName);
   if (fsize == 0) {
@@ -243,6 +247,7 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent)
   iNode inode;
   if (this->storage.getFileInfo(fileName, &inode)) {
     senFileBlockRes res;
+    res.id_token = messageContent.id_token;
     res.fileName = messageContent.fileName;
     res.usedBlocks = sizeof(inode.directBlocks) / sizeof(uint32_t);
     uint32_t blockSize = BLOCK_SIZE;

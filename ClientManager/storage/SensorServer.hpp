@@ -19,8 +19,8 @@ class SensorServer : public StorageServer {
 
  public:
   static SensorServer& getInstance();
-  void run(std::string serverIP, int listeningPort, 
-                                          std::string masterIP, int materPort);
+  void run(std::string serverIP, int listeningPort
+         , std::string masterIP, int materPort);
   void stopServer();
   void handleClientConnection(int  clientSocket) override;
   void serveClient(int clientSocket, genMessage& clientRequest);
