@@ -279,7 +279,7 @@ namespace bitsery {
         s.value1b(m.state);
         s.value2b(m.addition_year);
         s.value1b(m.addition_moth);
-        s.value1b(m.adittion_day);
+        s.value1b(m.addition_day);
         s.value2b(m.last_send_year);
         s.value1b(m.last_send_moth);
         s.value1b(m.last_send_day);

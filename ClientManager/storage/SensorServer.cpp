@@ -118,19 +118,19 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
     }
 
     case MessageType::ADD_SENSOR: {
-      addSensor messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      addSensor messageContent = getMessageContent<addSensor>(clientRequest);
       this->addToSensorServer(messageContent);
       break;
     }
 
     case MessageType::DELETE_SENSOR: {
-      deleteSensor messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      deleteSensor messageContent = getMessageContent<deleteSensor>(clientRequest);
       this->deleteFromSensorServer(messageContent);
       break;
     }
 
     case MessageType::MODIFY_SENSOR: {
-      modifySensorInfp messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      modifySensorInfp messageContent = getMessageContent<modifySensorInfp>(clientRequest);
       this->modifySensor(messageContent);
       break;
     }
@@ -242,8 +242,6 @@ void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq& messa
 void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq& messageContent) {
   genMessage reply;
   std::string fileName = messageContent.fileName.Filename;
-  res.id_token = messageContent.id_token;
-  res.fileName = messageContent.fileName;
   iNode inode;
   if (this->storage.getFileInfo(fileName, &inode)) {
     senFileBlockNumRes res;
@@ -315,6 +313,7 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
       }
   } else {
     // mensaje de error
+    genMessage reply;
     errorCommonMsg err;
     err.message = "No se pudo obtener los metadatos del archivo " + fileName;
     reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
