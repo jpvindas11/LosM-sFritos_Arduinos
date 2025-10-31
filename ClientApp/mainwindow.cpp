@@ -95,13 +95,11 @@ void MainWindow::on_pushButton_clicked()
             ui->login_info->setText("Ingreso exitoso");
 
             // Configurar datos del usuario
-            userDataQt login;
-            login.setData(user.toStdString(), pass.toStdString(), loginSuccess.Token.userType);
+            currentData.setData(user.toStdString(), pass.toStdString(), loginSuccess.Token.userType);
 
             // Crear y mostrar ventana de menú
             MenuWindow* menu = new MenuWindow();
-            menu->setCurrentUser(login);
-            // menu->setSocket(socket.get()); // Pasar el socket al menú
+            menu->setCurrentUser(currentData);
             menu->show();
             this->hide();
 

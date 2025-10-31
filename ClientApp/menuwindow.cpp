@@ -124,18 +124,84 @@ void MenuWindow::on_b_arduinos_clicked()
     // this->arduinoMenu.updateList();
 }
 
-
 void MenuWindow::on_b_cerrarSesion_clicked()
 {
-    /*
-    std::string logoutMessage = "LOGOUT " + currentUser.getUser();
-    authServer->setMessage(logoutMessage);
-    authServer->processMessage();
-    authServer->sendMessage();
-    MainWindow* login = new MainWindow(this->authServer, this->masterServer);
-    login->show();
-    this->hide();
-    */
+    std::string IP = currentUser.getIP();
+    int port = currentUser.getPort();
+
+    std::cout << IP << std::endl;
+    std::cout << port << std::endl;
+
+    // Crear socket temporal para el logout
+    Socket* tempSocket = nullptr;
+
+    try {
+        tempSocket = new Socket();
+
+        // Crear y configurar el socket
+        if (!tempSocket->create()) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+            return;
+        }
+
+        // Conectar al servidor
+        if (!tempSocket->connectToServer(IP, port)) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
+            return;
+        }
+
+        // Crear mensaje de logout usando Bitsery
+        genMessage logout;
+        logout.MID = static_cast<uint8_t>(MessageType::AUTH_LOGOUT);
+
+        authLogout authLogoutReq;
+        authLogoutReq.user = currentUser.getUser();
+        logout.content = authLogoutReq;
+
+        // Enviar solicitud de logout
+        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), logout);
+        if (sent <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de logout");
+            return;
+        }
+
+        // Recibir respuesta
+        genMessage response;
+        ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+
+        if (received <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo recibir respuesta del servidor");
+            return;
+        }
+
+        // Verificar tipo de respuesta
+        if (response.MID == static_cast<uint8_t>(MessageType::OK_COMMON_MSG)) {
+            try {
+                delete tempSocket; // Limpiar socket antes de cambiar ventana
+
+                MainWindow* login = new MainWindow();
+                login->show();
+                this->hide();
+
+            } catch (const std::runtime_error& e) {
+                QMessageBox::critical(this, "Error", "Error al procesar respuesta del servidor");
+            }
+        }
+        else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+            errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
+        }
+
+    } catch (const std::exception& e) {
+        if (tempSocket) delete tempSocket;
+        QMessageBox::critical(this, "Error de conexión",
+                              QString("No se pudo conectar al servidor: %1").arg(e.what()));
+    }
 }
 
 void MenuWindow::on_user_list_itemClicked(QListWidgetItem *item)

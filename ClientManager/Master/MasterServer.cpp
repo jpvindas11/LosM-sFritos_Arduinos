@@ -101,6 +101,8 @@ void MasterServer::listenForever(std::string ip, int port, Socket* socket,
 // Logica por handler
 
 void MasterServer::handleUserConnection(int client, Socket* socket) {
+  std::cout << "[USER] New connection on client " << client << std::endl;
+
   Socket clientSocket;
   genMessage clientRequest;
   
@@ -112,8 +114,17 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
   MessageType msgType = static_cast<MessageType>(clientRequest.MID);
   std::string targetIP = "127.0.0.1";
   int targetPort;
-  
-  if (msgType == MessageType::AUTH_LOGIN_REQ) {
+
+  switch (msgType) {
+    case MessageType::AUTH_LOGIN_REQ:
+    case MessageType::AUTH_LOGOUT:
+    case MessageType::AUTH_USER_CREATE:
+    case MessageType::AUTH_USER_DELETE:
+    case MessageType::AUTH_USER_MODIFY_PASS:
+    case MessageType::AUTH_USER_MODIFY_RANK:
+    targetPort = PORT_MASTER_AUTH;
+    default:
+    // Error
     targetPort = PORT_MASTER_AUTH;
   }
 

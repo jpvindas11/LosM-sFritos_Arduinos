@@ -117,6 +117,31 @@ void AuthenticationServer::handleClientConnection(int clientSocket) {
                 response = processLoginRequest(req);
                 break;
             }
+            case MessageType::AUTH_LOGOUT: {
+                auto req = getMessageContent<authLogout>(receivedMsg);
+                response = processLogoutRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_CREATE: {
+                auto req = getMessageContent<authCreateUser>(receivedMsg);
+                response = processCreateUserRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_DELETE: {
+                auto req = getMessageContent<authDeleteUser>(receivedMsg);
+                response = processDeleteUserRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_MODIFY_PASS: {
+                auto req = getMessageContent<authModifyUserPass>(receivedMsg);
+                response = processModPassRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_MODIFY_RANK: {
+                auto req = getMessageContent<authModifyUserRank>(receivedMsg);
+                response = processModRankRequest(req);
+                break;
+            }
             default: {
                 response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
                 response.content = errorCommonMsg{"Comando no reconocido"};
@@ -225,6 +250,48 @@ genMessage AuthenticationServer::processLoginRequest(const authLoginReq& req) {
     
     std::cout << "Login exitoso: " << req.user << std::endl;
     return response;
+}
+
+genMessage AuthenticationServer::processLogoutRequest(const authLogout& req) {
+    std::lock_guard<std::mutex> lock(usersMutex);
+    genMessage response;
+    
+    auto it = users.find(req.user);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+    
+    if (!it->second.isConnected) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no está conectado"};
+        return response;
+    }
+
+    it->second.isConnected = false;
+    counterMutex.wait();
+    connectedUsersCount--;
+    counterMutex.signal();
+
+    response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+    response.content = okCommonMsg{"Logout logrado"};
+    
+    std::cout << "Logout exitoso: " << req.user << std::endl;
+    return response;
+}
+
+genMessage AuthenticationServer::processCreateUserRequest(const authCreateUser& req) {
+
+}
+genMessage AuthenticationServer::processDeleteUserRequest(const authDeleteUser& req) {
+
+}
+genMessage AuthenticationServer::processModPassRequest(const authModifyUserPass& req) {
+
+}
+genMessage AuthenticationServer::processModRankRequest(const authModifyUserRank req) {
+
 }
 
 

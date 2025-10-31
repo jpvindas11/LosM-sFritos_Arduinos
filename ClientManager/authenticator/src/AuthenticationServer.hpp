@@ -40,6 +40,11 @@ private:
     bool verifyPassword(const std::string& password, const std::string& storedHash, const std::string& storedSalt);
 
     genMessage processLoginRequest(const authLoginReq& req);
+    genMessage processLogoutRequest(const authLogout& req);
+    genMessage processCreateUserRequest(const authCreateUser& req);
+    genMessage processDeleteUserRequest(const authDeleteUser& req);
+    genMessage processModPassRequest(const authModifyUserPass& req);
+    genMessage processModRankRequest(const authModifyUserRank req);
 
     bool registerUser(const std::string& username, const std::string& password, char type, char permission);
     bool updateUserInFile(const std::string& username, std::function<void(user_t*)> updateFn);
