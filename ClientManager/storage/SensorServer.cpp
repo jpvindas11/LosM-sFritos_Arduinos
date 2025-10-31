@@ -117,6 +117,24 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
       break;
     }
 
+    case MessageType::ADD_SENSOR: {
+      addSensor messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      // this->addSensor(clientSocket, messageContent);
+      break;
+    }
+
+    case MessageType::DELETE_SENSOR: {
+      deleteSensor messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      // this->deleteSensor(clientSocket, messageContent);
+      break;
+    }
+
+    case MessageType::MODIFY_SENSOR: {
+      modifySensorInfp messageContent = getMessageContent<genSenFileReq>(clientRequest);
+      // this->modifySensor(clientSocket, messageContent);
+      break;
+    }
+
     default: {
       std::cerr << "ERROR: MID non recognized" << std::endl;
       break;
@@ -182,12 +200,10 @@ void SensorServer::sendFileNames(int clientSocket, GenNumReq messageContent) {
   resp.page = 0;
   resp.totalPages = 1;
   for (std::string file : files){
-    ++resp.page;  // ?
     if (file.size() >= 4 && file.rfind(".log") == file.size() - 4) {
       forNamesRequest nameReq;
       nameReq.Filename = file;
       resp.fileNames.names.push_back(nameReq);
-      ++resp.totalPages;  // ?
     }
   }
   reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
@@ -255,36 +271,50 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageCo
 }
 
 void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent) {
-  genMessage reply;
   std::string fileName = messageContent.fileName.Filename;
   iNode inode;
-  res.page = 0;
+  // Trata de leer los datos de archivo
   if (this->storage.getFileInfo(fileName, &inode)) {
-    senFileBlockRes res;
-    res.id_token = messageContent.id_token;
-    res.fileName = messageContent.fileName;
-    res.usedBlocks = 0;
+    u_int8_t totalBlocks = 0;
     for (size_t idx = 0; idx < TOTAL_DIRECT_POINTERS; ++idx) {
       if (inode.directBlocks[idx] != BLOCK_FREE_SLOT) {
-        ++res.usedBlocks;
+        ++totalBlocks;
       }
     }
     uint32_t blockSize = BLOCK_SIZE;
-    /*
-    char* firstBuffer;
-    char* secondBuffer;
-    if (this->storage.readFile(fileName, firstBuffer, blockSize)) {
-      res.firstBlock = firstBuffer;
-      if (this->storage.readFile(fileName, secondBuffer, blockSize)) {
-        res.secondBlock = secondBuffer;
+    uint32_t localPage = 0;
+    for (int i = 0; i < totalBlocks; i += 2) {
+      // Crea mensaje genérico y de respuesta
+      genMessage reply;
+      senFileBlockRes res;
+      res.id_token = messageContent.id_token;
+      res.fileName = messageContent.fileName;
+      res.usedBlocks = totalBlocks;
+      res.page = localPage++;
+      res.totalPages = (totalBlocks + 1) / 2;
+      // Lee bloque 1 desde buffer
+      // No hay manera de leer a partir de cierto punto?
+      // como se que buffer1 y 2 no serán iguales?
+      char* buffer1 = new char[blockSize];
+      if (this->storage.readFile(fileName, buffer1, blockSize)) {
+        std::string firstBlock(buffer1);
+        res.firstBlock = firstBlock;
       }
-    }
-    uint32_t totalPages = (inode.size + BLOCK_SIZE - 1) / BLOCK_SIZE;
-    res.totalPages = totalPages;
-    */
-  
-    reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
-    reply.content = res;
+      delete[] buffer1;
+      // Lee bloque 2 desde buffer (si existe)
+      if (i + 1 < 2) {
+        char* buffer2 = new char[blockSize];
+        if (this->storage.readFile(fileName, buffer2, blockSize)) {
+          std::string secondBlock(buffer2);
+          res.secondBlock = secondBlock;
+        }
+        delete[] buffer2;
+      }
+      // Envía la respuesta
+      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
+      reply.content = res;
+      this->listeningSocket.bSendData(clientSocket, reply);
+      }
   } else {
     // mensaje de error
     errorCommonMsg err;
@@ -292,6 +322,4 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent)
     reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
     reply.content = err;
   }
-
-  this->listeningSocket.bSendData(clientSocket, reply);
 }
