@@ -197,7 +197,7 @@ void SensorServer::sendFileNames(int clientSocket, GenNumReq& messageContent) {
   senFileNamesRes resp;
   resp.id_token = messageContent.id_token;
   std::vector<std::string> files = this->storage.listFiles();
-  resp.page = 0;
+  resp.page = 0;  // ???
   resp.totalPages = 1;
   for (std::string file : files){
     if (file.size() >= 4 && file.rfind(".log") == file.size() - 4) {
