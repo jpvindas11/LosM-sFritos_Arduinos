@@ -17,11 +17,9 @@ MainWindow::~MainWindow()
 void MainWindow::on_pushButton_ip_clicked()
 {
     QString ip = ui->lineEdit_IP->text();
-    QString port = ui->lineEdit_PORT->text();
-
     // Validar que los campos no estén vacíos
-    if (ip.isEmpty() || port.isEmpty()) {
-        QMessageBox::warning(this, "Error", "Por favor ingrese IP y Puerto");
+    if (ip.isEmpty()) {
+        QMessageBox::warning(this, "Error", "Por favor ingrese una IP");
         return;
     }
 
@@ -32,16 +30,15 @@ void MainWindow::on_pushButton_ip_clicked()
     }
 
     // Conectar al servidor
-    if (!socket->connectToServer(ip.toStdString(), port.toInt())) {
+    if (!socket->connectToServer(ip.toStdString(), PORT_MASTER_USERS)) {
         QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
         ui->lineEdit_IP->clear();
-        ui->lineEdit_PORT->clear();
         isConnected = false;
         return;
     }
 
     isConnected = true;
-    this->currentData.setNetwork(ip.toStdString(), port.toInt());
+    this->currentData.setNetwork(ip.toStdString(), PORT_MASTER_USERS);
 
     QMessageBox::information(this, "Éxito", "Conectado al servidor");
 }

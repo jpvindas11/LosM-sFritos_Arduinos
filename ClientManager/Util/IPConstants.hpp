@@ -1,0 +1,13 @@
+// Los mas fritos
+
+#ifndef IPCONSTANTS_HPP
+#define IPCONSTANTS_HPP
+
+typedef enum SERVER_PORTS {
+    PORT_MASTER_USERS = 14000,
+    PORT_MASTER_AUTH,
+    PORT_MASTER_ARDUINO,
+    PORT_MASTER_STORAGE,
+} SERVER_PORTS;
+
+#endif
