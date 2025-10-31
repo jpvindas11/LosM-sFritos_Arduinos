@@ -7,7 +7,7 @@
 #include <mutex>
 #include <atomic>
 
-#include "StorageServer.hpp"
+#include "genServer/StorageServer.hpp"
 
 
 class SensorServer : public StorageServer {
