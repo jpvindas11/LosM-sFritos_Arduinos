@@ -118,27 +118,21 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
     }
 
     case MessageType::ADD_SENSOR: {
-      /*
       addSensor messageContent = getMessageContent<addSensor>(clientRequest);
       this->addToSensorServer(messageContent);
       break;
-      */
     }
 
     case MessageType::DELETE_SENSOR: {
-      /*
       deleteSensor messageContent = getMessageContent<deleteSensor>(clientRequest);
       this->deleteFromSensorServer(messageContent);
       break;
-      */
     }
 
     case MessageType::MODIFY_SENSOR: {
-      /*
       modifySensorInfp messageContent = getMessageContent<modifySensorInfp>(clientRequest);
       this->modifySensor(messageContent);
       break;
-      */
     }
 
     default: {

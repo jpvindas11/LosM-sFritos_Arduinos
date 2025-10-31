@@ -173,6 +173,9 @@ struct genMessage {
         senFileBlockNumRes,
         senAddLog,
         senFileBlockRes,
+        addSensor,
+        deleteSensor,
+        modifySensorInfp,
         authLoginReq,
         authLoginSuccess,
         errorCommonMsg
