@@ -28,7 +28,6 @@ private slots:
 private:
     Ui::MainWindow *ui;
     userDataQt currentData;
-    Socket* socket;
     bool isConnected;
 };
 #endif // MAINWINDOW_H

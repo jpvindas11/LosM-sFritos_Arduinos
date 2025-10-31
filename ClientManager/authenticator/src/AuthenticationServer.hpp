@@ -68,9 +68,9 @@ public:
     void listenForever(std::string ip, int port);
 
     bool addUser(const std::string& username, const std::string& password, char type, char permission);
-    void changePassword(std::string& username, const std::string& newPassword);
+    void changePassword(const std::string& username, const std::string& newPassword);
     bool deleteUser(const std::string& username);
-    void changePermissions(std::string& username, char newType, char newPermission);
+    void changePermissions(const std::string& username, char newType, char newPermission);
 
     void printUsers();
     std::unordered_map<std::string, AuthUser>* getUserMap();

@@ -285,8 +285,8 @@ namespace bitsery {
 
     template <typename S>
     void serialize(S& s, authModifyUserPass& m) {
-        s.text1b(m.newPassword, USER_PASSWORD_SIZE_MAX);
         s.text1b(m.user, USER_NAME_SIZE);
+        s.text1b(m.newPassword, USER_PASSWORD_SIZE_MAX);
     }
 
     template <typename S>
