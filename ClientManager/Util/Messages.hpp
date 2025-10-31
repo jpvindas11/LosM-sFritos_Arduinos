@@ -122,7 +122,7 @@ struct addSensor {
     uint8_t state;
     uint16_t addition_year;
     uint8_t addition_moth;
-    uint8_t adittion_day;
+    uint8_t addition_day;
     uint16_t last_send_year;
     uint8_t last_send_moth;
     uint8_t last_send_day;

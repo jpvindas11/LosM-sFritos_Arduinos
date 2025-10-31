@@ -119,19 +119,19 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
 
     case MessageType::ADD_SENSOR: {
       addSensor messageContent = getMessageContent<genSenFileReq>(clientRequest);
-      // this->addSensor(clientSocket, messageContent);
+      this->addToSensorServer(messageContent);
       break;
     }
 
     case MessageType::DELETE_SENSOR: {
       deleteSensor messageContent = getMessageContent<genSenFileReq>(clientRequest);
-      // this->deleteSensor(clientSocket, messageContent);
+      this->deleteFromSensorServer(messageContent);
       break;
     }
 
     case MessageType::MODIFY_SENSOR: {
       modifySensorInfp messageContent = getMessageContent<genSenFileReq>(clientRequest);
-      // this->modifySensor(clientSocket, messageContent);
+      this->modifySensor(messageContent);
       break;
     }
 
@@ -143,7 +143,7 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
 }
 
 void SensorServer::addToSensorLog(senAddLog& messageContent) {
-  std::lock_guard<std::mutex> lock(storageMutex); // Thread-safe file access
+  std::lock_guard<std::mutex> lock(this->storageMutex); // Thread-safe file access
   
   std::string fileName = this->getSensorFileName(messageContent.fileName);
   std::cout << "Adding to sensor log: " << fileName << std::endl;
@@ -161,7 +161,7 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   char buffer [256];
   uint32_t size = 256;
   this->storage.readFile(fileName, buffer, size);
-  std::cout << "Received for file -> " << fileName << "\n" << buffer<<std::endl;
+  std::cout << "Received for file -> " << fileName << "\n" << buffer << std::endl;
 }
 
 std::string SensorServer::getSensorFileName(sensorFileName& name) {
@@ -181,7 +181,7 @@ std::string SensorServer::getSensorFileName(sensorFileName& name) {
        + monthS + "/" + dayS + ".log";
 }
 
-void SensorServer::sendFileNumber(int clientSocket, GenNumReq messageContent) {
+void SensorServer::sendFileNumber(int clientSocket, GenNumReq& messageContent) {
   genMessage reply;
   fileNumberResp resp;
   resp.id_token = messageContent.id_token;
@@ -192,7 +192,7 @@ void SensorServer::sendFileNumber(int clientSocket, GenNumReq messageContent) {
   this->listeningSocket.bSendData(clientSocket, reply);
 }
 
-void SensorServer::sendFileNames(int clientSocket, GenNumReq messageContent) {
+void SensorServer::sendFileNames(int clientSocket, GenNumReq& messageContent) {
   genMessage reply;
   senFileNamesRes resp;
   resp.id_token = messageContent.id_token;
@@ -211,7 +211,7 @@ void SensorServer::sendFileNames(int clientSocket, GenNumReq messageContent) {
   this->listeningSocket.bSendData(clientSocket, reply);
 }
 
-void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messageContent) {
+void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq& messageContent) {
   genMessage reply;
   std::string filename = messageContent.fileName.Filename;
   iNode inode;
@@ -239,7 +239,7 @@ void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq messag
   this->listeningSocket.bSendData(clientSocket, reply);
 }
 
-void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageContent) {
+void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq& messageContent) {
   genMessage reply;
   std::string fileName = messageContent.fileName.Filename;
   res.id_token = messageContent.id_token;
@@ -270,7 +270,7 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq messageCo
   this->listeningSocket.bSendData(clientSocket, reply);
 }
 
-void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent) {
+void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent) {
   std::string fileName = messageContent.fileName.Filename;
   iNode inode;
   // Trata de leer los datos de archivo
@@ -295,20 +295,18 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent)
       // Lee bloque 1 desde buffer
       // No hay manera de leer a partir de cierto punto?
       // como se que buffer1 y 2 no serán iguales?
-      char* buffer1 = new char[blockSize];
+      char buffer1 [blockSize];
       if (this->storage.readFile(fileName, buffer1, blockSize)) {
         std::string firstBlock(buffer1);
         res.firstBlock = firstBlock;
       }
-      delete[] buffer1;
       // Lee bloque 2 desde buffer (si existe)
       if (i + 1 < 2) {
-        char* buffer2 = new char[blockSize];
+        char buffer2 [blockSize];
         if (this->storage.readFile(fileName, buffer2, blockSize)) {
           std::string secondBlock(buffer2);
           res.secondBlock = secondBlock;
         }
-        delete[] buffer2;
       }
       // Envía la respuesta
       reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
@@ -321,5 +319,149 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq messageContent)
     err.message = "No se pudo obtener los metadatos del archivo " + fileName;
     reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
     reply.content = err;
+  }
+}
+
+void SensorServer::addToSensorServer(addSensor& messageContent) {
+  std::lock_guard<std::mutex> lock(this->storageMutex);
+
+  std::string fileName = messageContent.name + "_"
+                       + messageContent.id + ".txt";
+  // Si el archivo ya existe no hace nada
+  if (!this->storage.fileExists(fileName)) {
+
+    if (!this->storage.createFile(fileName)) {
+      std::cerr << "Failed to create file -> "
+                << fileName
+                << "\n"
+                << std::endl;
+      return;
+    }
+    
+    std::string content = messageContent.id_token + "_"
+                        + messageContent.name + "_"
+                        + messageContent.id + "_"
+                        + messageContent.state + "_"
+                        + messageContent.addition_year + "_"
+                        + messageContent.addition_moth + "_"
+                        + messageContent.addition_day + "_"
+                        + messageContent.last_send_year + "_"
+                        + messageContent.last_send_moth + "_"
+                        + messageContent.last_send_day + "_"
+                        + messageContent.added_by + "\n";
+
+    if (!this->storage.appendFile(fileName, content.data(), content.size())) {
+      std::cerr << "Failed to write on file -> "
+                << fileName
+                << "\n"
+                << std::endl;
+      return;
+    }
+
+    // debug
+    char buffer [256];
+    uint32_t size = 256;
+    this->storage.readFile(fileName, buffer, size);
+    std::cout << "Received for file -> "
+              << fileName
+              << "\n"
+              << buffer
+              << std::endl;
+  }
+}
+
+void SensorServer::deleteFromSensorServer(deleteSensor& messageContent) {
+  std::lock_guard<std::mutex> lock(this->storageMutex);
+
+  std::string fileName = messageContent.name;
+  // Si el archivo no existe envía un error
+  if (this->storage.fileExists(fileName)) {
+    if (!this->storage.deleteFile(fileName)) {
+      std::cerr << "Failed to delete file -> "
+                << fileName
+                << "\n"
+                << std::endl;
+      return;
+    }
+    std::cout << "Deleted sensor -> "
+              << fileName
+              << "\n"
+              << std::endl;
+    if (messageContent.delete_logs) {
+      size_t pos = fileName.rfind(".txt");
+      fileName.replace(pos, 4, ".log");
+      if (!this->storage.deleteFile(fileName)) {
+        std::cerr << "Failed to log file -> "
+                  << fileName
+                  << "\n"
+                  << std::endl;
+        return;
+      }
+      std::cout << "Deleted log -> "
+                << fileName
+                << "\n"
+                << std::endl;
+    }
+  } else {
+    std::cerr << "File -> "
+              << fileName
+              << " doesn't exist"
+              << "\n"
+              << std::endl;
+  }
+}
+
+void SensorServer::modifySensor(modifySensorInfp& messageContent) {
+  std::lock_guard<std::mutex> lock(this->storageMutex);
+
+  std::string fileName = messageContent.name;
+  // Si el archivo no existe envía un error
+  if (this->storage.fileExists(fileName)) {
+    char buffer [1024];
+    if (this->storage.readFile(fileName, buffer, 1024)) {
+      // extrae los datos guardados
+      std::string ogContent(buffer);
+      std::vector<std::string> parts;
+      std::stringstream ss(ogContent);
+      std::string item;
+      while (std::getline(ss, item, '_')) {
+        parts.push_back(item);
+      }
+      // modifica los datos
+      parts[7] = std::to_string(messageContent.last_send_year);
+      parts[8] = std::to_string(messageContent.last_send_moth);
+      parts[9] = std::to_string(messageContent.last_send_day);
+      // cambia el estado del sensor
+      if (messageContent.modifyState) {
+        parts[3] = std::to_string(messageContent.newState);
+      }
+      // guarda los datos como strings
+      std::ostringstream oss;
+      for (size_t i = 0; i < vec.size(); ++i) {
+        oss << vec[i];
+        if (i + 1 < vec.size()) {
+          oss << '_';
+        }
+      }
+      std::string newContent = oss.str();
+      // reescribe los datos modificados
+      if (!this->storage.writeFile(fileName, newContent.data()
+                                           , newContent.size())) {
+        std::cerr << "Failed to write modified metadata to "
+                  << fileName
+                  << std::endl;
+        return;
+      }
+      std::cout << "Modified sensor file-> "
+                << fileName 
+                << "\n"
+                << std::endl;
+    }
+  } else {
+    std::cerr << "File -> "
+              << fileName
+              << " doesn't exist"
+              << "\n"
+              << std::endl;
   }
 }
