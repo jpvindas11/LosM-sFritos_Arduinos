@@ -1,5 +1,10 @@
 #include "Proxy.hpp"
 #include <stdexcept>
+#include <regex>
+#include <ctime>
+#include <sstream>
+#include <algorithm>
+#include <cstdio>
 
 Proxy::Proxy() : running(false), messageQueue(100) {}
 
@@ -65,20 +70,43 @@ void Proxy::acceptAllConnections() {
 void Proxy::handleArduinoConnection(int arduinoSocket) {
   std::cout << "Thread started for Arduino socket: " << arduinoSocket << std::endl;
   
-  // Solo leer UN mensaje por conexión (los Arduinos cierran después de enviar)
-  genMessage sensorData;
+  // Leer datos en texto plano del Arduino con buffer más seguro
+  const size_t BUFFER_SIZE = 512;
+  char buffer[BUFFER_SIZE];
+  memset(buffer, 0, BUFFER_SIZE);
   
-  ssize_t bytesReceived = listeningSocket.bReceiveData(arduinoSocket, sensorData);
+  ssize_t bytesReceived = listeningSocket.receiveData(arduinoSocket, buffer, BUFFER_SIZE - 1);
   
   if (bytesReceived > 0) {
-    std::cout << "Received data from Arduino (socket: " << arduinoSocket 
-              << ", MID: " << static_cast<int>(sensorData.MID) << ")\n";
+    // Asegurar terminación nula
+    buffer[bytesReceived] = '\0';
     
-    // Encolar el mensaje para procesamiento
-    QueuedMessage queuedMsg = {arduinoSocket, sensorData};
-    messageQueue.enqueue(queuedMsg);
+    std::string rawData(buffer, bytesReceived);
+    std::cout << "Received raw data from Arduino (socket: " << arduinoSocket 
+              << ", bytes: " << bytesReceived << "): '" << rawData << "'" << std::endl;
+    
+    // Mostrar los datos en hexadecimal para debugging
+    std::cout << "Raw data in hex: ";
+    for (ssize_t i = 0; i < bytesReceived; ++i) {
+      printf("%02X ", (unsigned char)buffer[i]);
+    }
+    std::cout << std::endl;
+    
+    // Parsear los datos del sensor y crear mensaje serializado
+    genMessage sensorData = parseArduinoData(rawData);
+    
+    if (sensorData.MID != 0) {  // Verificar que el parsing fue exitoso
+      std::cout << "Parsed sensor data (MID: " << static_cast<int>(sensorData.MID) << ")\n";
+      
+      // Encolar el mensaje para procesamiento
+      QueuedMessage queuedMsg = {arduinoSocket, sensorData};
+      messageQueue.enqueue(queuedMsg);
+    } else {
+      std::cout << "Could not parse Arduino data: '" << rawData << "'" << std::endl;
+    }
   } else {
-    std::cout << "Could not receive data from Arduino (socket: " << arduinoSocket << ")\n";
+    std::cout << "Could not receive data from Arduino (socket: " << arduinoSocket 
+              << "), bytes received: " << bytesReceived << std::endl;
   }
   
   // Cerrar la conexión después de procesar el mensaje
@@ -193,4 +221,103 @@ void Proxy::stopProxy() {
   
   listeningSocket.closeSocket();
   std::cout << "Proxy stopped\n";
+}
+
+genMessage Proxy::parseArduinoData(const std::string& rawData) {
+  genMessage message;
+  
+  // Inicializar mensaje con valores por defecto
+  message.MID = static_cast<uint8_t>(MessageType::SEN_ADD_LOG);
+  
+  try {
+    // Limpiar los datos de entrada de manera más agresiva
+    std::string cleanData;
+    for (char c : rawData) {
+      // Solo mantener caracteres imprimibles ASCII y algunos caracteres de control específicos
+      if ((c >= 32 && c <= 126) || c == ' ') {
+        cleanData += c;
+      }
+    }
+    
+    // Trim espacios al inicio y final
+    size_t start = cleanData.find_first_not_of(" \t");
+    if (start != std::string::npos) {
+      size_t end = cleanData.find_last_not_of(" \t");
+      cleanData = cleanData.substr(start, end - start + 1);
+    }
+    
+    std::cout << "Original data length: " << rawData.length() << std::endl;
+    std::cout << "Cleaned data: '" << cleanData << "' (length: " << cleanData.length() << ")" << std::endl;
+    
+    // Parsear el formato "Distancia: X cm"
+    std::regex distanceRegex(R"(Distancia:\s*(\d+)\s*cm)");
+    std::smatch matches;
+    
+    if (std::regex_search(cleanData, matches, distanceRegex)) {
+      int distance = std::stoi(matches[1].str());
+      
+      // Validar que la distancia esté en un rango razonable (0-5000 cm)
+      if (distance < 0 || distance > 5000) {
+        std::cerr << "Invalid distance value: " << distance << " cm" << std::endl;
+        message.MID = 0;
+        return message;
+      }
+      
+      // Crear estructura senAddLog
+      senAddLog logData;
+      
+      // Configurar nombre del archivo del sensor (sensor ultrasónico)
+      logData.fileName.sensorType = "US";  // UltraSonic
+      logData.fileName.id = 1;  // ID del sensor
+      
+      // Obtener fecha actual correctamente
+      std::time_t now = std::time(nullptr);
+      std::tm* localTime = std::localtime(&now);
+      
+      logData.fileName.year = localTime->tm_year + 1900;
+      logData.fileName.month = localTime->tm_mon + 1;
+      logData.fileName.day = localTime->tm_mday;
+      
+      // Formatear datos del sensor de manera más controlada
+      char formattedBuffer[200]; // Buffer más pequeño para mayor control
+      int written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                           "Distance:%dcm,Timestamp:%ld", distance, (long)now);
+      
+      // Verificar que la escritura fue exitosa
+      if (written < 0 || written >= (int)sizeof(formattedBuffer)) {
+        std::cerr << "Error formatting sensor data" << std::endl;
+        message.MID = 0;
+        return message;
+      }
+      
+      std::string formattedData(formattedBuffer);
+      
+      // Verificar longitud final (bitsery usa límite de 256 chars)
+      if (formattedData.length() >= 255) {
+        std::cerr << "Formatted data too long: " << formattedData.length() << " chars" << std::endl;
+        formattedData = formattedData.substr(0, 254);
+      }
+      
+      // Asignar datos y asegurar terminación nula
+      logData.data = formattedData;
+      
+      // Asignar al mensaje
+      message.content = logData;
+      
+      std::cout << "Parsed distance: " << distance << " cm" << std::endl;
+      std::cout << "Generated log data: '" << logData.data << "'" << std::endl;
+      std::cout << "Final data length: " << logData.data.length() << std::endl;
+      std::cout << "Timestamp: " << now << " (date: " << std::ctime(&now) << ")" << std::endl;
+      
+    } else {
+      std::cerr << "Could not parse distance from: '" << cleanData << "'" << std::endl;
+      message.MID = 0; // Indica error en el parsing
+    }
+    
+  } catch (const std::exception& e) {
+    std::cerr << "Error parsing Arduino data: " << e.what() << std::endl;
+    message.MID = 0; // Indica error en el parsing
+  }
+  
+  return message;
 }
