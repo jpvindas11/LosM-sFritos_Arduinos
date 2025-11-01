@@ -38,6 +38,8 @@ enum class MessageType : uint8_t {
     AUTH_USER_DELETE,
     AUTH_USER_MODIFY_PASS,
     AUTH_USER_MODIFY_RANK,
+    AUTH_USER_REQUEST,
+    AUTH_USER_RESPONSE,
     ERR_COMMOM_MSG,
     OK_COMMON_MSG,
 };
@@ -189,6 +191,10 @@ struct authModifyUserRank {
     uint8_t rank;
 };
 
+struct authRequestUsers {
+    std::vector<UserInfo> users;
+};
+
 struct errorCommonMsg {
     std::string message;
 };
@@ -218,6 +224,7 @@ struct genMessage {
         authDeleteUser,
         authModifyUserPass,
         authModifyUserRank,
+        authRequestUsers,
         errorCommonMsg,
         okCommonMsg
     > content;
@@ -233,6 +240,13 @@ namespace bitsery {
         s.value1b(t.userType);
         s.value1b(t.hour);
         s.value1b(t.minute);
+    }
+
+    template <typename S>
+    void serialize(S& s, UserInfo& ui) {
+        s.text1b(ui.user, USER_NAME_SIZE);
+        s.value1b(ui.rank);
+        s.value1b(ui.isConnected);
     }
 
     template <typename S>
@@ -386,6 +400,11 @@ namespace bitsery {
     void serialize(S& s, authModifyUserRank& m) {
         s.text1b(m.user, USER_NAME_SIZE);
         s.value1b(m.rank);
+    }
+
+    template <typename S>
+    void serialize(S& s, authRequestUsers& m) {
+        s.container(m.users, 100);
     }
 
     template <typename S>

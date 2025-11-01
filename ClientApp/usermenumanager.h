@@ -2,26 +2,23 @@
 #define USERMENUMANAGER_H
 
 #include <QListWidgetItem>
-#include "userdataqt.h"
+#include <QListWidget>
 #include <QPushButton>
-
+#include <vector>
+#include "userdataqt.h"
+#include "User.hpp"
 
 class userMenuManager
 {
 public:
     userMenuManager();
-
-    void updateUserList();
-
+    void updateUserList(QListWidget* userList, const std::vector<UserInfo>* users, userDataQt* currentUser);
     void setSelectedUser(QListWidgetItem* user);
-
     QListWidgetItem* getSelectedUser();
-
-    void hideDeleteButton(QPushButton* deleteButton);
+    void hideDeleteButton(QPushButton* deleteButton, userDataQt* currentUser);
+    UserInfo* getSelectedUserInfo(const std::vector<UserInfo>* users);
 
 private:
-    QListWidget* user_list;
-    userDataQt* currentUser;
     QListWidgetItem* selectedUser;
 };
 

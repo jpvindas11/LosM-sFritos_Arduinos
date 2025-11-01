@@ -122,6 +122,7 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     case MessageType::AUTH_USER_DELETE:
     case MessageType::AUTH_USER_MODIFY_PASS:
     case MessageType::AUTH_USER_MODIFY_RANK:
+    case MessageType::AUTH_USER_REQUEST:
     targetPort = PORT_MASTER_AUTH;
     break;
     default:

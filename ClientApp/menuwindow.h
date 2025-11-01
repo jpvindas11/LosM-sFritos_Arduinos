@@ -7,6 +7,7 @@
 #include "arduinomenumanager.h"
 #include "setrankdialog.h"
 #include "Socket.hpp"
+#include "User.hpp"
 #include <QMainWindow>
 #include <QPushButton>
 #include <QString>
@@ -14,12 +15,6 @@
 namespace Ui {
 class MenuWindow;
 }
-
-struct savedUser {
-    QString user;
-    char rank;
-    bool isConnected;
-};
 
 class MenuWindow : public QMainWindow
 {
@@ -76,7 +71,7 @@ private:
     dataMenuManager dataMenu;
 
     // Saved users
-    std::vector<savedUser> users;
+    std::vector<UserInfo> users;
 };
 
 #endif // MENUWINDOW_H

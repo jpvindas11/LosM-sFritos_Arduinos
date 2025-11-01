@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    server.addUser("Wega", "password", USER_OWNER, USER_OWNER);
+    server.addUser("Admin", "password", USER_OWNER, USER_OWNER);
 
     std::cout << "\n& Iniciando servidor en " << ip << ":" << port << "... &" << std::endl;
 

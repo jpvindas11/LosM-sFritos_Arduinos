@@ -45,10 +45,13 @@ private:
     genMessage processCreateUserRequest(const authCreateUser& req);
     genMessage processDeleteUserRequest(const authDeleteUser& req);
     genMessage processModPassRequest(const authModifyUserPass& req);
-    genMessage processModRankRequest(const authModifyUserRank req);
+    genMessage processModRankRequest(const authModifyUserRank& req);
+    genMessage processUsersInfoRequest(const authRequestUsers& req);
 
     bool registerUser(const std::string& username, const std::string& password, char type, char permission);
     bool updateUserInFile(const std::string& username, std::function<void(user_t*)> updateFn);
+
+    bool storeUsersInVector(std::vector<UserInfo>* usersVec);
 
     int openConnectionRequestSocket(std::string ip, int port);
 
@@ -69,7 +72,7 @@ public:
     void listenForever(std::string ip, int port);
 
     bool addUser(const std::string& username, const std::string& password, char type, char permission);
-    void changePassword(const std::string& username, const std::string& newPassword);
+    bool changePassword(const std::string& username, const std::string& newPassword);
     bool deleteUser(const std::string& username);
     void changePermissions(const std::string& username, char newType, char newPermission);
 

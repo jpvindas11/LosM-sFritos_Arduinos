@@ -77,7 +77,6 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText)
 }
 
 void MenuWindow::askForUsers() {
-    /*
     std::string IP = currentUser.getIP();
     int port = currentUser.getPort();
 
@@ -101,19 +100,15 @@ void MenuWindow::askForUsers() {
             return;
         }
 
-        // Crear mensaje de logout usando Bitsery
-        genMessage logout;
-        logout.MID = static_cast<uint8_t>(MessageType::AUTH_LOGOUT);
+        genMessage usersMsg;
+        usersMsg.MID = static_cast<uint8_t>(MessageType::AUTH_USER_REQUEST);
+        usersMsg.content = authRequestUsers{};
 
-        authLogout authLogoutReq;
-        authLogoutReq.user = currentUser.getUser();
-        logout.content = authLogoutReq;
-
-        // Enviar solicitud de logout
-        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), logout);
+        // Enviar solicitud de usuarios
+        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), usersMsg);
         if (sent <= 0) {
             delete tempSocket;
-            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de logout");
+            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de usuarios");
             return;
         }
 
@@ -128,14 +123,15 @@ void MenuWindow::askForUsers() {
         }
 
         // Verificar tipo de respuesta
-        if (response.MID == static_cast<uint8_t>(MessageType::OK_COMMON_MSG)) {
+        if (response.MID == static_cast<uint8_t>(MessageType::AUTH_USER_RESPONSE)) {
             try {
                 delete tempSocket; // Limpiar socket antes de cambiar ventana
 
-                MainWindow* login = new MainWindow();
-                login->show();
-                this->hide();
+                authRequestUsers usersResponse = getMessageContent<authRequestUsers>(response);
 
+                this->users = usersResponse.users;
+
+                this->userMenu.updateUserList(this->ui->user_list, &this->users, &this->currentUser);
             } catch (const std::runtime_error& e) {
                 QMessageBox::critical(this, "Error", "Error al procesar respuesta del servidor");
             }
@@ -151,14 +147,13 @@ void MenuWindow::askForUsers() {
         QMessageBox::critical(this, "Error de conexión",
             QString("No se pudo conectar al servidor: %1").arg(e.what()));
     }
-    */
 }
 
 void MenuWindow::on_b_usuarios_clicked()
 {
     setActiveMenu(ui->b_usuarios, "Usuarios");
 
-    // this->userMenu.setSelectedUser(nullptr);
+    this->userMenu.setSelectedUser(nullptr);
 
     // Scroll list
     this->ui->user_list->move(280,30);
@@ -178,7 +173,7 @@ void MenuWindow::on_b_usuarios_clicked()
     // Rank button
     this->ui->user_change_rank->move(170, 170);
 
-    // this->userMenu.updateUserList();
+    askForUsers();
 }
 
 
@@ -277,8 +272,8 @@ void MenuWindow::on_b_cerrarSesion_clicked()
 
 void MenuWindow::on_user_list_itemClicked(QListWidgetItem *item)
 {
-    // this->userMenu.setSelectedUser(item);
-    // userMenu.hideDeleteButton(ui->user_delete);
+    this->userMenu.setSelectedUser(item);
+    this->userMenu.hideDeleteButton(ui->user_delete, &this->currentUser);
 }
 
 
@@ -362,107 +357,78 @@ void MenuWindow::on_user_add_clicked()
                                   QString("No se pudo conectar al servidor: %1").arg(e.what()));
         }
 
-        // this->userMenu.updateUserList();
+        this->askForUsers();
+
     }
 }
 
 
 void MenuWindow::on_user_delete_clicked()
 {
-    /*
+    UserInfo* userDel = this->userMenu.getSelectedUserInfo(&this->users);
+
+    if (!userDel) {
+        QMessageBox::warning(this, "Aviso", "No hay usuario seleccionado");
+        return;
+    }
+
+    if (userDel->user == currentUser.getUser()) {
+        QMessageBox::warning(this, "Aviso", "No puedes eliminarte a ti mismo");
+        return;
+    }
+
     confirmDeleteUserDialog dialog(this);
 
-    QString message = QString("¿Estás seguro de querer eliminar a %1?")
-                      .arg(QString::fromStdString(userDel->username));
+    QString message = QString("¿Estás seguro de querer eliminar a %1?").arg(QString::fromStdString(userDel->user));
 
     dialog.setUsername(message);
 
-    dialog.show();
-
     if (dialog.exec() == QDialog::Accepted) {
-        authServer->deleteUser(userDel->username);
-    }
-    */
-
-    confirmDeleteUserDialog dialog(this);
-    if (dialog.exec() == QDialog::Accepted) {
-        std::string user = dialog.getUsername().toStdString();
-        std::string pass = dialog.getPassword().toStdString();
-        char rank = dialog.getRank();
+        // Aquí enviarías el mensaje de eliminación al servidor
         std::string IP = currentUser.getIP();
         int port = currentUser.getPort();
-        std::cout << IP << std::endl;
-        std::cout << port << std::endl;
 
-        // Crear socket temporal para la creación de usuario
         Socket* tempSocket = nullptr;
         try {
             tempSocket = new Socket();
 
-            // Crear y configurar el socket
-            if (!tempSocket->create()) {
-                delete tempSocket;
-                QMessageBox::critical(this, "Error", "No se pudo crear el socket");
-                return;
-            }
-
-            std::cout << "Socket creado" << std::endl;
-
-            // Conectar al servidor
-            if (!tempSocket->connectToServer(IP, port)) {
+            if (!tempSocket->create() || !tempSocket->connectToServer(IP, port)) {
                 delete tempSocket;
                 QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
                 return;
             }
 
-            std::cout << "Conectado al server" << std::endl;
+            genMessage deleteMsg;
+            deleteMsg.MID = static_cast<uint8_t>(MessageType::AUTH_USER_DELETE);
+            authDeleteUser delUser;
+            delUser.deleteUser = userDel->user;
+            deleteMsg.content = delUser;
 
-            // Crear mensaje de creación de usuario usando Bitsery
-            genMessage msg;
-            msg.MID = static_cast<uint8_t>(MessageType::AUTH_USER_CREATE);
-            authCreateUser authCreate;
-            authCreate.newUser = user;
-            authCreate.pass = pass;
-            authCreate.rank = rank;
-            msg.content = authCreate;
-
-            // Enviar solicitud de creación
-            ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), msg);
+            ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), deleteMsg);
             if (sent <= 0) {
                 delete tempSocket;
-                QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de creación");
+                QMessageBox::critical(this, "Error", "No se pudo enviar solicitud");
                 return;
             }
 
-            std::cout << "Enviado a master" << std::endl;
-
-            // Recibir respuesta
             genMessage response;
             ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
-            if (received <= 0) {
-                delete tempSocket;
-                QMessageBox::critical(this, "Error", "No se pudo recibir respuesta del servidor");
-                return;
-            }
-
-            std::cout << "Respuesta recibida" << std::endl;
-
-            // Limpiar socket
             delete tempSocket;
-            tempSocket = nullptr;
 
-            QMessageBox::information(this, "INFO", "Usuario creado correctamente");
+            if (received > 0 && response.MID == static_cast<uint8_t>(MessageType::OK_COMMON_MSG)) {
+                QMessageBox::information(this, "Aviso", "Usuario eliminado correctamente");
+
+                // Actualizar lista
+                this->askForUsers();
+                this->userMenu.updateUserList(this->ui->user_list, &this->users, &this->currentUser);
+            } else {
+                QMessageBox::critical(this, "Error", "No se pudo eliminar el usuario");
+            }
 
         } catch (const std::exception& e) {
-            if (tempSocket) {
-                delete tempSocket;
-                tempSocket = nullptr;
-            }
-            QMessageBox::critical(this, "Error de conexión",
-                QString("No se pudo conectar al servidor: %1").arg(e.what()));
+            if (tempSocket) delete tempSocket;
+            QMessageBox::critical(this, "Error", e.what());
         }
-
-        // this->userMenu.updateUserList();
     }
 }
 
@@ -482,58 +448,140 @@ void MenuWindow::hideMenuWidgets() {
 
 void MenuWindow::on_user_change_pass_clicked()
 {
-    /*
-    AuthUser* userPass = this->userMenu.getSelectedAuthUser();
+    UserInfo* userPass = this->userMenu.getSelectedUserInfo(&this->users);
 
-    // Has to have something selected
-    if (!userPass) return;
+    if (!userPass) {
+        QMessageBox::warning(this, "Advertencia", "No hay usuario seleccionado");
+        return;
+    }
 
     changePassDialog dialog(this);
 
-    QString message = QString("Cambiar contraseña de %1")
-                      .arg(QString::fromStdString(userPass->username));
+    QString message = QString("Cambiar contraseña de %1").arg(QString::fromStdString(userPass->user));
 
     dialog.setUsername(message);
 
-    dialog.show();
-
     if (dialog.exec() == QDialog::Accepted) {
-        if (dialog.getFirstPass() == dialog.getSecondPass()) {
-            // Funcion para cambiar contrasena de usuario
-            authServer->changePassword(userPass->username , dialog.getFirstPass().toStdString());
+        if (dialog.getFirstPass() != dialog.getSecondPass()) {
+            QMessageBox::warning(this, "Advertencia", "Ambas contraseñas deben ser iguales");
+            return;
+        }
+        else if (dialog.getFirstPass().size() <= 4) {
+            QMessageBox::warning(this, "Advertencia", "La nueva contraseña es demasiado corta");
+            return;
+        }
+
+        std::string IP = currentUser.getIP();
+        int port = currentUser.getPort();
+
+        Socket* tempSocket = nullptr;
+        try {
+            tempSocket = new Socket();
+
+            if (!tempSocket->create() || !tempSocket->connectToServer(IP, port)) {
+                delete tempSocket;
+                QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
+                return;
+            }
+
+            genMessage changeMsg;
+            changeMsg.MID = static_cast<uint8_t>(MessageType::AUTH_USER_MODIFY_PASS);
+            authModifyUserPass changeUser;
+            changeUser.user = userPass->user;
+            changeUser.newPassword = dialog.getFirstPass().toStdString();
+            changeMsg.content = changeUser;
+
+            ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), changeMsg);
+            if (sent <= 0) {
+                delete tempSocket;
+                QMessageBox::critical(this, "Error", "No se pudo enviar solicitud");
+                return;
+            }
+
+            genMessage response;
+            ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+            delete tempSocket;
+
+            if (received > 0 && response.MID == static_cast<uint8_t>(MessageType::OK_COMMON_MSG)) {
+                QMessageBox::information(this, "Aviso", "Usuario modificado correctamente");
+
+                // Actualizar lista
+                this->askForUsers();
+                this->userMenu.updateUserList(this->ui->user_list, &this->users, &this->currentUser);
+            } else {
+                QMessageBox::critical(this, "Error", "No se pudo modificar el usuario");
+            }
+
+        } catch (const std::exception& e) {
+            if (tempSocket) delete tempSocket;
+            QMessageBox::critical(this, "Error", e.what());
         }
     }
-    */
 }
 
 void MenuWindow::on_user_change_rank_clicked()
 {
-    /*
-    AuthUser* userRank = this->userMenu.getSelectedAuthUser();
+    UserInfo* userRank = this->userMenu.getSelectedUserInfo(&this->users);
 
-    // Has to have something selected
-    if (!userRank) return;
-
-    // Cannot delete self
-    if (userRank->username == currentUser.getUser()) return;
+    if (!userRank) {
+        QMessageBox::warning(this, "Advertencia", "No hay usuario seleccionado");
+        return;
+    }
 
     setRankDialog dialog(this);
 
-    QString message = QString("Cambiar permisos de %1")
-                      .arg(QString::fromStdString(userRank->username));
+    QString message = QString("Cambiar contraseña de %1").arg(QString::fromStdString(userRank->user));
 
     dialog.setUsername(message);
 
-    dialog.show();
-
     if (dialog.exec() == QDialog::Accepted) {
-        if (dialog.getRank() != '-') {
-            // Funcion para cambiar rango del usuario
-            authServer->changePermissions(userRank->username, userRank->rank, '1');
-            userRank->rank = dialog.getRank();
+        std::string IP = currentUser.getIP();
+        int port = currentUser.getPort();
+
+        Socket* tempSocket = nullptr;
+        try {
+            tempSocket = new Socket();
+
+            if (!tempSocket->create() || !tempSocket->connectToServer(IP, port)) {
+                delete tempSocket;
+                QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
+                return;
+            }
+
+            genMessage changeMsg;
+            changeMsg.MID = static_cast<uint8_t>(MessageType::AUTH_USER_MODIFY_RANK);
+            authModifyUserRank changeUser;
+            changeUser.user = userRank->user;
+            changeUser.rank = dialog.getRank();
+
+            changeMsg.content = changeUser;
+
+            ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), changeMsg);
+            if (sent <= 0) {
+                delete tempSocket;
+                QMessageBox::critical(this, "Error", "No se pudo enviar solicitud");
+                return;
+            }
+
+            genMessage response;
+            ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+            delete tempSocket;
+
+            if (received > 0 && response.MID == static_cast<uint8_t>(MessageType::OK_COMMON_MSG)) {
+                QMessageBox::information(this, "Aviso", "Usuario modificado correctamente");
+
+                // Actualizar lista
+                this->askForUsers();
+                this->userMenu.updateUserList(this->ui->user_list, &this->users, &this->currentUser);
+            } else {
+                QMessageBox::critical(this, "Error", "No se pudo modificar el usuario");
+            }
+
+        } catch (const std::exception& e) {
+            if (tempSocket) delete tempSocket;
+            QMessageBox::critical(this, "Error", e.what());
         }
     }
-*/
 }
 
 
