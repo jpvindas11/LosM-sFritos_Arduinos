@@ -1,4 +1,5 @@
 #include "SensorServer.hpp"
+#include <algorithm>
 
 SensorServer::SensorServer() : running(false) {
 }
@@ -148,20 +149,41 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   std::string fileName = this->getSensorFileName(messageContent.fileName);
   std::cout << "Adding to sensor log: " << fileName << std::endl;
   
-  if (!this->storage.fileExists(fileName)) {
+  // Obtener tamaño actual del archivo
+  uint32_t sizeBeforeWrite = 0;
+  if (this->storage.fileExists(fileName)) {
+    sizeBeforeWrite = this->storage.getFileSize(fileName);
+  } else {
     this->storage.createFile(fileName);
   }
-  this->storage.appendFile(fileName, messageContent.data.data()
-                                   , messageContent.data.size());
+  
+  // Agregar datos del sensor
+  uint32_t dataSize = messageContent.data.size();
+  this->storage.appendFile(fileName, messageContent.data.data(), dataSize);
   
   // Add newline for better formatting
   std::string newline = "\n";
   this->storage.appendFile(fileName, newline.data(), newline.size());
   
-  char buffer [256];
-  uint32_t size = 256;
-  this->storage.readFile(fileName, buffer, size);
-  std::cout << "Received for file -> " << fileName << "\n" << buffer << std::endl;
+  // Calcular nuevo tamaño y mostrar info
+  uint32_t newSize = sizeBeforeWrite + dataSize + newline.size();
+  std::cout << "Agregados " << (dataSize + newline.size()) << " bytes a " << fileName 
+            << " (tamaño anterior: " << sizeBeforeWrite 
+            << ", nuevo: " << newSize << ")" << std::endl;
+  
+  // Leer solo las últimas líneas del archivo para mostrar
+  const uint32_t READ_SIZE = 1024;
+  char buffer[READ_SIZE];
+  memset(buffer, 0, READ_SIZE); // Inicializar con ceros
+  
+  uint32_t totalFileSize = this->storage.getFileSize(fileName);
+  uint32_t readSize = std::min(totalFileSize, READ_SIZE - 1); // Dejar espacio para null terminator
+  
+  this->storage.readFile(fileName, buffer, readSize);
+  buffer[readSize] = '\0'; // Asegurar terminación nula
+  
+  std::cout << "Received for file -> " << fileName << std::endl;
+  std::cout << buffer << std::endl;
 }
 
 std::string SensorServer::getSensorFileName(sensorFileName& name) {
