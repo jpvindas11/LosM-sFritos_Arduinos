@@ -2,9 +2,8 @@
 #include "ui_mainwindow.h"
 #include "menuwindow.h"
 
-
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MainWindow)
+    : QMainWindow(parent), ui(new Ui::MainWindow), isConnected(false)
 {
     ui->setupUi(this);
 }
@@ -17,39 +16,41 @@ MainWindow::~MainWindow()
 void MainWindow::on_pushButton_ip_clicked()
 {
     QString ip = ui->lineEdit_IP->text();
-    QString port = ui->lineEdit_PORT->text();
 
-    // Validar que los campos no estén vacíos
-    if (ip.isEmpty() || port.isEmpty()) {
-        QMessageBox::warning(this, "Error", "Por favor ingrese IP y Puerto");
+    if (ip.isEmpty()) {
+        QMessageBox::warning(this, "Error", "Por favor ingrese una IP");
         return;
     }
 
-    // Crear el socket
-    if (!socket->create()) {
+    // Crear socket temporal para verificar conexión
+    Socket testSocket;
+
+    if (!testSocket.create()) {
         QMessageBox::critical(this, "Error", "No se pudo crear el socket");
         return;
     }
 
-    // Conectar al servidor
-    if (!socket->connectToServer(ip.toStdString(), port.toInt())) {
+    // Intentar conectar
+    if (!testSocket.connectToServer(ip.toStdString(), PORT_MASTER_USERS)) {
         QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
         ui->lineEdit_IP->clear();
-        ui->lineEdit_PORT->clear();
         isConnected = false;
+        testSocket.closeSocket();
         return;
     }
 
+    // Conexión exitosa - guardar datos y cerrar
     isConnected = true;
-    this->currentData.setNetwork(ip.toStdString(), port.toInt());
+    testSocket.closeSocket();
 
-    QMessageBox::information(this, "Éxito", "Conectado al servidor");
+    this->currentData.setNetwork(ip.toStdString(), PORT_MASTER_USERS);
+    QMessageBox::information(this, "Éxito", "Servidor disponible");
 }
 
 void MainWindow::on_pushButton_clicked()
 {
     if (!isConnected) {
-        QMessageBox::warning(this, "Error", "Primero debe conectarse al servidor");
+        QMessageBox::warning(this, "Error", "Primero debe verificar la conexión al servidor");
         return;
     }
 
@@ -61,7 +62,25 @@ void MainWindow::on_pushButton_clicked()
         return;
     }
 
-    // Crear mensaje de login usando Bitsery
+    // Crear nuevo socket para login
+    Socket loginSocket;
+
+    if (!loginSocket.create()) {
+        QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+        return;
+    }
+
+    // Conectar usando los datos guardados
+    if (!loginSocket.connectToServer(currentData.getIP(), currentData.getPort())) {
+        QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
+        ui->lineEdit_user->clear();
+        ui->lineEdit_pass->clear();
+        isConnected = false;
+        loginSocket.closeSocket();
+        return;
+    }
+
+    // Crear mensaje de login
     genMessage loginRequest;
     loginRequest.MID = static_cast<uint8_t>(MessageType::AUTH_LOGIN_REQ);
 
@@ -70,18 +89,22 @@ void MainWindow::on_pushButton_clicked()
     authReq.pass = pass.toStdString();
     loginRequest.content = authReq;
 
-    // Enviar solicitud de login
-    ssize_t sent = socket->bSendData(socket->getSocketFD(), loginRequest);
+    // Enviar solicitud
+    ssize_t sent = loginSocket.bSendData(loginSocket.getSocketFD(), loginRequest);
     if (sent <= 0) {
         QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de login");
         ui->lineEdit_user->clear();
         ui->lineEdit_pass->clear();
+        loginSocket.closeSocket();
         return;
     }
 
     // Recibir respuesta
     genMessage response;
-    ssize_t received = socket->bReceiveData(socket->getSocketFD(), response);
+    ssize_t received = loginSocket.bReceiveData(loginSocket.getSocketFD(), response);
+
+    // Cerrar socket después de recibir respuesta
+    loginSocket.closeSocket();
 
     if (received <= 0) {
         QMessageBox::critical(this, "Error", "No se pudo recibir respuesta del servidor");
@@ -90,21 +113,16 @@ void MainWindow::on_pushButton_clicked()
         return;
     }
 
-    // Verificar tipo de respuesta
+    // Procesar respuesta
     if (response.MID == static_cast<uint8_t>(MessageType::AUTH_LOGIN_SUCCESS)) {
         try {
             authLoginSuccess loginSuccess = getMessageContent<authLoginSuccess>(response);
-
             ui->login_info->setText("Ingreso exitoso");
 
-            // Configurar datos del usuario
-            userDataQt login;
-            login.setData(user.toStdString(), pass.toStdString(), loginSuccess.Token.userType);
+            currentData.setData(user.toStdString(), pass.toStdString(), loginSuccess.Token.userType);
 
-            // Crear y mostrar ventana de menú
             MenuWindow* menu = new MenuWindow();
-            menu->setCurrentUser(login);
-            // menu->setSocket(socket.get()); // Pasar el socket al menú
+            menu->setCurrentUser(currentData);
             menu->show();
             this->hide();
 
@@ -117,11 +135,10 @@ void MainWindow::on_pushButton_clicked()
             errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
             ui->login_info->setText("Error: " + QString::fromStdString(errorMsg.message));
         } catch (const std::runtime_error& e) {
-            ui->login_info->setText("El usuario o contraseña son incorrectos");
+            ui->login_info->setText("Usuario o contraseña incorrectos");
         }
     }
 
     ui->lineEdit_user->clear();
     ui->lineEdit_pass->clear();
 }
-

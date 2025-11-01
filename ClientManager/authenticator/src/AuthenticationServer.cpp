@@ -117,6 +117,31 @@ void AuthenticationServer::handleClientConnection(int clientSocket) {
                 response = processLoginRequest(req);
                 break;
             }
+            case MessageType::AUTH_LOGOUT: {
+                auto req = getMessageContent<authLogout>(receivedMsg);
+                response = processLogoutRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_CREATE: {
+                auto req = getMessageContent<authCreateUser>(receivedMsg);
+                response = processCreateUserRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_DELETE: {
+                auto req = getMessageContent<authDeleteUser>(receivedMsg);
+                response = processDeleteUserRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_MODIFY_PASS: {
+                auto req = getMessageContent<authModifyUserPass>(receivedMsg);
+                response = processModPassRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_MODIFY_RANK: {
+                auto req = getMessageContent<authModifyUserRank>(receivedMsg);
+                response = processModRankRequest(req);
+                break;
+            }
             default: {
                 response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
                 response.content = errorCommonMsg{"Comando no reconocido"};
@@ -182,7 +207,7 @@ bool AuthenticationServer::verifyPassword(const std::string& password,
 }
 
 genMessage AuthenticationServer::processLoginRequest(const authLoginReq& req) {
-    std::lock_guard<std::mutex> lock(usersMutex);
+    std::lock_guard<std::mutex> lock(requestMutex);
     genMessage response;
     
     auto it = users.find(req.user);
@@ -227,11 +252,123 @@ genMessage AuthenticationServer::processLoginRequest(const authLoginReq& req) {
     return response;
 }
 
+genMessage AuthenticationServer::processLogoutRequest(const authLogout& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    auto it = users.find(req.user);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+    
+    if (!it->second.isConnected) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no está conectado"};
+        return response;
+    }
+
+    it->second.isConnected = false;
+    counterMutex.wait();
+    connectedUsersCount--;
+    counterMutex.signal();
+
+    response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+    response.content = okCommonMsg{"Logout logrado"};
+    
+    std::cout << "Logout exitoso: " << req.user << std::endl;
+    return response;
+}
+
+genMessage AuthenticationServer::processCreateUserRequest(const authCreateUser& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    auto it = users.find(req.newUser);
+    if (it != users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario ya existe"};
+        return response;
+    }
+
+    if (this->registerUser(req.newUser, req.pass, req.rank, req.rank)) {
+        response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+        response.content = okCommonMsg{"Usuario registrado"};
+    } else {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"No se pudo registrar al user"};
+    }
+
+    std::cout << "Usuario registrado correctamente: " << req.newUser << std::endl;
+
+    return response;
+}
+genMessage AuthenticationServer::processDeleteUserRequest(const authDeleteUser& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    auto it = users.find(req.deleteUser);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+
+    if (this->deleteUser(req.deleteUser)) {
+        response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+        response.content = okCommonMsg{"Usuario eliminado"};
+    } else {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"No se pudo eliminar al user"};
+    }
+
+    std::cout << "Usuario eliminado correctamente: " << req.deleteUser << std::endl;
+
+    return response;
+}
+genMessage AuthenticationServer::processModPassRequest(const authModifyUserPass& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    auto it = users.find(req.user);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+
+    this->changePassword(req.user, req.newPassword);
+    response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+    response.content = okCommonMsg{"Usuario modificado"};
+
+    std::cout << "Usuario modificado (password) correctamente: " << req.user << std::endl;
+
+    return response;
+}
+genMessage AuthenticationServer::processModRankRequest(const authModifyUserRank req) {
+   std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+
+    auto it = users.find(req.user);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+
+    this->changePermissions(req.user, req.rank, req.rank);
+    response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+    response.content = okCommonMsg{"Usuario modificado"};
+
+    std::cout << "Usuario modificado (rank) correctamente: " << req.user << std::endl;
+
+    return response;
+}
+
 
 bool AuthenticationServer::registerUser(const std::string& username,
-                                               const std::string& password,
-                                               char type,
-                                               char permission) {
+    const std::string& password, char type, char permission) {
     std::lock_guard<std::mutex> lock(usersMutex);
     
     if (users.find(username) != users.end()) {
@@ -451,7 +588,7 @@ void AuthenticationServer::loadUsers() {
     std::cout << "Total de usuarios cargados: " << users.size() << std::endl;
 }
 
-void AuthenticationServer::changePassword(std::string& username,
+void AuthenticationServer::changePassword(const std::string& username,
                                          const std::string& newPassword) {
     std::lock_guard<std::mutex> lock(usersMutex);
     
@@ -611,7 +748,7 @@ bool AuthenticationServer::deleteUser(const std::string& username) {
     return true;
 }
 
-void AuthenticationServer::changePermissions(std::string& username,
+void AuthenticationServer::changePermissions(const std::string& username,
                                             char newType,
                                             char newPermission) {
     std::lock_guard<std::mutex> lock(usersMutex);
