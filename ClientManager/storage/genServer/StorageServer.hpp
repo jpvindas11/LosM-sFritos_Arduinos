@@ -6,8 +6,8 @@
 #include <string>
 
 
-#include "../FileSystem/src/FileSystem.hpp"
-#include "../Util/Socket.hpp"
+#include "../../FileSystem/src/FileSystem.hpp"
+#include "../../Util/Socket.hpp"
 
 
 class StorageServer {
