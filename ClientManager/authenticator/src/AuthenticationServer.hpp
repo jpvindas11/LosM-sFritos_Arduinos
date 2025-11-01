@@ -31,6 +31,7 @@ private:
     Semaphore counterMutex;
     std::unordered_map<std::string, AuthUser> users;
     std::mutex usersMutex;
+    std::mutex requestMutex;
     Socket listeningSocket;
     std::string serverIP;
     int listeningPort;
