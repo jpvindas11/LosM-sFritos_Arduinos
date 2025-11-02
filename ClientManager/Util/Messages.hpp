@@ -146,6 +146,7 @@ struct modifySensorInfp {
     uint16_t last_send_year;
     uint8_t last_send_moth;
     uint8_t last_send_day;
+    std::string name;
 };
 
 

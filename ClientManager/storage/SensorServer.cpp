@@ -193,22 +193,36 @@ void SensorServer::sendFileNumber(int clientSocket, GenNumReq& messageContent) {
 }
 
 void SensorServer::sendFileNames(int clientSocket, GenNumReq& messageContent) {
-  genMessage reply;
-  senFileNamesRes resp;
-  resp.id_token = messageContent.id_token;
   std::vector<std::string> files = this->storage.listFiles();
-  resp.page = 0;  // ???
-  resp.totalPages = 1;
-  for (std::string file : files){
+  std::vector<std::string> logFiles;
+  // Busca solo los archivos .log
+  for (std::string file : files) {
     if (file.size() >= 4 && file.rfind(".log") == file.size() - 4) {
-      forNamesRequest nameReq;
-      nameReq.Filename = file;
-      resp.fileNames.names.push_back(nameReq);
+      logFiles.push_back(file);
     }
   }
-  reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
-  reply.content = resp;
-  this->listeningSocket.bSendData(clientSocket, reply);
+  // Define la cantidad de mensajes a enviar
+  size_t pageSize = 50;
+  uint32_t actualPage = 0;
+  uint32_t totalPages =  (logFiles.size() + pageSize - 1) / pageSize;
+  // Reparte el contenido entre los mensajes
+  for (size_t idx = 0; idx < totalPages; ++idx) {
+    // Crea el mensaje y la respuesta
+    genMessage reply;
+    senFileNamesRes resp;
+    resp.id_token = messageContent.id_token;
+    resp.page = actualPage++;
+    resp.totalPages = totalPages;
+    // Divide el contenido
+    size_t inicio = idx * pageSize;
+    size_t fin = min(inicio + pageSize, logFiles.size());
+    std::vector<forNamesRequest> subvector(logFiles.begin() + inicio, logFiles.begin() + fin);
+    resp.fileNames.names = subvector;
+    // Envía el mensaje
+    reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
+    reply.content = resp;
+    this->listeningSocket.bSendData(clientSocket, reply);
+  }
 }
 
 void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq& messageContent) {
@@ -418,7 +432,7 @@ void SensorServer::deleteFromSensorServer(deleteSensor& messageContent) {
 void SensorServer::modifySensor(modifySensorInfp& messageContent) {
   std::lock_guard<std::mutex> lock(this->storageMutex);
 
-  std::string fileName;  // = messageContent.name;
+  std::string fileName = messageContent.name;
   // Si el archivo no existe envía un error
   if (this->storage.fileExists(fileName)) {
     char buffer [1024];
