@@ -1312,6 +1312,75 @@ bool FileSystem::readFile(const std::string& fileName, char* buffer, uint32_t& s
     return bytesRead > 0;
 }
 
+bool FileSystem::readFile(const std::string& fileName, uint32_t cursor, char* buffer, uint32_t& size) {
+    if (!isMounted) {
+        std::cerr << "Disco no montado" << std::endl;
+        return false;
+    }
+    if (!buffer) {
+        std::cerr << "Buffer inválido" << std::endl;
+        return false;
+    }
+
+    FileLocation fileIndex = findFileInDirectory(fileName);
+    if (!fileIndex.found) {
+        std::cerr << "Archivo no encontrado: " << fileName << std::endl;
+        size = 0;
+        return false;
+    }
+
+    uint16_t inodeNum = fileIndex.file.iNodePointer;
+    iNode node;
+    if (!readInode(inodeNum, &node)) {
+        std::cerr << "Error al leer inodo" << std::endl;
+        size = 0;
+        return false;
+    }
+
+    // Actualizar ultimo acceso
+    node.lastAccessTime = time(nullptr);
+    writeInode(inodeNum, &node);
+
+    if (cursor >= node.size) {
+        size = 0;
+        return false;
+    }
+
+    uint32_t maxToRead = std::min(size, node.size - cursor);
+    uint32_t bytesRemaining = maxToRead;
+    uint32_t bytesRead = 0;
+
+    uint32_t currentBlockIndex = cursor / BLOCK_SIZE;
+    uint32_t offsetInBlock = cursor % BLOCK_SIZE;
+
+    while (bytesRemaining > 0) {
+        uint32_t physBlock = getBlockNumber(node, currentBlockIndex);
+        if (physBlock == BLOCK_FREE_SLOT || physBlock < DATA_BLOCKS_START || physBlock >= TOTAL_BLOCK) {
+            // Bloque inválido / no asignado
+            break;
+        }
+
+        char blockBuffer[BLOCK_SIZE];
+        if (!readBlock(physBlock, blockBuffer)) {
+            std::cerr << "Error al leer bloque físico: " << physBlock << std::endl;
+            break;
+        }
+
+        uint32_t startInBlock = (currentBlockIndex == (cursor / BLOCK_SIZE)) ? offsetInBlock : 0;
+        uint32_t canTake = std::min<uint32_t>(BLOCK_SIZE - startInBlock, bytesRemaining);
+
+        memcpy(buffer + bytesRead, blockBuffer + startInBlock, canTake);
+
+        bytesRead += canTake;
+        bytesRemaining -= canTake;
+        currentBlockIndex++;
+        offsetInBlock = 0;
+    }
+
+    size = bytesRead;
+    return bytesRead > 0;
+}
+
 bool FileSystem::deleteFile(const std::string& fileName) {
     if (!isMounted) {
         std::cerr << "Disco no montado" << std::endl;

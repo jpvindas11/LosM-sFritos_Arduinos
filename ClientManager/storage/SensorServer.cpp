@@ -296,6 +296,7 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
     uint32_t blockSize = BLOCK_SIZE;
     uint32_t localPage = 0;
     for (int i = 0; i < totalBlocks; i += 2) {
+      int offset = 0 ;
       // Crea mensaje genérico y de respuesta
       genMessage reply;
       senFileBlockRes res;
@@ -305,19 +306,19 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
       res.page = localPage++;
       res.totalPages = (totalBlocks + 1) / 2;
       // Lee bloque 1 desde buffer
-      // No hay manera de leer a partir de cierto punto?
-      // como se que buffer1 y 2 no serán iguales?
       char buffer1 [blockSize];
-      if (this->storage.readFile(fileName, buffer1, blockSize)) {
+      if (this->storage.readFile(fileName, blockSize * offset, buffer1, blockSize)) {
         std::string firstBlock(buffer1);
         res.firstBlock = firstBlock;
+        ++offset;
       }
       // Lee bloque 2 desde buffer (si existe)
       if (i + 1 < 2) {
         char buffer2 [blockSize];
-        if (this->storage.readFile(fileName, buffer2, blockSize)) {
+        if (this->storage.readFile(fileName, blockSize * offset, buffer2, blockSize)) {
           std::string secondBlock(buffer2);
           res.secondBlock = secondBlock;
+          ++offset;
         }
       }
       // Envía la respuesta
