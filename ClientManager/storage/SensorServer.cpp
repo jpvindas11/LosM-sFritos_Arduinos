@@ -296,7 +296,8 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
     uint32_t blockSize = BLOCK_SIZE;
     uint32_t localPage = 0;
     for (int i = 0; i < totalBlocks; i += 2) {
-      int offset = 0 ;
+      // crea un cursor para avanzar en el archivo
+      uint32_t offset = 0 ;
       // Crea mensaje genérico y de respuesta
       genMessage reply;
       senFileBlockRes res;
@@ -410,7 +411,7 @@ void SensorServer::deleteFromSensorServer(deleteSensor& messageContent) {
       size_t pos = fileName.rfind(".txt");
       fileName.replace(pos, 4, ".log");
       if (!this->storage.deleteFile(fileName)) {
-        std::cerr << "Failed to log file -> "
+        std::cerr << "Failed to delete log file -> "
                   << fileName
                   << "\n"
                   << std::endl;
