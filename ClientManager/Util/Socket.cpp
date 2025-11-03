@@ -144,3 +144,21 @@ int Socket::getSocketFD() const {
 sockaddr_in Socket::getAddress() const {
     return address;
 }
+
+Socket::ClientInfo Socket::getClientInfo(int socketFD) {
+  ClientInfo info;
+  struct sockaddr_in addr;
+  socklen_t addrLen = sizeof(addr);
+  
+  if (getpeername(socketFD, (struct sockaddr*)&addr, &addrLen) == 0) {
+    char ipBuffer[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &addr.sin_addr, ipBuffer, INET_ADDRSTRLEN);
+    info.ip = std::string(ipBuffer);
+    info.port = ntohs(addr.sin_port);
+  } else {
+    info.ip = "unknown";
+    info.port = 0;
+  }
+  
+  return info;
+}

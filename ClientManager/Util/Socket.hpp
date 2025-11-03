@@ -40,6 +40,13 @@ public:
 
     int getSocketFD() const;
     sockaddr_in getAddress() const;
+
+    struct ClientInfo {
+        std::string ip;
+        uint16_t port;
+    };
+    
+    static ClientInfo getClientInfo(int socketFD);
 };
 
 #endif // SOCKET_HPP
