@@ -9,7 +9,7 @@ int main() {
 
   LogsServer& server = LogsServer::getInstance();
 
-  server.run("127.0.0.1", 9090, "127.0.0.1", 9090);
+  server.run("127.0.0.1", 9090);
 
   return EXIT_SUCCESS;
 }
