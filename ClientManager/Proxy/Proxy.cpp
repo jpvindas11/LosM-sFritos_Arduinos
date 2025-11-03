@@ -1,4 +1,5 @@
 #include "Proxy.hpp"
+#include "Util.hpp"
 #include <stdexcept>
 #include <regex>
 #include <ctime>
@@ -231,6 +232,7 @@ genMessage Proxy::parseArduinoData(const std::string& rawData, const std::string
   genMessage message;
   
   // Inicializar mensaje con valores por defecto
+  std::cout << "Parsing Arduino data: '" << rawData << "'" << std::endl;
   message.MID = static_cast<uint8_t>(MessageType::SEN_ADD_LOG);
   
   try {
@@ -249,30 +251,18 @@ genMessage Proxy::parseArduinoData(const std::string& rawData, const std::string
       size_t end = cleanData.find_last_not_of(" \t");
       cleanData = cleanData.substr(start, end - start + 1);
     }
+
+    std::vector<std::string> tokens = Util::split(cleanData); // Solo para debug
     
     std::cout << "Original data length: " << rawData.length() << std::endl;
     std::cout << "Cleaned data: '" << cleanData << "' (length: " << cleanData.length() << ")" << std::endl;
-    
-    // Parsear el formato "Distancia: X cm"
-    std::regex distanceRegex(R"(Distancia:\s*(\d+)\s*cm)");
-    std::smatch matches;
-    
-    if (std::regex_search(cleanData, matches, distanceRegex)) {
-      int distance = std::stoi(matches[1].str());
-      
-      // Validar que la distancia esté en un rango razonable (0-5000 cm)
-      if (distance < 0 || distance > 5000) {
-        std::cerr << "Invalid distance value: " << distance << " cm" << std::endl;
-        message.MID = 0;
-        return message;
-      }
       
       // Crear estructura senAddLog
       senAddLog logData;
       
       // Configurar nombre del archivo del sensor (sensor ultrasónico)
-      logData.fileName.sensorType = "US";  // UltraSonic
-      logData.fileName.id = 1;  // ID del sensor
+      logData.fileName.sensorType = tokens[0];  // UltraSonic
+      logData.fileName.id = this->arduinoType(tokens[0]);  // ID del sensor
       logData.originIP = originIP;
       
       // Obtener fecha actual correctamente
@@ -283,10 +273,25 @@ genMessage Proxy::parseArduinoData(const std::string& rawData, const std::string
       logData.fileName.month = localTime->tm_mon + 1;
       logData.fileName.day = localTime->tm_mday;
       
-      // Formatear datos del sensor de manera más controlada
+      // Formatear datos del sensor según su tipo
       char formattedBuffer[200]; // Buffer más pequeño para mayor control
-      int written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
-                           "Distance:%dcm,Timestamp:%ld", distance, (long)now);
+      int written;
+      
+      // Determinar el formato según el tipo de sensor
+      if (this->arduinoType(tokens[0]) == 1) { // Ultrasonic
+        written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                          "Distance:%dcm,Timestamp:%ld", std::stoi(tokens[1]), (long)now);
+      } else if (this->arduinoType(tokens[0]) == 2) { // Humidity
+        written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                          "Humidity:%scm,Timestamp:%ld", tokens[1].c_str(), (long)now);
+      } else if (this->arduinoType(tokens[0]) == 3) { // UV
+        written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                          "UV:%s,Timestamp:%ld", tokens[1].c_str(), (long)now);
+      } else {
+        // Formato genérico para sensores desconocidos
+        written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                          "%s:%s,Timestamp:%ld", tokens[0].c_str(), tokens[1].c_str(), (long)now);
+      }
       
       // Verificar que la escritura fue exitosa
       if (written < 0 || written >= (int)sizeof(formattedBuffer)) {
@@ -309,20 +314,24 @@ genMessage Proxy::parseArduinoData(const std::string& rawData, const std::string
       // Asignar al mensaje
       message.content = logData;
       
-      std::cout << "Parsed distance: " << distance << " cm" << std::endl;
+      std::cout << "Parsed distance: " << tokens[1] << " cm" << std::endl;
       std::cout << "Generated log data: '" << logData.data << "'" << std::endl;
       std::cout << "Final data length: " << logData.data.length() << std::endl;
       std::cout << "Timestamp: " << now << " (date: " << std::ctime(&now) << ")" << std::endl;
       
-    } else {
-      std::cerr << "Could not parse distance from: '" << cleanData << "'" << std::endl;
-      message.MID = 0; // Indica error en el parsing
-    }
-    
-  } catch (const std::exception& e) {
+    } catch (const std::out_of_range& e) {
     std::cerr << "Error parsing Arduino data: " << e.what() << std::endl;
     message.MID = 0; // Indica error en el parsing
   }
-  
+
   return message;
+}
+
+int Proxy::arduinoType(std::string arduinoInformation) {
+  if (arduinoInformation == "Distancia:") return 1;
+  else if (arduinoInformation == "Humedad:") return 2;
+  else if (arduinoInformation == "UV:") return 3;
+  else {
+    return -1; // Unknown type
+  }
 }

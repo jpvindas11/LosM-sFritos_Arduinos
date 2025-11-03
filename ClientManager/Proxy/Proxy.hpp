@@ -11,6 +11,13 @@
 #include "../Util/Socket.hpp"
 #include "../Util/Messages.hpp"
 #include "../Util/Queue.hpp"
+#include "../Util/Util.hpp"
+
+enum{
+  ULTRASONICSENSOR = 100,
+  UVSENSOR = 200,
+  DHTSENSOR = 300
+};
 
 struct QueuedMessage {
   int arduinoSocket;
@@ -40,7 +47,7 @@ class Proxy {
   void acceptAllConnections();
   void forwardSensorData(genMessage& sensorData);
   void processMessageQueue();
-  genMessage Proxy::parseArduinoData(const std::string& rawData, const std::string& originIP);
+  genMessage parseArduinoData(const std::string& rawData, const std::string& originIP);
     
  public:
   Proxy();
@@ -52,6 +59,7 @@ class Proxy {
            std::string storageIP, int storagePort);
   void stopProxy();
   void handleArduinoConnection(int arduinoSocket);
+  int arduinoType(std::string arduinoInformatuion);
 
 };
 

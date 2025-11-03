@@ -253,7 +253,7 @@ namespace bitsery {
 
     template <typename S>
     void serialize(S& s, sensorFileName& sf) {
-        s.text1b(sf.sensorType, 3);
+        s.text1b(sf.sensorType, 16);
         s.value2b(sf.id);
         s.value2b(sf.year);
         s.value1b(sf.month);
@@ -330,7 +330,7 @@ namespace bitsery {
     void serialize(S& s, senAddLog& m) {
         s.object(m.fileName);
         s.text1b(m.data, 256);
-        s.text1b(m.originIP, 15);
+        s.text1b(m.originIP, 16);
     }
 
     template <typename S>
