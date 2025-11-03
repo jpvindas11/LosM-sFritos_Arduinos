@@ -17,8 +17,12 @@
  * 
  * Sin creación de carpetas por el momento
  */
+
+class LogsServer;
+
 class FileSystem {
 protected:
+    friend class LogsServer;
     // Super bloque que guarda los metadatos del file system
     SuperBlock superBlock;
 

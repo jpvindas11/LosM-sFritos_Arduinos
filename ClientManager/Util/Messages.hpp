@@ -42,6 +42,10 @@ enum class MessageType : uint8_t {
     AUTH_USER_RESPONSE,
     ERR_COMMOM_MSG,
     OK_COMMON_MSG,
+    LOG_USER_REQUEST,
+    LOG_USER_RESP,
+    ADD_USER_LOG,
+    DELETE_USER_LOGS
 };
 
 struct token {
@@ -205,6 +209,27 @@ struct okCommonMsg {
     std::string message;
 };
 
+// for LOG_USER_REQUEST and DELETE_USER_LOGS
+struct userLogRequestCommon {
+    uint32_t id_token;
+    std::string userName;
+};
+
+struct userLogResp {
+    uint32_t id_token;
+    std::string userName;
+    uint32_t page;
+    uint32_t totalPages;
+    std::string firstBlock;
+    std::string secondBlock;
+};
+
+struct addUserLog {
+    uint32_t id_token;
+    std::string userName;
+    std::string logInfo;
+};
+
 struct genMessage {
     uint8_t MID;
     std::variant<
@@ -228,9 +253,11 @@ struct genMessage {
         authModifyUserRank,
         authRequestUsers,
         errorCommonMsg,
-        okCommonMsg
+        okCommonMsg,
+        userLogRequestCommon,
+        userLogResp,
+        addUserLog
     > content;
-
 };
 
 namespace bitsery {
@@ -418,6 +445,29 @@ namespace bitsery {
     template <typename S>
     void serialize(S& s, okCommonMsg& m) {
         s.text1b(m.message, MAX_COMMON_MSG_LENGTH);
+    }
+
+    template <typename S>
+    void serialize(S& s, userLogRequestCommon& m) {
+        s.value4b(m.id_token);
+        s.text1b(m.userName, 25);
+    }
+
+    template <typename S>
+    void serialize(S& s, userLogResp& m) {
+        s.value4b(m.id_token);
+        s.text1b(m.userName, 25);
+        s.value4b(m.page);
+        s.value4b(m.totalPages);
+        s.text1b(m.firstBlock, 1024);
+        s.text1b(m.secondBlock, 1024);
+    }
+
+    template <typename S>
+    void serialize(S& s, addUserLog& m) {
+        s.value4b(m.id_token);
+        s.text1b(m.userName, 25);
+        s.text1b(m.logInfo, 1024);
     }
 
     template <typename S>
