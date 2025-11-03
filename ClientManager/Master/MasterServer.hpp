@@ -16,7 +16,11 @@ class MasterEntryPoint;
 class MasterServer {
  protected:
   std::string serverIP;
-  
+
+  std::string authServerIP;
+  std::string storageServerIP;
+  std::string logsServerIP;
+
   Socket userEntryPoint;
   Socket arduinoEntryPoint;
 
@@ -30,6 +34,7 @@ class MasterServer {
   ~MasterServer();
 
   int startAllListeners(const std::string& ip);
+  void setDestinationIPs(std::string auth, std::string storage, std::string logs);
 
   void waitForAllListeners();
 
@@ -42,9 +47,7 @@ class MasterServer {
   void listenForever(std::string ip, int port, Socket* socket, void (MasterServer::*handler)(int, Socket*));
 
   void handleUserConnection(int client, Socket* socket);
-  void handleAuthConnection(int client, Socket* socket);
   void handleArduinoConnection(int client, Socket* socket);
-  void handleStorageConnection(int client, Socket* socket);
 };
 
 #endif

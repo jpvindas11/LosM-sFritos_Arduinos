@@ -9,12 +9,9 @@ SensorServer& SensorServer::getInstance() {
   return server;
 }
 
-int SensorServer::startServer(std::string serverIP, int listeningPort, 
-                                          std::string masterIP, int materPort) {
+int SensorServer::startServer(std::string serverIP, int listeningPort) {
   this->serverIP = serverIP;
   this->listeningPort = listeningPort;
-  this->masterIP = masterIP;
-  this->materPort = materPort;
   if (!this->storage.mount("sensorStorage.bin")) {
     return EXIT_FAILURE;
   }
@@ -31,11 +28,9 @@ void SensorServer::closeListeningSocket() {
   this->listeningSocket.closeSocket();
 }
 
-void SensorServer::run(std::string serverIP, int listeningPort, 
-                                          std::string masterIP, int materPort){
+void SensorServer::run(std::string serverIP, int listeningPort){
   try{
-    if (this->startServer(serverIP, listeningPort, masterIP, materPort) ==
-                                                                 EXIT_SUCCESS) {
+    if (this->startServer(serverIP, listeningPort) == EXIT_SUCCESS) {
       running.store(true);
       std::cout << "Storage server started on " << serverIP << ":" 
                 << listeningPort << " (multi-threaded mode)\n";
@@ -508,3 +503,19 @@ void SensorServer::modifySensor(modifySensorInfp& messageContent) {
               << std::endl;
   }
 }
+
+void SensorServer::sendFileNumber(int clientSocket, GenNumReq& messageContent) {}
+/// Envía los nombres de los archivos en sistema
+void SensorServer::sendFileNames(int clientSocket, GenNumReq& messageContent) {}
+/// Envía metadatos del sensor solicitados
+void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq& messageContent) {}
+/// Envía el tamaño del bloque solicitado
+void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq& messageContent) {}
+/// Envía los datos del archivo en bloques
+void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent) {}
+/// Agrega un sensor
+void SensorServer::addToSensorServer(addSensor& messageContent) {}
+/// Elimina un sensor
+void SensorServer::deleteFromSensorServer(deleteSensor& messageContent) {}
+/// Modifica los metadatos de un sensor
+void SensorServer::modifySensor(modifySensorInfp& messageContent) {}

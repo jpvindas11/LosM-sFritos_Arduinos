@@ -10,10 +10,19 @@ MasterServer::MasterServer()
 }
 
 MasterServer::~MasterServer() {
+  this->userEntryPoint.closeSocket();
+  this->arduinoEntryPoint.closeSocket();
+
   for (auto* listener : listeners) {
     delete listener;
   }
   listeners.clear();
+}
+
+void MasterServer::setDestinationIPs(std::string auth, std::string storage, std::string logs) {
+  this->authServerIP = auth;
+  this->storageServerIP = storage;
+  this->logsServerIP = logs;
 }
 
 int MasterServer::startAllListeners(const std::string& ip) {
@@ -112,7 +121,7 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
   }
 
   MessageType msgType = static_cast<MessageType>(clientRequest.MID);
-  std::string targetIP = "127.0.0.1";
+  std::string targetIP;
   int targetPort;
 
   switch (msgType) {
@@ -123,10 +132,12 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     case MessageType::AUTH_USER_MODIFY_PASS:
     case MessageType::AUTH_USER_MODIFY_RANK:
     case MessageType::AUTH_USER_REQUEST:
+    targetIP = this->authServerIP;
     targetPort = PORT_MASTER_AUTH;
     break;
     default:
     // Error
+    targetIP = "ERR";
     targetPort = PORT_MASTER_AUTH;
     break;
   }
@@ -135,22 +146,8 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
   worker->startThread();
 }
 
-void MasterServer::handleAuthConnection(int client, Socket* socket) {
-  std::cout << "[AUTH] New connection on client " << client << std::endl;
-  
-
-  socket->closeSocket(client);
-}
-
 void MasterServer::handleArduinoConnection(int client, Socket* socket) {
   std::cout << "[ARDUINO] New connection on client " << client << std::endl;
-  
-
-  socket->closeSocket(client);
-}
-
-void MasterServer::handleStorageConnection(int client, Socket* socket) {
-  std::cout << "[STORAGE] New connection on client " << client << std::endl;
   
 
   socket->closeSocket(client);

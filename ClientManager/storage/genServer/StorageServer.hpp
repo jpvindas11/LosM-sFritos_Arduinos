@@ -14,8 +14,6 @@ class StorageServer {
  protected:
   std::string serverIP;
   int listeningPort;
-  std::string masterIP;
-  int materPort;
   FileSystem storage;
   Socket listeningSocket;
 

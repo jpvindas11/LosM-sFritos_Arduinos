@@ -19,8 +19,7 @@ class SensorServer : public StorageServer {
 
  public:
   static SensorServer& getInstance();
-  void run(std::string serverIP, int listeningPort
-         , std::string masterIP, int materPort);
+  void run(std::string serverIP, int listeningPort);
   void stopServer();
   void handleClientConnection(int  clientSocket) override;
   void serveClient(int clientSocket, genMessage& clientRequest);
@@ -30,8 +29,7 @@ class SensorServer : public StorageServer {
   std::string getFromBuffer(char* buffer, uint32_t size);
 
  private:
-  int startServer(std::string serverIP, int listeningPort
-                , std::string masterIP, int materPort);
+  int startServer(std::string serverIP, int listeningPort);
   SensorServer();
   ~SensorServer() = default;
   /// Envía la cantidad de archivos en el sistema
