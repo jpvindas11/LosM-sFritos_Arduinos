@@ -290,11 +290,21 @@ public:
     /**
      * @brief Lee los datos de un archivo
      * @param fileName Nombre del archivo
-     * @param data Buffer de datos a en donde se guardará la información obtenida
+     * @param buffer Buffer de datos a en donde se guardará la información obtenida
      * @param size Tamaño del buffer recibido
-     * @return True si el archivo fue leido, False en caso contrario
+     * @return True si el archivo fue leído, False en caso contrario
      */
     bool readFile(const std::string& fileName, char* buffer, uint32_t& size);
+
+    /**
+     * @brief Lee un rango del archivo comenzando en offset.
+     * @param fileName Nombre del archivo
+     * @param cursor Punto desde el cual leer el archivo (en bytes)
+     * @param buffer Buffer de datos a en donde se guardará la información obtenida
+     * @param size Tamaño del buffer recibido
+     * @return True si el archivo fue leído, False en caso contrario
+     */
+    bool readFile(const std::string& fileName, uint32_t cursor, char* buffer, uint32_t& size);
 
     /**
      * @brief Agrega nuevos datos a un archivo existente
@@ -304,7 +314,7 @@ public:
      * @return True si la información fue agregada, False en caso contrario
      */
     bool appendFile(const std::string& fileName, const char* data, uint32_t size);
-    
+
     // Información de archivos
 
     /**
