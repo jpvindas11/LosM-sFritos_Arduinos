@@ -135,6 +135,18 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     targetIP = this->authServerIP;
     targetPort = PORT_MASTER_AUTH;
     break;
+
+    case MessageType::FILE_NUMBER_REQ:
+    case MessageType::SEN_FILE_NAMES_REQ:
+    case MessageType::SEN_FILE_METD_REQ:
+    case MessageType::SEN_FILE_BLOCKNUM_REQ:
+    case MessageType::SEN_FILE_BLOCK_REQ:
+    case MessageType::ADD_SENSOR:
+    case MessageType::DELETE_SENSOR:
+    case MessageType::MODIFY_SENSOR:
+    targetIP = this->storageServerIP;
+    targetPort = PORT_MASTER_STORAGE;
+    break;
     default:
     // Error
     targetIP = "ERR";
@@ -149,6 +161,35 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
 void MasterServer::handleArduinoConnection(int client, Socket* socket) {
   std::cout << "[ARDUINO] New connection on client " << client << std::endl;
   
+  Socket clientSocket;
+  genMessage clientRequest;
+  
+  if (clientSocket.bReceiveData(client, clientRequest) <= 0) {
+    close(client);
+    return;
+  }
 
-  socket->closeSocket(client);
+  MessageType msgType = static_cast<MessageType>(clientRequest.MID);
+  std::string targetIP;
+  int targetPort;
+
+  // Esto aqui lo hice un toque a la carrera
+  // Solo estoy admitiendo SEND ADD LOG desde la entrada de Arduinos
+  // Si ocupan mas, metan otro case
+  // Deberia en lugar de iniciar un worker, devolver un mensaje de error codificado en bitsery
+
+  switch (msgType) {
+    case MessageType::SEN_ADD_LOG:
+    targetIP = this->storageServerIP;
+    targetPort = PORT_MASTER_STORAGE;
+    break;
+    default:
+    // Error
+    targetIP = "ERR";
+    targetPort = PORT_MASTER_AUTH;
+    break;
+  }
+
+  auto* worker = new MasterWorker(client, targetIP, targetPort, clientRequest);
+  worker->startThread();
 }

@@ -29,6 +29,8 @@ class MasterServer {
 
   std::vector<MasterEntryPoint*> listeners;
 
+  void handleMID(int client, Socket* socket);
+
  public:
   MasterServer();
   ~MasterServer();
