@@ -120,6 +120,7 @@ struct senFileBlockRes {
 struct senAddLog {
     sensorFileName fileName;
     std::string data;
+    std::string originIP;
 };
 
 struct addSensor {
@@ -329,6 +330,7 @@ namespace bitsery {
     void serialize(S& s, senAddLog& m) {
         s.object(m.fileName);
         s.text1b(m.data, 256);
+        s.text1b(m.originIP, 15);
     }
 
     template <typename S>

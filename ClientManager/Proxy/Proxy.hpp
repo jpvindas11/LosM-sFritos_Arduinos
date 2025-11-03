@@ -40,7 +40,7 @@ class Proxy {
   void acceptAllConnections();
   void forwardSensorData(genMessage& sensorData);
   void processMessageQueue();
-  genMessage parseArduinoData(const std::string& rawData);
+  genMessage Proxy::parseArduinoData(const std::string& rawData, const std::string& originIP);
     
  public:
   Proxy();

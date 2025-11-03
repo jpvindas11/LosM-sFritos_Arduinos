@@ -70,6 +70,10 @@ void Proxy::acceptAllConnections() {
 void Proxy::handleArduinoConnection(int arduinoSocket) {
   std::cout << "Thread started for Arduino socket: " << arduinoSocket << std::endl;
   
+  Socket::ClientInfo clientInfo = Socket::getClientInfo(arduinoSocket);
+  std::string originIP = clientInfo.ip;
+  
+  std::cout << "Arduino connection from IP: " << originIP << ", Port: " << clientInfo.port << std::endl;
   // Leer datos en texto plano del Arduino con buffer más seguro
   const size_t BUFFER_SIZE = 512;
   char buffer[BUFFER_SIZE];
@@ -93,7 +97,7 @@ void Proxy::handleArduinoConnection(int arduinoSocket) {
     std::cout << std::endl;
     
     // Parsear los datos del sensor y crear mensaje serializado
-    genMessage sensorData = parseArduinoData(rawData);
+    genMessage sensorData = parseArduinoData(rawData, originIP);
     
     if (sensorData.MID != 0) {  // Verificar que el parsing fue exitoso
       std::cout << "Parsed sensor data (MID: " << static_cast<int>(sensorData.MID) << ")\n";
@@ -223,7 +227,7 @@ void Proxy::stopProxy() {
   std::cout << "Proxy stopped\n";
 }
 
-genMessage Proxy::parseArduinoData(const std::string& rawData) {
+genMessage Proxy::parseArduinoData(const std::string& rawData, const std::string& originIP) {
   genMessage message;
   
   // Inicializar mensaje con valores por defecto
@@ -269,6 +273,7 @@ genMessage Proxy::parseArduinoData(const std::string& rawData) {
       // Configurar nombre del archivo del sensor (sensor ultrasónico)
       logData.fileName.sensorType = "US";  // UltraSonic
       logData.fileName.id = 1;  // ID del sensor
+      logData.originIP = originIP;
       
       // Obtener fecha actual correctamente
       std::time_t now = std::time(nullptr);
