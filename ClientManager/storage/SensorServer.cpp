@@ -1,4 +1,5 @@
 #include "SensorServer.hpp"
+#include <algorithm>
 
 SensorServer::SensorServer() : running(false) {
 }
@@ -8,12 +9,9 @@ SensorServer& SensorServer::getInstance() {
   return server;
 }
 
-int SensorServer::startServer(std::string serverIP, int listeningPort, 
-                                          std::string masterIP, int materPort) {
+int SensorServer::startServer(std::string serverIP, int listeningPort) {
   this->serverIP = serverIP;
   this->listeningPort = listeningPort;
-  this->masterIP = masterIP;
-  this->materPort = materPort;
   if (!this->storage.mount("sensorStorage.bin")) {
     return EXIT_FAILURE;
   }
@@ -30,11 +28,9 @@ void SensorServer::closeListeningSocket() {
   this->listeningSocket.closeSocket();
 }
 
-void SensorServer::run(std::string serverIP, int listeningPort, 
-                                          std::string masterIP, int materPort){
+void SensorServer::run(std::string serverIP, int listeningPort){
   try{
-    if (this->startServer(serverIP, listeningPort, masterIP, materPort) ==
-                                                                 EXIT_SUCCESS) {
+    if (this->startServer(serverIP, listeningPort) == EXIT_SUCCESS) {
       running.store(true);
       std::cout << "Storage server started on " << serverIP << ":" 
                 << listeningPort << " (multi-threaded mode)\n";
@@ -148,20 +144,41 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   std::string fileName = this->getSensorFileName(messageContent.fileName);
   std::cout << "Adding to sensor log: " << fileName << std::endl;
   
-  if (!this->storage.fileExists(fileName)) {
+  // Obtener tamaño actual del archivo
+  uint32_t sizeBeforeWrite = 0;
+  if (this->storage.fileExists(fileName)) {
+    sizeBeforeWrite = this->storage.getFileSize(fileName);
+  } else {
     this->storage.createFile(fileName);
   }
-  this->storage.appendFile(fileName, messageContent.data.data()
-                                   , messageContent.data.size());
+  
+  // Agregar datos del sensor
+  uint32_t dataSize = messageContent.data.size();
+  this->storage.appendFile(fileName, messageContent.data.data(), dataSize);
   
   // Add newline for better formatting
   std::string newline = "\n";
   this->storage.appendFile(fileName, newline.data(), newline.size());
   
-  char buffer [256];
-  uint32_t size = 256;
-  this->storage.readFile(fileName, buffer, size);
-  std::cout << "Received for file -> " << fileName << "\n" << buffer << std::endl;
+  // Calcular nuevo tamaño y mostrar info
+  uint32_t newSize = sizeBeforeWrite + dataSize + newline.size();
+  std::cout << "Agregados " << (dataSize + newline.size()) << " bytes a " << fileName 
+            << " (tamaño anterior: " << sizeBeforeWrite 
+            << ", nuevo: " << newSize << ")" << std::endl;
+  
+  // Leer solo las últimas líneas del archivo para mostrar
+  const uint32_t READ_SIZE = 1024;
+  char buffer[READ_SIZE];
+  memset(buffer, 0, READ_SIZE); // Inicializar con ceros
+  
+  uint32_t totalFileSize = this->storage.getFileSize(fileName);
+  uint32_t readSize = std::min(totalFileSize, READ_SIZE - 1); // Dejar espacio para null terminator
+  
+  this->storage.readFile(fileName, buffer, readSize);
+  buffer[readSize] = '\0'; // Asegurar terminación nula
+  
+  std::cout << "Received for file -> " << fileName << std::endl;
+  std::cout << buffer << std::endl;
 }
 
 std::string SensorServer::getSensorFileName(sensorFileName& name) {
@@ -193,22 +210,44 @@ void SensorServer::sendFileNumber(int clientSocket, GenNumReq& messageContent) {
 }
 
 void SensorServer::sendFileNames(int clientSocket, GenNumReq& messageContent) {
-  genMessage reply;
-  senFileNamesRes resp;
-  resp.id_token = messageContent.id_token;
   std::vector<std::string> files = this->storage.listFiles();
-  resp.page = 0;  // ???
-  resp.totalPages = 1;
-  for (std::string file : files){
+  std::vector<std::string> logFiles;
+  // Busca solo los archivos .log
+  for (const std::string& file : files) {
     if (file.size() >= 4 && file.rfind(".log") == file.size() - 4) {
-      forNamesRequest nameReq;
-      nameReq.Filename = file;
-      resp.fileNames.names.push_back(nameReq);
+      logFiles.push_back(file);
     }
   }
-  reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
-  reply.content = resp;
-  this->listeningSocket.bSendData(clientSocket, reply);
+  // Define la cantidad de mensajes a enviar
+  size_t pageSize = 50;
+  uint32_t actualPage = 0;
+  uint32_t totalPages = (logFiles.size() + pageSize - 1) / pageSize;
+  // Reparte el contenido entre los mensajes
+  for (size_t idx = 0; idx < totalPages; ++idx) {
+    // Crea el mensaje y la respuesta
+    genMessage reply;
+    senFileNamesRes resp;
+    resp.id_token = messageContent.id_token;
+    resp.page = actualPage++;
+    resp.totalPages = totalPages;
+    // Divide el contenido
+    size_t inicio = idx * pageSize;
+    size_t fin = std::min(inicio + pageSize, logFiles.size());
+    
+    // Convierte cada string a forNamesRequest
+    std::vector<forNamesRequest> subvector;
+    for (size_t i = inicio; i < fin; ++i) {
+      forNamesRequest nameReq;
+      nameReq.Filename = logFiles[i];
+      subvector.push_back(nameReq);
+    }
+    
+    resp.fileNames.names = subvector;
+    // Envía el mensaje
+    reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES);
+    reply.content = resp;
+    this->listeningSocket.bSendData(clientSocket, reply);
+  }
 }
 
 void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq& messageContent) {
@@ -243,8 +282,9 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq& messageC
   genMessage reply;
   std::string fileName = messageContent.fileName.Filename;
   iNode inode;
-  senFileBlockNumRes res;
+  
   if (this->storage.getFileInfo(fileName, &inode)) {
+    senFileBlockNumRes res;
     res.id_token = messageContent.id_token;
     res.fileName = messageContent.fileName;
     res.blocks = 0;
@@ -261,26 +301,27 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq& messageC
     err.message = "No se pudo obtener los metadatos del archivo " + fileName;
     reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
     reply.content = err;
-    return;
   }
-  reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCKNUM_RES);
-  reply.content = res;
+  
   this->listeningSocket.bSendData(clientSocket, reply);
 }
 
 void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent) {
   std::string fileName = messageContent.fileName.Filename;
   iNode inode;
+  
   // Trata de leer los datos de archivo
   if (this->storage.getFileInfo(fileName, &inode)) {
-    u_int8_t totalBlocks = 0;
+    uint8_t totalBlocks = 0;
     for (size_t idx = 0; idx < TOTAL_DIRECT_POINTERS; ++idx) {
       if (inode.directBlocks[idx] != BLOCK_FREE_SLOT) {
         ++totalBlocks;
       }
     }
+    
     uint32_t blockSize = BLOCK_SIZE;
     uint32_t localPage = 0;
+    
     for (int i = 0; i < totalBlocks; i += 2) {
       // Crea mensaje genérico y de respuesta
       genMessage reply;
@@ -290,27 +331,30 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
       res.usedBlocks = totalBlocks;
       res.page = localPage++;
       res.totalPages = (totalBlocks + 1) / 2;
+      
       // Lee bloque 1 desde buffer
-      // No hay manera de leer a partir de cierto punto?
-      // como se que buffer1 y 2 no serán iguales?
-      char buffer1 [blockSize];
-      if (this->storage.readFile(fileName, buffer1, blockSize)) {
-        std::string firstBlock(buffer1);
-        res.firstBlock = firstBlock;
+      char buffer1[blockSize];
+      memset(buffer1, 0, blockSize);
+      uint32_t readSize = blockSize;
+      if (this->storage.readFile(fileName, blockSize * i, buffer1, readSize)) {
+        res.firstBlock = std::string(buffer1, readSize);
       }
+      
       // Lee bloque 2 desde buffer (si existe)
-      if (i + 1 < 2) {
-        char buffer2 [blockSize];
-        if (this->storage.readFile(fileName, buffer2, blockSize)) {
-          std::string secondBlock(buffer2);
-          res.secondBlock = secondBlock;
+      if (i + 1 < totalBlocks) {
+        char buffer2[blockSize];
+        memset(buffer2, 0, blockSize);
+        readSize = blockSize;
+        if (this->storage.readFile(fileName, blockSize * (i + 1), buffer2, readSize)) {
+          res.secondBlock = std::string(buffer2, readSize);
         }
       }
+      
       // Envía la respuesta
       reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
       reply.content = res;
       this->listeningSocket.bSendData(clientSocket, reply);
-      }
+    }
   } else {
     // mensaje de error
     genMessage reply;
@@ -318,6 +362,7 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
     err.message = "No se pudo obtener los metadatos del archivo " + fileName;
     reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
     reply.content = err;
+    this->listeningSocket.bSendData(clientSocket, reply);
   }
 }
 
@@ -395,7 +440,7 @@ void SensorServer::deleteFromSensorServer(deleteSensor& messageContent) {
       size_t pos = fileName.rfind(".txt");
       fileName.replace(pos, 4, ".log");
       if (!this->storage.deleteFile(fileName)) {
-        std::cerr << "Failed to log file -> "
+        std::cerr << "Failed to delete log file -> "
                   << fileName
                   << "\n"
                   << std::endl;
@@ -418,7 +463,7 @@ void SensorServer::deleteFromSensorServer(deleteSensor& messageContent) {
 void SensorServer::modifySensor(modifySensorInfp& messageContent) {
   std::lock_guard<std::mutex> lock(this->storageMutex);
 
-  std::string fileName;  // = messageContent.name;
+  std::string fileName = messageContent.name;
   // Si el archivo no existe envía un error
   if (this->storage.fileExists(fileName)) {
     char buffer [1024];

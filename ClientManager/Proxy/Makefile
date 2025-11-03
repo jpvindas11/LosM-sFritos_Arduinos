@@ -12,7 +12,7 @@ BIN_DIR = bin
 # Archivos
 TARGET = $(BIN_DIR)/proxy
 SOURCES = main.cpp Proxy.cpp
-UTIL_SOURCES = $(UTIL_DIR)/Socket.cpp $(UTIL_DIR)/Semaphore.cpp
+UTIL_SOURCES = $(UTIL_DIR)/Socket.cpp $(UTIL_DIR)/Semaphore.cpp $(UTIL_DIR)/Util.cpp
 
 # Objetos
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
@@ -48,6 +48,9 @@ $(OBJ_DIR)/Socket.o: $(UTIL_DIR)/Socket.cpp
 $(OBJ_DIR)/Semaphore.o: $(UTIL_DIR)/Semaphore.cpp
 	@echo "Compiling $<..."
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+$(OBJ_DIR)/Util.o: $(UTIL_DIR)/Util.cpp
+	@echo "Compiling $<..."
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 # Limpiar archivos generados
 clean:
@@ -61,7 +64,7 @@ rebuild: clean all
 # Ejecutar el proxy con parámetros por defecto
 run: all
 	@echo "Running proxy..."
-	./$(TARGET) 0.0.0.0 8080 127.0.0.1 9090
+	./$(TARGET) 0.0.0.0 8080 127.0.0.1 14004
 
 # Ejecutar con argumentos personalizados
 run-custom: all

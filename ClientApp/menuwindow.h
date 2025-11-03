@@ -7,6 +7,7 @@
 #include "arduinomenumanager.h"
 #include "setrankdialog.h"
 #include "Socket.hpp"
+#include "User.hpp"
 #include <QMainWindow>
 #include <QPushButton>
 #include <QString>
@@ -24,8 +25,6 @@ public:
     ~MenuWindow();
 
     void setCurrentUser(userDataQt user);
-
-    void setSocket(Socket* socket);
 
 private slots:
     void on_b_usuarios_clicked();
@@ -63,7 +62,7 @@ private:
 
     void hideMenuWidgets();
 
-    Socket* socket;
+    void askForUsers();
 
     userMenuManager userMenu;
 
@@ -71,6 +70,8 @@ private:
 
     dataMenuManager dataMenu;
 
+    // Saved users
+    std::vector<UserInfo> users;
 };
 
 #endif // MENUWINDOW_H

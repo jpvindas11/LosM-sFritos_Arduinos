@@ -37,6 +37,7 @@ HEADERS += \
     ../ClientManager/Util/Socket.hpp \
     ../ClientManager/Util/Messages.hpp \
     ../ClientManager/Util/User.hpp \
+    ../ClientManager/Util/IPConstants.hpp \
     usermenumanager.h
 
 FORMS += \

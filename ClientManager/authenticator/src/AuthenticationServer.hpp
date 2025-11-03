@@ -31,6 +31,7 @@ private:
     Semaphore counterMutex;
     std::unordered_map<std::string, AuthUser> users;
     std::mutex usersMutex;
+    std::mutex requestMutex;
     Socket listeningSocket;
     std::string serverIP;
     int listeningPort;
@@ -40,9 +41,17 @@ private:
     bool verifyPassword(const std::string& password, const std::string& storedHash, const std::string& storedSalt);
 
     genMessage processLoginRequest(const authLoginReq& req);
+    genMessage processLogoutRequest(const authLogout& req);
+    genMessage processCreateUserRequest(const authCreateUser& req);
+    genMessage processDeleteUserRequest(const authDeleteUser& req);
+    genMessage processModPassRequest(const authModifyUserPass& req);
+    genMessage processModRankRequest(const authModifyUserRank& req);
+    genMessage processUsersInfoRequest(const authRequestUsers& req);
 
     bool registerUser(const std::string& username, const std::string& password, char type, char permission);
     bool updateUserInFile(const std::string& username, std::function<void(user_t*)> updateFn);
+
+    bool storeUsersInVector(std::vector<UserInfo>* usersVec);
 
     int openConnectionRequestSocket(std::string ip, int port);
 
@@ -63,9 +72,9 @@ public:
     void listenForever(std::string ip, int port);
 
     bool addUser(const std::string& username, const std::string& password, char type, char permission);
-    void changePassword(std::string& username, const std::string& newPassword);
+    bool changePassword(const std::string& username, const std::string& newPassword);
     bool deleteUser(const std::string& username);
-    void changePermissions(std::string& username, char newType, char newPermission);
+    void changePermissions(const std::string& username, char newType, char newPermission);
 
     void printUsers();
     std::unordered_map<std::string, AuthUser>* getUserMap();

@@ -1,5 +1,6 @@
 #include <csignal>
 
+#include "../Util/IPConstants.hpp"
 #include "Handler.hpp"
 #include "SensorServer.hpp"
 
@@ -9,7 +10,7 @@ int main() {
 
   SensorServer& server = SensorServer::getInstance();
 
-  server.run("127.0.0.1", 9090, "127.0.0.1", 9090);
+  server.run("0.0.0.0", PORT_MASTER_STORAGE);
 
   return EXIT_SUCCESS;
 }

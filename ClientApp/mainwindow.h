@@ -6,6 +6,7 @@
 #include "userdataqt.h"
 #include "Socket.hpp"
 #include "Messages.hpp"
+#include "IPConstants.hpp"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -27,7 +28,6 @@ private slots:
 private:
     Ui::MainWindow *ui;
     userDataQt currentData;
-    Socket* socket;
     bool isConnected;
 };
 #endif // MAINWINDOW_H

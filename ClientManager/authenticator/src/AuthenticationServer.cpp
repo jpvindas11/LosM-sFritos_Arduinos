@@ -117,6 +117,36 @@ void AuthenticationServer::handleClientConnection(int clientSocket) {
                 response = processLoginRequest(req);
                 break;
             }
+            case MessageType::AUTH_LOGOUT: {
+                auto req = getMessageContent<authLogout>(receivedMsg);
+                response = processLogoutRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_CREATE: {
+                auto req = getMessageContent<authCreateUser>(receivedMsg);
+                response = processCreateUserRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_DELETE: {
+                auto req = getMessageContent<authDeleteUser>(receivedMsg);
+                response = processDeleteUserRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_MODIFY_PASS: {
+                auto req = getMessageContent<authModifyUserPass>(receivedMsg);
+                response = processModPassRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_MODIFY_RANK: {
+                auto req = getMessageContent<authModifyUserRank>(receivedMsg);
+                response = processModRankRequest(req);
+                break;
+            }
+            case MessageType::AUTH_USER_REQUEST: {
+                auto req = getMessageContent<authRequestUsers>(receivedMsg);
+                response = processUsersInfoRequest(req);
+                break;
+            }
             default: {
                 response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
                 response.content = errorCommonMsg{"Comando no reconocido"};
@@ -149,9 +179,8 @@ void AuthenticationServer::generateSalt(unsigned char* salt) {
     randombytes_buf(salt, crypto_pwhash_SALTBYTES);
 }
 
-bool AuthenticationServer::hashPassword(const std::string& password,
-                                       const unsigned char* salt,
-                                       unsigned char* hash) {
+bool AuthenticationServer::hashPassword(const std::string& password, const unsigned char* salt,
+    unsigned char* hash) {
     if (crypto_pwhash(hash, 32, password.c_str(), password.length(), salt,
                      crypto_pwhash_OPSLIMIT_INTERACTIVE,
                      crypto_pwhash_MEMLIMIT_INTERACTIVE,
@@ -182,7 +211,7 @@ bool AuthenticationServer::verifyPassword(const std::string& password,
 }
 
 genMessage AuthenticationServer::processLoginRequest(const authLoginReq& req) {
-    std::lock_guard<std::mutex> lock(usersMutex);
+    std::lock_guard<std::mutex> lock(requestMutex);
     genMessage response;
     
     auto it = users.find(req.user);
@@ -227,11 +256,148 @@ genMessage AuthenticationServer::processLoginRequest(const authLoginReq& req) {
     return response;
 }
 
+genMessage AuthenticationServer::processLogoutRequest(const authLogout& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    auto it = users.find(req.user);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+    
+    if (!it->second.isConnected) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no está conectado"};
+        return response;
+    }
+
+    it->second.isConnected = false;
+    counterMutex.wait();
+    connectedUsersCount--;
+    counterMutex.signal();
+
+    response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+    response.content = okCommonMsg{"Logout logrado"};
+    
+    std::cout << "Logout exitoso: " << req.user << std::endl;
+    return response;
+}
+
+genMessage AuthenticationServer::processCreateUserRequest(const authCreateUser& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    auto it = users.find(req.newUser);
+    if (it != users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario ya existe"};
+        return response;
+    }
+
+    if (this->registerUser(req.newUser, req.pass, req.rank, req.rank)) {
+        response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+        response.content = okCommonMsg{"Usuario registrado"};
+    } else {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"No se pudo registrar al user"};
+    }
+
+    std::cout << "Usuario registrado correctamente: " << req.newUser << std::endl;
+
+    return response;
+}
+genMessage AuthenticationServer::processDeleteUserRequest(const authDeleteUser& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    auto it = users.find(req.deleteUser);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+
+    if (this->deleteUser(req.deleteUser)) {
+        response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+        response.content = okCommonMsg{"Usuario eliminado"};
+    } else {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"No se pudo eliminar al user"};
+    }
+
+    std::cout << "Usuario eliminado correctamente: " << req.deleteUser << std::endl;
+
+    return response;
+}
+genMessage AuthenticationServer::processModPassRequest(const authModifyUserPass& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    auto it = users.find(req.user);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+
+    if (this->changePassword(req.user, req.newPassword)) {
+        response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+        response.content = okCommonMsg{"Usuario modificado"};
+
+        std::cout << "Usuario modificado (password) correctamente: " << req.user << std::endl;
+    } else {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"No se pudo cambiar el password"};
+        return response;
+    }
+
+
+    return response;
+}
+genMessage AuthenticationServer::processModRankRequest(const authModifyUserRank& req) {
+   std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+
+    auto it = users.find(req.user);
+    if (it == users.end()) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"Usuario no existe"};
+        return response;
+    }
+
+    this->changePermissions(req.user, req.rank, req.rank);
+    response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+    response.content = okCommonMsg{"Usuario modificado"};
+
+    std::cout << "Usuario modificado (rank) correctamente: " << req.user << std::endl;
+
+    return response;
+}
+
+genMessage AuthenticationServer::processUsersInfoRequest(const authRequestUsers& req) {
+    std::lock_guard<std::mutex> lock(requestMutex);
+    genMessage response;
+    
+    std::vector<UserInfo> usersVec;
+    
+    if (!storeUsersInVector(&usersVec)) {
+        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+        response.content = errorCommonMsg{"No se pudo guardar los users"};
+        return response;
+    }
+    
+    response.MID = static_cast<uint8_t>(MessageType::AUTH_USER_RESPONSE);
+    response.content = authRequestUsers{usersVec};
+    
+    std::cout << "Usuarios recopilados exitosamente: " << usersVec.size() << std::endl;
+    
+    return response;
+}
 
 bool AuthenticationServer::registerUser(const std::string& username,
-                                               const std::string& password,
-                                               char type,
-                                               char permission) {
+    const std::string& password, char type, char permission) {
     std::lock_guard<std::mutex> lock(usersMutex);
     
     if (users.find(username) != users.end()) {
@@ -305,7 +471,7 @@ bool AuthenticationServer::registerUser(const std::string& username,
 }
 
 bool AuthenticationServer::updateUserInFile(const std::string& username,
-                                           std::function<void(user_t*)> updateFn) {
+    std::function<void(user_t*)> updateFn) {
     uint32_t fileSize = fs->getFileSize("user_data.csv");
     if (fileSize == 0) return false;
     
@@ -345,10 +511,27 @@ bool AuthenticationServer::updateUserInFile(const std::string& username,
     return success;
 }
 
-bool AuthenticationServer::addUser(const std::string& username,
-                                   const std::string& password,
-                                   char type,
-                                   char permission) {
+bool AuthenticationServer::storeUsersInVector(std::vector<UserInfo>* usersVec) {
+    if (usersVec == nullptr) {
+        return false;
+    }
+
+    usersVec->clear();
+    usersVec->reserve(users.size());
+
+    for (const auto& [username, user] : users) {
+        usersVec->emplace_back(UserInfo{
+            std::string(user.username),
+            user.rank,
+            user.isConnected
+        });
+    }
+
+    return true;
+}
+
+bool AuthenticationServer::addUser(const std::string& username, const std::string& password,
+    char type, char permission) {
     return registerUser(username, password, type, permission);
 }
 
@@ -357,17 +540,14 @@ std::unordered_map<std::string, AuthUser>* AuthenticationServer::getUserMap() {
 }
 
 void AuthenticationServer::hexLiterals(const unsigned char* input,
-                                      size_t inputLen,
-                                      char* output,
-                                      size_t outputLen) {
+    size_t inputLen, char* output, size_t outputLen) {
     for (size_t i = 0; i < inputLen && (i * 2) < outputLen; i++) {
         sprintf(output + (i * 2), "%02x", input[i]);
     }
 }
 
 void AuthenticationServer::hexToBytes(const std::string& hexString,
-                                     unsigned char* output,
-                                     size_t outputLen) {
+    unsigned char* output, size_t outputLen) {
     for (size_t i = 0; i < outputLen && i * 2 < hexString.length(); i++) {
         std::string byteString = hexString.substr(i * 2, 2);
         output[i] = static_cast<unsigned char>(
@@ -451,20 +631,20 @@ void AuthenticationServer::loadUsers() {
     std::cout << "Total de usuarios cargados: " << users.size() << std::endl;
 }
 
-void AuthenticationServer::changePassword(std::string& username,
+bool AuthenticationServer::changePassword(const std::string& username,
                                          const std::string& newPassword) {
     std::lock_guard<std::mutex> lock(usersMutex);
     
     auto it = users.find(username);
     if (it == users.end()) {
         std::cout << "Error: Usuario '" << username << "' no existe" << std::endl;
-        return;
+        return false;
     }
     
     if (newPassword.length() < 4) {
         std::cout << "Error: Nueva contraseña muy corta (mínimo 4 caracteres)" 
                   << std::endl;
-        return;
+        return false;
     }
     
     // Generar nuevo salt
@@ -475,7 +655,7 @@ void AuthenticationServer::changePassword(std::string& username,
     unsigned char newHash[32];
     if (!hashPassword(newPassword, newSalt, newHash)) {
         std::cout << "Error: No se pudo hashear la nueva contraseña" << std::endl;
-        return;
+        return false;
     }
     
     // Actualizar en memoria
@@ -493,7 +673,7 @@ void AuthenticationServer::changePassword(std::string& username,
     if (!fs->readFile("user_data.csv", buffer, bytesRead)) {
         std::cerr << "Error al leer archivo de usuarios" << std::endl;
         delete[] buffer;
-        return;
+        return false;
     }
     
     bool found = false;
@@ -527,6 +707,7 @@ void AuthenticationServer::changePassword(std::string& username,
     }
     
     delete[] buffer;
+    return true;
 }
 
 bool AuthenticationServer::deleteUser(const std::string& username) {
@@ -611,7 +792,7 @@ bool AuthenticationServer::deleteUser(const std::string& username) {
     return true;
 }
 
-void AuthenticationServer::changePermissions(std::string& username,
+void AuthenticationServer::changePermissions(const std::string& username,
                                             char newType,
                                             char newPermission) {
     std::lock_guard<std::mutex> lock(usersMutex);

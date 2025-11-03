@@ -12,8 +12,9 @@
 #include <stdexcept>
 #include <variant>
 #include <vector>
+#include "User.hpp"
 
-#define MAX_ERR_MSG_LENGTH 32
+#define MAX_COMMON_MSG_LENGTH 32
 
 enum class MessageType : uint8_t {
     FILE_NUMBER_REQ,
@@ -32,7 +33,15 @@ enum class MessageType : uint8_t {
     MODIFY_SENSOR,
     AUTH_LOGIN_REQ,
     AUTH_LOGIN_SUCCESS,
+    AUTH_LOGOUT,
+    AUTH_USER_CREATE,
+    AUTH_USER_DELETE,
+    AUTH_USER_MODIFY_PASS,
+    AUTH_USER_MODIFY_RANK,
+    AUTH_USER_REQUEST,
+    AUTH_USER_RESPONSE,
     ERR_COMMOM_MSG,
+    OK_COMMON_MSG,
     LOG_USER_REQUEST,
     LOG_USER_RESP,
     ADD_USER_LOG,
@@ -115,6 +124,7 @@ struct senFileBlockRes {
 struct senAddLog {
     sensorFileName fileName;
     std::string data;
+    std::string originIP;
 };
 
 struct addSensor {
@@ -150,6 +160,7 @@ struct modifySensorInfp {
     uint16_t last_send_year;
     uint8_t last_send_moth;
     uint8_t last_send_day;
+    std::string name;
 };
 
 
@@ -162,7 +173,39 @@ struct authLoginSuccess {
     token Token;
 };
 
+struct authLogout {
+    std::string user;
+};
+
+struct authCreateUser {
+    std::string newUser;
+    std::string pass;
+    uint8_t rank;
+};
+
+struct authDeleteUser {
+    std::string deleteUser;
+};
+
+struct authModifyUserPass {
+    std::string user;
+    std::string newPassword;
+};
+
+struct authModifyUserRank {
+    std::string user;
+    uint8_t rank;
+};
+
+struct authRequestUsers {
+    std::vector<UserInfo> users;
+};
+
 struct errorCommonMsg {
+    std::string message;
+};
+
+struct okCommonMsg {
     std::string message;
 };
 
@@ -187,7 +230,6 @@ struct addUserLog {
     std::string logInfo;
 };
 
-
 struct genMessage {
     uint8_t MID;
     std::variant<
@@ -204,7 +246,14 @@ struct genMessage {
         modifySensorInfp,
         authLoginReq,
         authLoginSuccess,
+        authLogout,
+        authCreateUser,
+        authDeleteUser,
+        authModifyUserPass,
+        authModifyUserRank,
+        authRequestUsers,
         errorCommonMsg,
+        okCommonMsg,
         userLogRequestCommon,
         userLogResp,
         addUserLog
@@ -216,15 +265,22 @@ namespace bitsery {
     template <typename S>
     void serialize(S& s, token& t) {
         s.value4b(t.id);
-        s.text1b(t.name, 20);
+        s.text1b(t.name, USER_NAME_SIZE);
         s.value1b(t.userType);
         s.value1b(t.hour);
         s.value1b(t.minute);
     }
 
     template <typename S>
+    void serialize(S& s, UserInfo& ui) {
+        s.text1b(ui.user, USER_NAME_SIZE);
+        s.value1b(ui.rank);
+        s.value1b(ui.isConnected);
+    }
+
+    template <typename S>
     void serialize(S& s, sensorFileName& sf) {
-        s.text1b(sf.sensorType, 3);
+        s.text1b(sf.sensorType, 16);
         s.value2b(sf.id);
         s.value2b(sf.year);
         s.value1b(sf.month);
@@ -301,6 +357,7 @@ namespace bitsery {
     void serialize(S& s, senAddLog& m) {
         s.object(m.fileName);
         s.text1b(m.data, 256);
+        s.text1b(m.originIP, 16);
     }
 
     template <typename S>
@@ -337,8 +394,8 @@ namespace bitsery {
 
     template <typename S>
     void serialize(S& s, authLoginReq& m) {
-        s.text1b(m.user, 28);
-        s.text1b(m.pass, 28);
+        s.text1b(m.user, USER_NAME_SIZE);
+        s.text1b(m.pass, USER_PASSWORD_SIZE_MAX);
     }
 
     template <typename S>
@@ -347,8 +404,47 @@ namespace bitsery {
     }
 
     template <typename S>
+    void serialize(S& s, authLogout& m) {
+        s.text1b(m.user, USER_NAME_SIZE);
+    }
+
+    template <typename S>
+    void serialize(S& s, authCreateUser& m) {
+        s.text1b(m.newUser, USER_NAME_SIZE);
+        s.text1b(m.pass, USER_PASSWORD_SIZE_MAX);
+        s.value1b(m.rank);
+    }
+
+    template <typename S>
+    void serialize(S& s, authDeleteUser& m) {
+        s.text1b(m.deleteUser, USER_NAME_SIZE);
+    }
+
+    template <typename S>
+    void serialize(S& s, authModifyUserPass& m) {
+        s.text1b(m.user, USER_NAME_SIZE);
+        s.text1b(m.newPassword, USER_PASSWORD_SIZE_MAX);
+    }
+
+    template <typename S>
+    void serialize(S& s, authModifyUserRank& m) {
+        s.text1b(m.user, USER_NAME_SIZE);
+        s.value1b(m.rank);
+    }
+
+    template <typename S>
+    void serialize(S& s, authRequestUsers& m) {
+        s.container(m.users, 100);
+    }
+
+    template <typename S>
     void serialize(S& s, errorCommonMsg& m) {
-        s.text1b(m.message, MAX_ERR_MSG_LENGTH);
+        s.text1b(m.message, MAX_COMMON_MSG_LENGTH);
+    }
+
+    template <typename S>
+    void serialize(S& s, okCommonMsg& m) {
+        s.text1b(m.message, MAX_COMMON_MSG_LENGTH);
     }
 
     template <typename S>

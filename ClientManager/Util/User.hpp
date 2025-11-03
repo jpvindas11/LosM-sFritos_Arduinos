@@ -11,6 +11,12 @@
 #define USER_HASH_SIZE 64  // Hexadecimal representation (32 bytes = 64 hex chars)
 #define USER_SALT_SIZE 32  // Hexadecimal representation (16 bytes = 32 hex chars)
 
+struct UserInfo {
+    std::string user;
+    char rank;
+    bool isConnected;
+};
+
 enum USER_TYPES {
     USER_OWNER = 'o',
     USER_HARDWAREMANAGER = 'h',

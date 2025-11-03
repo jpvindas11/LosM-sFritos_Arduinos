@@ -32,7 +32,6 @@ public:
     QLabel *login_info;
     QLabel *label_2;
     QLineEdit *lineEdit_IP;
-    QLineEdit *lineEdit_PORT;
     QPushButton *pushButton_ip;
     QMenuBar *menubar;
     QStatusBar *statusbar;
@@ -67,18 +66,13 @@ public:
         login_info->setAlignment(Qt::AlignCenter);
         label_2 = new QLabel(centralwidget);
         label_2->setObjectName(QString::fromUtf8("label_2"));
-        label_2->setGeometry(QRect(450, 90, 331, 20));
+        label_2->setGeometry(QRect(450, 190, 331, 20));
         label_2->setAlignment(Qt::AlignCenter);
         lineEdit_IP = new QLineEdit(centralwidget);
         lineEdit_IP->setObjectName(QString::fromUtf8("lineEdit_IP"));
-        lineEdit_IP->setGeometry(QRect(480, 160, 281, 26));
+        lineEdit_IP->setGeometry(QRect(470, 220, 281, 26));
         lineEdit_IP->setEchoMode(QLineEdit::Normal);
         lineEdit_IP->setCursorMoveStyle(Qt::LogicalMoveStyle);
-        lineEdit_PORT = new QLineEdit(centralwidget);
-        lineEdit_PORT->setObjectName(QString::fromUtf8("lineEdit_PORT"));
-        lineEdit_PORT->setGeometry(QRect(480, 220, 281, 26));
-        lineEdit_PORT->setEchoMode(QLineEdit::Normal);
-        lineEdit_PORT->setCursorMoveStyle(Qt::LogicalMoveStyle);
         pushButton_ip = new QPushButton(centralwidget);
         pushButton_ip->setObjectName(QString::fromUtf8("pushButton_ip"));
         pushButton_ip->setGeometry(QRect(580, 290, 87, 26));
@@ -104,10 +98,8 @@ public:
         label->setText(QCoreApplication::translate("MainWindow", "Bienvenido a Frituinos", nullptr));
         pushButton->setText(QCoreApplication::translate("MainWindow", "Ingresar", nullptr));
         login_info->setText(QString());
-        label_2->setText(QCoreApplication::translate("MainWindow", "Ingresa IP y Puerto", nullptr));
+        label_2->setText(QCoreApplication::translate("MainWindow", "Ingresa IP del servidor", nullptr));
         lineEdit_IP->setPlaceholderText(QCoreApplication::translate("MainWindow", "IP del servidor", nullptr));
-        lineEdit_PORT->setText(QString());
-        lineEdit_PORT->setPlaceholderText(QCoreApplication::translate("MainWindow", "Puerto del servidor", nullptr));
         pushButton_ip->setText(QCoreApplication::translate("MainWindow", "Verificar", nullptr));
     } // retranslateUi
 

@@ -1,6 +1,7 @@
 /// @copyright Los Más Fritos - 2025
 
 #include "AuthenticationServer.hpp"
+#include "../../Util/IPConstants.hpp"
 #include <iostream>
 #include <string>
 
@@ -13,7 +14,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::string ip = "127.0.0.1";
-    int port = 8080;
+    int port = PORT_MASTER_AUTH;
 
     // Parseo de argumentos
     if (argc >= 2) {
@@ -36,7 +37,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    server.addUser("Wega", "password", USER_OWNER, USER_OWNER);
+    server.addUser("Admin", "password", USER_OWNER, USER_OWNER);
 
     std::cout << "\n& Iniciando servidor en " << ip << ":" << port << "... &" << std::endl;
 
