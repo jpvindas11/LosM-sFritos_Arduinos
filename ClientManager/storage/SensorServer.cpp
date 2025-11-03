@@ -232,7 +232,7 @@ void SensorServer::sendFileNames(int clientSocket, GenNumReq& messageContent) {
     resp.totalPages = totalPages;
     // Divide el contenido
     size_t inicio = idx * pageSize;
-    size_t fin = min(inicio + pageSize, logFiles.size());
+    size_t fin = std::min(inicio + pageSize, logFiles.size());
     std::vector<forNamesRequest> subvector(logFiles.begin() + inicio, logFiles.begin() + fin);
     resp.fileNames.names = subvector;
     // Envía el mensaje
@@ -503,19 +503,3 @@ void SensorServer::modifySensor(modifySensorInfp& messageContent) {
               << std::endl;
   }
 }
-
-void SensorServer::sendFileNumber(int clientSocket, GenNumReq& messageContent) {}
-/// Envía los nombres de los archivos en sistema
-void SensorServer::sendFileNames(int clientSocket, GenNumReq& messageContent) {}
-/// Envía metadatos del sensor solicitados
-void SensorServer::sendSensorFileMetadata(int clientSocket, genSenFileReq& messageContent) {}
-/// Envía el tamaño del bloque solicitado
-void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq& messageContent) {}
-/// Envía los datos del archivo en bloques
-void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent) {}
-/// Agrega un sensor
-void SensorServer::addToSensorServer(addSensor& messageContent) {}
-/// Elimina un sensor
-void SensorServer::deleteFromSensorServer(deleteSensor& messageContent) {}
-/// Modifica los metadatos de un sensor
-void SensorServer::modifySensor(modifySensorInfp& messageContent) {}
