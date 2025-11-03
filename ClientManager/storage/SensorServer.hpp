@@ -9,11 +9,13 @@
 
 #include "genServer/StorageServer.hpp"
 
+#define SENSOR_FORGET_TIME 120 // 2 minutos
 
 class SensorServer : public StorageServer {
  private:
   std::atomic<bool> running;
   std::mutex storageMutex; // Para acceso thread-safe al filesystem
+  std::vector<sensorRecentData> recentData;
 
   void processClientInThread(int clientSocket);
 
@@ -48,5 +50,10 @@ class SensorServer : public StorageServer {
   void deleteFromSensorServer(deleteSensor& messageContent);
   /// Modifica los metadatos de un sensor
   void modifySensor(modifySensorInfp& messageContent);
+
+  void sendRecentData(int clientSocket, GenNumReq& messageContent);
+
+
+  void updateRecentSensorData(const std::string& sensorIP, const std::string& data);
 };
 #endif // SENSORSERVER_HPP

@@ -113,6 +113,12 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
       break;
     }
 
+    case MessageType::SEN_RECENT_DATA_REQ: {
+      GenNumReq messageContent = getMessageContent<GenNumReq>(clientRequest);
+      this->sendRecentData(clientSocket, messageContent);
+      break;
+    }
+
     case MessageType::ADD_SENSOR: {
       addSensor messageContent = getMessageContent<addSensor>(clientRequest);
       this->addToSensorServer(messageContent);
@@ -140,6 +146,8 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
 
 void SensorServer::addToSensorLog(senAddLog& messageContent) {
   std::lock_guard<std::mutex> lock(this->storageMutex); // Thread-safe file access
+
+  this->updateRecentSensorData(messageContent.originIP, messageContent.data);
   
   std::string fileName = this->getSensorFileName(messageContent.fileName);
   std::cout << "Adding to sensor log: " << fileName << std::endl;
@@ -514,4 +522,90 @@ void SensorServer::modifySensor(modifySensorInfp& messageContent) {
               << "\n"
               << std::endl;
   }
+}
+
+void SensorServer::sendRecentData(int clientSocket, GenNumReq& messageContent) {
+  std::lock_guard<std::mutex> lock(this->storageMutex);
+  
+  std::cout << "Sending recent sensor data (total sensors: " << this->recentData.size() << ")" << std::endl;
+  
+  time_t currentTime = time(nullptr);
+  auto it = this->recentData.begin();
+  while (it != this->recentData.end()) {
+    double elapsedTime = difftime(currentTime, it->lastModified);
+    if (elapsedTime > SENSOR_FORGET_TIME) {
+      std::cout << "Removing expired sensor before sending: " << it->ip << std::endl;
+      it = this->recentData.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  
+  genMessage reply;
+  senRecentDataRes response;
+  
+  size_t maxSensors = std::min(this->recentData.size(), size_t(20));
+  response.recentData.reserve(maxSensors);
+  
+  for (size_t i = 0; i < maxSensors; ++i) {
+    response.recentData.push_back(this->recentData[i]);
+    std::cout << "  - Sensor " << (i+1) << ": IP=" << this->recentData[i].ip 
+              << ", Data=" << this->recentData[i].data 
+              << ", Age=" << (currentTime - this->recentData[i].lastModified) << "s"
+              << std::endl;
+  }
+  
+  reply.MID = static_cast<uint8_t>(MessageType::SEN_RECENT_DATA_RES);
+  reply.content = response;
+  
+  if (this->listeningSocket.bSendData(clientSocket, reply)) {
+    std::cout << "Recent data sent successfully (" 
+              << response.recentData.size() << " sensors)" << std::endl;
+  } else {
+    std::cerr << "ERROR: Failed to send recent data" << std::endl;
+  }
+}
+
+void SensorServer::updateRecentSensorData(const std::string& sensorIP, const std::string& data) {
+  time_t currentTime = time(nullptr);
+  bool found = false;
+  
+  // Buscar si ya existe un registro para esta IP
+  for (auto& sensor : this->recentData) {
+    if (sensor.ip == sensorIP) {
+      // Actualizar datos existentes
+      sensor.data = data;
+      sensor.lastModified = static_cast<uint32_t>(currentTime);
+      found = true;
+      std::cout << "Updated recent data for sensor IP: " << sensorIP << std::endl;
+      break;
+    }
+  }
+  
+  // Si no existe, agregar nuevo registro
+  if (!found) {
+    sensorRecentData newSensor;
+    newSensor.ip = sensorIP;
+    newSensor.data = data;
+    newSensor.lastModified = static_cast<uint32_t>(currentTime);
+    this->recentData.push_back(newSensor);
+    std::cout << "Added new sensor to recent data: " << sensorIP << std::endl;
+  }
+  
+  // Limpiar sensores que han excedido el tiempo de olvido
+  auto it = this->recentData.begin();
+  while (it != this->recentData.end()) {
+    double elapsedTime = difftime(currentTime, it->lastModified);
+    
+    if (elapsedTime > SENSOR_FORGET_TIME) {
+      std::cout << "Removing expired sensor from recent data: " << it->ip 
+                << " (inactive for " << elapsedTime << " seconds)" << std::endl;
+      it = this->recentData.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  
+  // Mostrar estado actual del vector
+  std::cout << "Current active sensors in memory: " << this->recentData.size() << std::endl;
 }

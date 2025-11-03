@@ -28,6 +28,8 @@ enum class MessageType : uint8_t {
     SEN_FILE_BLOCK_REQ,
     SEN_FILE_BLOCK_RESP,
     SEN_ADD_LOG,
+    SEN_RECENT_DATA_REQ,
+    SEN_RECENT_DATA_RES,
     ADD_SENSOR,
     DELETE_SENSOR,
     MODIFY_SENSOR,
@@ -54,6 +56,12 @@ struct token {
     uint8_t userType;
     uint8_t hour;
     uint8_t minute;
+};
+
+struct sensorRecentData {
+  std::string ip;
+  std::string data;
+  uint32_t lastModified;
 };
 
 struct sensorFileName {
@@ -125,6 +133,10 @@ struct senAddLog {
     sensorFileName fileName;
     std::string data;
     std::string originIP;
+};
+
+struct senRecentDataRes {
+    std::vector<sensorRecentData> recentData;
 };
 
 struct addSensor {
@@ -240,6 +252,7 @@ struct genMessage {
         senFileMetDRes,
         senFileBlockNumRes,
         senAddLog,
+        senRecentDataRes,
         senFileBlockRes,
         addSensor,
         deleteSensor,
@@ -276,6 +289,13 @@ namespace bitsery {
         s.text1b(ui.user, USER_NAME_SIZE);
         s.value1b(ui.rank);
         s.value1b(ui.isConnected);
+    }
+
+    template <typename S>
+    void serialize(S& s, sensorRecentData& ui) {
+        s.text1b(ui.ip, 16);
+        s.text1b(ui.data, 48);
+        s.value4b(ui.lastModified);
     }
 
     template <typename S>
@@ -358,6 +378,11 @@ namespace bitsery {
         s.object(m.fileName);
         s.text1b(m.data, 256);
         s.text1b(m.originIP, 16);
+    }
+
+    template <typename S>
+    void serialize(S& s, senRecentDataRes& m) {
+        s.container(m.recentData, 20);
     }
 
     template <typename S>
