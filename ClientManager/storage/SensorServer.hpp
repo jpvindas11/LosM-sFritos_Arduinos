@@ -54,6 +54,6 @@ class SensorServer : public StorageServer {
   void sendRecentData(int clientSocket, GenNumReq& messageContent);
 
 
-  void updateRecentSensorData(const std::string& sensorIP, const std::string& data);
+ void updateRecentSensorData(const std::string& sensorIP, const std::string& sensorType, const std::string& data);
 };
 #endif // SENSORSERVER_HPP

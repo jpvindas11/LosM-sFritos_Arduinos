@@ -1,71 +1,81 @@
 #include "ArduinoSimulator.hpp"
+#include <iostream>
 #include <vector>
-#include <memory>
-#include <signal.h>
-#include <thread>
+#include <csignal>
 
-std::vector<std::unique_ptr<ArduinoSimulator>> simulators;
-std::atomic<bool> keepRunning(true);
+// Vector global para manejar los simuladores
+std::vector<ArduinoSimulator*> simulators;
 
-void signalHandler(int signal) {
-    std::cout << "\nReceived signal " << signal << ". Stopping simulators...\n";
-    keepRunning.store(false);
-    
-    for (auto& simulator : simulators) {
-        simulator->stopSending();
+// Manejador de señales para detener los simuladores limpiamente
+void signalHandler(int signum) {
+    std::cout << "\n\n=== Deteniendo simuladores... ===" << std::endl;
+    for (auto* sim : simulators) {
+        sim->stop();
     }
+    exit(signum);
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     // Configurar manejador de señales
     signal(SIGINT, signalHandler);
-    signal(SIGTERM, signalHandler);
     
-    // Configuración por defecto
-    std::string proxyIP = "127.0.0.1";
-    int proxyPort = 8080;
-    int numSimulators = 3;
+    std::cout << "=== Simulador de Sensores Arduino ESP32 ===" << std::endl;
+    std::cout << "===========================================\n" << std::endl;
     
-    if (argc >= 3) {
-        proxyIP = argv[1];
-        proxyPort = std::stoi(argv[2]);
-    }
-    if (argc >= 4) {
-        numSimulators = std::stoi(argv[3]);
-    }
+    // Configuración del servidor (cambiar según tu configuración)
+    std::string serverIP = "127.0.0.1";  // Cambia esto a la IP de tu MasterServer
+    int serverPort = 13000;  // Puerto del Arduino en MasterServer (PORT_MASTER_ARDUINO)
     
-    std::cout << "Starting " << numSimulators << " Arduino simulators in PARALLEL mode\n";
-    std::cout << "Proxy: " << proxyIP << ":" << proxyPort << std::endl;
+    std::cout << "Servidor: " << serverIP << ":" << serverPort << "\n" << std::endl;
     
-    // Tipos de sensores disponibles
-    std::vector<std::string> sensorTypes = {"TMP", "HUM", "PRS"};
+    // Crear simuladores para los 3 tipos de sensores
+    // Simulador de distancia - cada 30 segundos
+    auto* distSim = new ArduinoSimulator(serverIP, serverPort, "DIS", 1, 15000);
+    simulators.push_back(distSim);
     
-    // Crear y arrancar simuladores en paralelo
-    for (int i = 0; i < numSimulators; ++i) {
-        uint16_t arduinoId = 1000 + i;
-        std::string sensorType = sensorTypes[i % sensorTypes.size()];
-        int interval = 2000 + (i * 300); // Intervalos ligeramente diferentes
-        
-        auto simulator = std::make_unique<ArduinoSimulator>(
-            arduinoId, proxyIP, proxyPort, sensorType, interval
-        );
-        
-        simulator->startSending();
-        simulators.push_back(std::move(simulator));
-        
-        // Pequeña pausa entre inicios
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    // Simulador de humedad - cada 32 segundos
+    auto* humSim = new ArduinoSimulator(serverIP, serverPort, "HUM", 1, 15500);
+    simulators.push_back(humSim);
+    
+    // Simulador de UV - cada 35 segundos
+    auto* uvSim = new ArduinoSimulator(serverIP, serverPort, "UV", 1, 17000);
+    simulators.push_back(uvSim);
+    
+    std::cout << "=== Iniciando simuladores ===" << std::endl;
+    std::cout << "Presiona Ctrl+C para detener\n" << std::endl;
+    
+    // Iniciar todos los simuladores
+    for (auto* sim : simulators) {
+        sim->start();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Delay entre inicios
     }
     
-    std::cout << "All " << numSimulators << " simulators started in PARALLEL mode.\n";
-    std::cout << "Each Arduino is sending data concurrently in its own thread.\n";
-    std::cout << "Press Ctrl+C to stop...\n\n";
+    std::cout << "\n=== Todos los simuladores están activos ===" << std::endl;
+    std::cout << "Envío de datos en progreso...\n" << std::endl;
     
     // Mantener el programa corriendo
-    while (keepRunning.load()) {
+    while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
+        // Verificar si todos los simuladores siguen corriendo
+        bool allRunning = true;
+        for (auto* sim : simulators) {
+            if (!sim->isRunning()) {
+                allRunning = false;
+                break;
+            }
+        }
+        
+        if (!allRunning) {
+            std::cout << "Algún simulador se detuvo inesperadamente" << std::endl;
+            break;
+        }
     }
     
-    std::cout << "All simulators stopped. Exiting...\n";
+    // Limpiar memoria
+    for (auto* sim : simulators) {
+        delete sim;
+    }
+    
     return 0;
 }

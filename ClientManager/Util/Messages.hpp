@@ -60,6 +60,7 @@ struct token {
 
 struct sensorRecentData {
   std::string ip;
+  std::string sensorType;
   std::string data;
   uint32_t lastModified;
 };
@@ -294,7 +295,8 @@ namespace bitsery {
     template <typename S>
     void serialize(S& s, sensorRecentData& ui) {
         s.text1b(ui.ip, 16);
-        s.text1b(ui.data, 48);
+        s.text1b(ui.sensorType, 16);
+        s.container1b(ui.data, 256);
         s.value4b(ui.lastModified);
     }
 

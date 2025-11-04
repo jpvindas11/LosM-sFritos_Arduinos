@@ -1,46 +1,57 @@
-#ifndef ARDUINO_SIMULATOR_HPP
-#define ARDUINO_SIMULATOR_HPP
+#ifndef ARDUINOSIMULATOR_HPP
+#define ARDUINOSIMULATOR_HPP
 
+#include <iostream>
 #include <string>
 #include <thread>
-#include <atomic>
-#include <random>
-#include <iostream>
 #include <chrono>
+#include <random>
+#include <atomic>
+#include <ctime>
+#include <sstream>
+#include <iomanip>
 #include "../Util/Socket.hpp"
 #include "../Util/Messages.hpp"
 
 class ArduinoSimulator {
 private:
-    uint16_t arduinoId;
-    std::string proxyIP;
-    int proxyPort;
-    std::string sensorType;
-    int sendIntervalMs;
+    std::string serverIP;
+    int serverPort;
+    std::string sensorType;  // "DIS", "HUM", "UV"
+    uint16_t sensorID;
     
     std::atomic<bool> running;
-    std::thread senderThread;
+    std::thread simulationThread;
     
-    // Random number generators
+    // Intervalos de envío (en milisegundos)
+    unsigned long sendInterval;
+    
+    // Generador de números aleatorios
     std::mt19937 rng;
-    std::uniform_real_distribution<float> tempDist;
-    std::uniform_real_distribution<float> humidityDist;
-    std::uniform_real_distribution<float> pressureDist;
     
-    // Private methods
-    void senderLoop();
-    genMessage generateSensorMessage();
-    std::string generateSensorValue();
-    sensorFileName getCurrentFileName();
+    // Funciones para generar datos aleatorios
+    float generateDistance();    // 5-200 cm
+    float generateHumidity();     // 20-90 %
+    float generateUV();          // 0-500 mW/m²
+    
+    // Función principal de simulación
+    void simulationLoop();
+    
+    // Enviar datos al servidor
+    bool sendDataToServer(const std::string& data);
+    
+    // Obtener fecha actual
+    sensorFileName getCurrentDate();
 
 public:
-    ArduinoSimulator(uint16_t id, const std::string& proxyIP, int proxyPort,
-                     const std::string& sensorType, int intervalMs);
+    ArduinoSimulator(const std::string& serverIP, int serverPort, 
+                     const std::string& sensorType, uint16_t sensorID,
+                     unsigned long intervalMs);
     ~ArduinoSimulator();
     
-    void startSending();
-    void stopSending();
-    void sendSensorData();
+    void start();
+    void stop();
+    bool isRunning() const;
 };
 
-#endif // ARDUINO_SIMULATOR_HPP
+#endif // ARDUINOSIMULATOR_HPP

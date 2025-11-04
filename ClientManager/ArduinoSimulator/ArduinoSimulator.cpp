@@ -1,122 +1,173 @@
 #include "ArduinoSimulator.hpp"
-#include <ctime>
-#include <iomanip>
-#include <sstream>
 
-ArduinoSimulator::ArduinoSimulator(uint16_t id, const std::string& proxyIP, int proxyPort,
-                                   const std::string& sensorType, int intervalMs)
-    : arduinoId(id), proxyIP(proxyIP), proxyPort(proxyPort), 
-      sensorType(sensorType), sendIntervalMs(intervalMs), running(false),
-      rng(std::random_device{}()), tempDist(15.0f, 35.0f), 
-      humidityDist(30.0f, 80.0f), pressureDist(980.0f, 1020.0f) {
+ArduinoSimulator::ArduinoSimulator(const std::string& serverIP, int serverPort,
+                                   const std::string& sensorType, uint16_t sensorID,
+                                   unsigned long intervalMs)
+    : serverIP(serverIP),
+      serverPort(serverPort),
+      sensorType(sensorType),
+      sensorID(sensorID),
+      sendInterval(intervalMs),
+      running(false),
+      rng(std::random_device{}()) {
 }
 
 ArduinoSimulator::~ArduinoSimulator() {
-    stopSending();
+    stop();
 }
 
-void ArduinoSimulator::startSending() {
+void ArduinoSimulator::start() {
     if (running.load()) {
-        std::cout << "Arduino " << arduinoId << " is already sending data\n";
+        std::cout << "[" << sensorType << "_" << sensorID << "] Ya está ejecutándose" << std::endl;
         return;
     }
     
     running.store(true);
-    senderThread = std::thread(&ArduinoSimulator::senderLoop, this);
-    std::cout << "Arduino " << arduinoId << " (" << sensorType << ") started sending every " 
-              << sendIntervalMs << "ms in parallel mode\n";
+    simulationThread = std::thread(&ArduinoSimulator::simulationLoop, this);
+    std::cout << "[" << sensorType << "_" << sensorID << "] Simulador iniciado" << std::endl;
 }
 
-void ArduinoSimulator::stopSending() {
-    if (running.load()) {
-        running.store(false);
-        if (senderThread.joinable()) {
-            senderThread.join();
+void ArduinoSimulator::stop() {
+    if (!running.load()) {
+        return;
+    }
+    
+    running.store(false);
+    if (simulationThread.joinable()) {
+        simulationThread.join();
+    }
+    std::cout << "[" << sensorType << "_" << sensorID << "] Simulador detenido" << std::endl;
+}
+
+bool ArduinoSimulator::isRunning() const {
+    return running.load();
+}
+
+float ArduinoSimulator::generateDistance() {
+    std::uniform_real_distribution<float> dist(5.0f, 200.0f);
+    return dist(rng);
+}
+
+float ArduinoSimulator::generateHumidity() {
+    std::uniform_real_distribution<float> dist(20.0f, 90.0f);
+    return dist(rng);
+}
+
+float ArduinoSimulator::generateUV() {
+    std::uniform_real_distribution<float> dist(0.0f, 500.0f);
+    return dist(rng);
+}
+
+sensorFileName ArduinoSimulator::getCurrentDate() {
+    sensorFileName fileName;
+    fileName.sensorType = sensorType;
+    fileName.id = sensorID;
+    
+    time_t now = time(nullptr);
+    tm* localTime = localtime(&now);
+    
+    fileName.year = localTime->tm_year + 1900;
+    fileName.month = localTime->tm_mon + 1;
+    fileName.day = localTime->tm_mday;
+    
+    return fileName;
+}
+
+bool ArduinoSimulator::sendDataToServer(const std::string& data) {
+    try {
+        Socket socket;
+        
+        if (!socket.create()) {
+            std::cerr << "[" << sensorType << "_" << sensorID << "] Error creando socket" << std::endl;
+            return false;
         }
-        std::cout << "Arduino " << arduinoId << " stopped\n";
-    }
-}
-
-void ArduinoSimulator::senderLoop() {
-    while (running.load()) {
-        try {
-            sendSensorData();
-            std::this_thread::sleep_for(std::chrono::milliseconds(sendIntervalMs));
-        } catch (const std::exception& e) {
-            std::cerr << "Arduino " << arduinoId << " error: " << e.what() << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        
+        if (!socket.connectToServer(serverIP, serverPort)) {
+            std::cerr << "[" << sensorType << "_" << sensorID << "] No se pudo conectar al servidor" << std::endl;
+            return false;
         }
-    }
-}
-
-void ArduinoSimulator::sendSensorData() {
-    Socket socket;
-    
-    if (!socket.create()) {
-        throw std::runtime_error("Could not create socket");
-    }
-    
-    if (!socket.connectToServer(proxyIP, proxyPort)) {
-        throw std::runtime_error("Could not connect to proxy");
-    }
-    
-    genMessage message = generateSensorMessage();
-    ssize_t bytesSent = socket.bSendData(socket.getSocketFD(), message);
-    
-    if (bytesSent <= 0) {
+        
+        // CAMBIO CRÍTICO: Enviar SOLO texto plano como el Arduino real
+        // El Arduino envía: "Distancia: 123 cm\n"
+        std::string plainTextData = data + "\n";  // Agregar newline como el Arduino
+        
+        ssize_t sent = socket.sendData(socket.getSocketFD(), plainTextData);
+        
         socket.closeSocket();
-        throw std::runtime_error("Failed to send data");
+        
+        if (sent <= 0) {
+            std::cerr << "[" << sensorType << "_" << sensorID << "] Error enviando datos" << std::endl;
+            return false;
+        }
+        
+        return true;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "[" << sensorType << "_" << sensorID << "] Excepción: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+void ArduinoSimulator::simulationLoop() {
+    std::cout << "[" << sensorType << "_" << sensorID << "] Loop de simulación iniciado" << std::endl;
+    std::cout << "[" << sensorType << "_" << sensorID << "] Enviando datos cada " 
+              << sendInterval / 1000 << " segundos" << std::endl;
+    
+    while (running.load()) {
+        // Generar datos según el tipo de sensor
+        std::string sensorData;
+        float value;
+        
+        if (sensorType == "DIS") {
+            value = generateDistance();
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(1) << value;
+            // FORMATO EXACTO del Arduino: "Distancia: 123.4 cm"
+            sensorData = "Distancia: " + oss.str() + " cm";
+        } 
+        else if (sensorType == "HUM") {
+            value = generateHumidity();
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(1) << value;
+            // FORMATO EXACTO del Arduino: "Humedad: 65.2 %"
+            sensorData = "Humedad: " + oss.str() + " %";
+        } 
+        else if (sensorType == "UV") {
+            value = generateUV();
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2) << value;
+            // FORMATO EXACTO del Arduino: "UV: 234.56 mW/m²"
+            sensorData = "UV: " + oss.str() + " mW/m²";
+        }
+        else {
+            std::cerr << "[" << sensorType << "_" << sensorID << "] Tipo de sensor desconocido" << std::endl;
+            break;
+        }
+        
+        // Mostrar datos generados
+        std::cout << "[" << sensorType << "_" << sensorID << "] " << sensorData << std::endl;
+        
+        // Enviar datos al servidor
+        if (sendDataToServer(sensorData)) {
+            std::cout << "[" << sensorType << "_" << sensorID << "] ✓ Datos enviados al servidor" << std::endl;
+        } else {
+            std::cout << "[" << sensorType << "_" << sensorID << "] ✗ Error al enviar datos" << std::endl;
+        }
+        
+        // Esperar el intervalo especificado
+        auto start = std::chrono::steady_clock::now();
+        while (running.load()) {
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count();
+            
+            if (elapsed >= sendInterval) {
+                break;
+            }
+            
+            // Dormir por 100ms para no consumir CPU innecesariamente
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
     }
     
-    std::string value = generateSensorValue();
-    std::cout << "Arduino " << arduinoId << " (" << sensorType << ") sent: " << value << std::endl;
-    
-    socket.closeSocket();
-}
-
-genMessage ArduinoSimulator::generateSensorMessage() {
-    genMessage message;
-    message.MID = static_cast<uint8_t>(MessageType::SEN_ADD_LOG);
-    
-    senAddLog logData;
-    logData.fileName = getCurrentFileName();
-    logData.data = generateSensorValue();
-    
-    message.content = logData;
-    return message;
-}
-
-std::string ArduinoSimulator::generateSensorValue() {
-    std::ostringstream oss;
-    
-    if (sensorType == "TMP") {
-        float temp = tempDist(rng);
-        oss << std::fixed << std::setprecision(2) << temp << "°C";
-    } else if (sensorType == "HUM") {
-        float humidity = humidityDist(rng);
-        oss << std::fixed << std::setprecision(1) << humidity << "%";
-    } else if (sensorType == "PRS") {
-        float pressure = pressureDist(rng);
-        oss << std::fixed << std::setprecision(1) << pressure << "hPa";
-    } else {
-        float value = tempDist(rng);
-        oss << std::fixed << std::setprecision(2) << value;
-    }
-    
-    return oss.str();
-}
-
-sensorFileName ArduinoSimulator::getCurrentFileName() {
-    sensorFileName filename;
-    filename.sensorType = sensorType;
-    filename.id = arduinoId;
-    
-    time_t now = time(0);
-    tm* ltm = localtime(&now);
-    
-    filename.year = 1900 + ltm->tm_year;
-    filename.month = 1 + ltm->tm_mon;
-    filename.day = ltm->tm_mday;
-    
-    return filename;
+    std::cout << "[" << sensorType << "_" << sensorID << "] Loop de simulación finalizado" << std::endl;
 }

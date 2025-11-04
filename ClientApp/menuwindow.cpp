@@ -9,11 +9,19 @@ MenuWindow::MenuWindow(QWidget *parent) :
     QMainWindow(parent), ui(new Ui::MenuWindow)
 {
     ui->setupUi(this);
+
+    sensorUpdateTimer = new QTimer(this);
+    connect(sensorUpdateTimer, &QTimer::timeout, this, &MenuWindow::updateSensorDataAutomatically);
 }
 
 MenuWindow::~MenuWindow()
 {
+
+    if (sensorUpdateTimer) {
+        sensorUpdateTimer->stop();
+    }
     delete ui;
+
 }
 
 void MenuWindow::setCurrentUser(userDataQt user) {
@@ -149,6 +157,122 @@ void MenuWindow::askForUsers() {
     }
 }
 
+void MenuWindow::askForSensorData() {
+    std::cout << "\n========== ASK FOR SENSOR DATA ==========" << std::endl;
+
+    std::string IP = currentUser.getIP();
+    int port = currentUser.getPort();
+
+    std::cout << "Connecting to: " << IP << ":" << port << std::endl;
+
+    Socket* tempSocket = nullptr;
+
+    try {
+        tempSocket = new Socket();
+
+        if (!tempSocket->create()) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+            return;
+        }
+
+        if (!tempSocket->connectToServer(IP, port)) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
+            return;
+        }
+
+        std::cout << "✓ Connected to server" << std::endl;
+
+        genMessage sensorsMsg;
+        sensorsMsg.MID = static_cast<uint8_t>(MessageType::SEN_RECENT_DATA_REQ);
+        GenNumReq request;
+        request.id_token = 0;
+        sensorsMsg.content = request;
+
+        std::cout << "Sending SEN_RECENT_DATA_REQ message..." << std::endl;
+
+        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), sensorsMsg);
+        if (sent <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud");
+            return;
+        }
+
+        std::cout << "✓ Request sent (" << sent << " bytes)" << std::endl;
+        std::cout << "Waiting for response..." << std::endl;
+
+        genMessage response;
+        ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+
+        if (received <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo recibir respuesta del servidor");
+            return;
+        }
+
+        std::cout << "✓ Response received (" << received << " bytes)" << std::endl;
+        std::cout << "Response MID: " << static_cast<int>(response.MID) << std::endl;
+
+        if (response.MID == static_cast<uint8_t>(MessageType::SEN_RECENT_DATA_RES)) {
+            try {
+                delete tempSocket;
+
+                senRecentDataRes sensorsResponse = getMessageContent<senRecentDataRes>(response);
+
+                std::cout << "\n========== RECEIVED SENSOR DATA ==========" << std::endl;
+                std::cout << "Total sensors received: " << sensorsResponse.recentData.size() << std::endl;
+
+                for (size_t i = 0; i < sensorsResponse.recentData.size(); ++i) {
+                    const auto& sensor = sensorsResponse.recentData[i];
+
+                    std::cout << "\n[" << i << "] Sensor details:" << std::endl;
+                    std::cout << "  IP: '" << sensor.ip << "' (length: " << sensor.ip.length() << ")" << std::endl;
+                    std::cout << "  Type: '" << sensor.sensorType << "' (length: " << sensor.sensorType.length() << ")" << std::endl;
+                    std::cout << "  Data: '" << sensor.data << "' (length: " << sensor.data.length() << ")" << std::endl;
+                    std::cout << "  LastModified: " << sensor.lastModified << std::endl;
+
+                    // Mostrar en hexadecimal
+                    std::cout << "  Type (HEX): ";
+                    for (char c : sensor.sensorType) {
+                        printf("%02X ", (unsigned char)c);
+                    }
+                    std::cout << std::endl;
+
+                    std::cout << "  Data (HEX): ";
+                    for (size_t j = 0; j < std::min(sensor.data.length(), size_t(50)); ++j) {
+                        printf("%02X ", (unsigned char)sensor.data[j]);
+                    }
+                    std::cout << std::endl;
+                }
+
+                this->sensorsData = sensorsResponse.recentData;
+
+                std::cout << "\nCalling updateList..." << std::endl;
+                this->dataMenu.updateList(this->ui->data_list, &this->sensorsData);
+
+                std::cout << "✓ List updated successfully" << std::endl;
+                std::cout << "==========================================\n" << std::endl;
+
+            } catch (const std::runtime_error& e) {
+                std::cerr << "✗ Error processing response: " << e.what() << std::endl;
+                QMessageBox::critical(this, "Error", "Error al procesar respuesta del servidor");
+            }
+        }
+        else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+            errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
+            delete tempSocket;
+            std::cerr << "✗ Server error: " << errorMsg.message << std::endl;
+            QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
+        }
+
+    } catch (const std::exception& e) {
+        if (tempSocket) delete tempSocket;
+        std::cerr << "✗ Exception: " << e.what() << std::endl;
+        QMessageBox::critical(this, "Error de conexión",
+                              QString("No se pudo conectar al servidor: %1").arg(e.what()));
+    }
+}
 void MenuWindow::on_b_usuarios_clicked()
 {
     setActiveMenu(ui->b_usuarios, "Usuarios");
@@ -444,6 +568,10 @@ void MenuWindow::hideMenuWidgets() {
     this->ui->arduino_turn->move(-500, -100);
     this->ui->b_consultar->move(-500, -100);
     this->ui->data_list->move(-1000, -100);
+
+    if (sensorUpdateTimer && sensorUpdateTimer->isActive()) {
+        sensorUpdateTimer->stop();
+    }
 }
 
 void MenuWindow::on_user_change_pass_clicked()
@@ -593,13 +721,81 @@ void MenuWindow::on_b_nodos_clicked()
 
 void MenuWindow::on_b_consulta_clicked()
 {
-    setActiveMenu(ui->b_consulta, "Información");
+    setActiveMenu(ui->b_consulta, "Información de Sensores");
+
+    // Limpiar selección previa
+    this->dataMenu.setSelectedSensor(nullptr);
 
     // Scroll list
-    this->ui->data_list->move(150,30);
-    // this->dataMenu.updateList();
-}
+    this->ui->data_list->move(280, 30);
 
+    // Solicitar datos de sensores
+    askForSensorData();
+
+    sensorUpdateTimer->start(3000);
+}
+void MenuWindow::on_data_list_itemClicked(QListWidgetItem *item)
+{
+    this->dataMenu.setSelectedSensor(item);
+
+    // Mostrar detalles del sensor seleccionado
+    sensorRecentData* sensor = this->dataMenu.getSelectedSensorInfo(&this->sensorsData);
+    if (sensor) {
+        // Calcular tiempo transcurrido
+        time_t currentTime = time(nullptr);
+        uint32_t secondsAgo = currentTime - sensor->lastModified;
+
+        // Formatear el tiempo de forma más legible
+        QString timeStr;
+        if (secondsAgo < 60) {
+            timeStr = QString("%1 segundo(s)").arg(secondsAgo);
+        } else if (secondsAgo < 3600) {
+            timeStr = QString("%1 minuto(s)").arg(secondsAgo / 60);
+        } else {
+            timeStr = QString("%1 hora(s)").arg(secondsAgo / 3600);
+        }
+
+        // Parsear los datos para mostrarlos de forma más legible
+        QString dataStr = QString::fromStdString(sensor->data);
+        QString parsedValue;
+
+        // Extraer solo el valor (entre ':' y ',')
+        int colonPos = dataStr.indexOf(':');
+        int commaPos = dataStr.indexOf(',');
+        if (colonPos != -1 && commaPos != -1) {
+            parsedValue = dataStr.mid(colonPos + 1, commaPos - colonPos - 1);
+        } else {
+            parsedValue = dataStr;
+        }
+
+        // Limpiar el tipo de sensor
+        QString sensorType = QString::fromStdString(sensor->sensorType);
+        sensorType = sensorType.replace(":", "");
+
+        QString details = QString("═══════════════════════════\n"
+                                  "INFORMACIÓN DEL SENSOR\n"
+                                  "═══════════════════════════\n\n"
+                                  "Tipo:                %1\n"
+                                  "IP:                  %2\n"
+                                  "Valor:               %3\n"
+                                  "Última actualización: %4 atrás\n\n"
+                                  "Datos completos:\n%5")
+                              .arg(sensorType)
+                              .arg(QString::fromStdString(sensor->ip))
+                              .arg(parsedValue)
+                              .arg(timeStr)
+                              .arg(dataStr);
+
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("Detalles del Sensor");
+        msgBox.setText(details);
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.exec();
+    } else {
+        QMessageBox::warning(this, "Error", "No se pudo obtener información del sensor");
+    }
+}
 
 void MenuWindow::on_arduino_list_itemClicked(QListWidgetItem *item)
 {
@@ -616,4 +812,8 @@ void MenuWindow::on_arduino_consultar_Clicked(){
     // setActiveMenu("")
     // this->dataMenu.getData();
     // this->dataMenu.updateList();
+}
+
+void MenuWindow::updateSensorDataAutomatically() {
+    askForSensorData();
 }

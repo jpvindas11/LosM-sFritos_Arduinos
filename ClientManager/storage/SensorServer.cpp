@@ -144,51 +144,6 @@ void SensorServer::serveClient(int clientSocket, genMessage& clientRequest) {
   }
 }
 
-void SensorServer::addToSensorLog(senAddLog& messageContent) {
-  std::lock_guard<std::mutex> lock(this->storageMutex); // Thread-safe file access
-
-  this->updateRecentSensorData(messageContent.originIP, messageContent.data);
-  
-  std::string fileName = this->getSensorFileName(messageContent.fileName);
-  std::cout << "Adding to sensor log: " << fileName << std::endl;
-  
-  // Obtener tamaño actual del archivo
-  uint32_t sizeBeforeWrite = 0;
-  if (this->storage.fileExists(fileName)) {
-    sizeBeforeWrite = this->storage.getFileSize(fileName);
-  } else {
-    this->storage.createFile(fileName);
-  }
-  
-  // Agregar datos del sensor
-  uint32_t dataSize = messageContent.data.size();
-  this->storage.appendFile(fileName, messageContent.data.data(), dataSize);
-  
-  // Add newline for better formatting
-  std::string newline = "\n";
-  this->storage.appendFile(fileName, newline.data(), newline.size());
-  
-  // Calcular nuevo tamaño y mostrar info
-  uint32_t newSize = sizeBeforeWrite + dataSize + newline.size();
-  std::cout << "Agregados " << (dataSize + newline.size()) << " bytes a " << fileName 
-            << " (tamaño anterior: " << sizeBeforeWrite 
-            << ", nuevo: " << newSize << ")" << std::endl;
-  
-  // Leer solo las últimas líneas del archivo para mostrar
-  const uint32_t READ_SIZE = 1024;
-  char buffer[READ_SIZE];
-  memset(buffer, 0, READ_SIZE); // Inicializar con ceros
-  
-  uint32_t totalFileSize = this->storage.getFileSize(fileName);
-  uint32_t readSize = std::min(totalFileSize, READ_SIZE - 1); // Dejar espacio para null terminator
-  
-  this->storage.readFile(fileName, buffer, readSize);
-  buffer[readSize] = '\0'; // Asegurar terminación nula
-  
-  std::cout << "Received for file -> " << fileName << std::endl;
-  std::cout << buffer << std::endl;
-}
-
 std::string SensorServer::getSensorFileName(sensorFileName& name) {
   char id [65535];
   char year [10000];
@@ -534,7 +489,8 @@ void SensorServer::sendRecentData(int clientSocket, GenNumReq& messageContent) {
   while (it != this->recentData.end()) {
     double elapsedTime = difftime(currentTime, it->lastModified);
     if (elapsedTime > SENSOR_FORGET_TIME) {
-      std::cout << "Removing expired sensor before sending: " << it->ip << std::endl;
+      std::cout << "Removing expired sensor before sending: " << it->ip 
+                << ", Type: " << it->sensorType << std::endl;
       it = this->recentData.erase(it);
     } else {
       ++it;
@@ -549,7 +505,9 @@ void SensorServer::sendRecentData(int clientSocket, GenNumReq& messageContent) {
   
   for (size_t i = 0; i < maxSensors; ++i) {
     response.recentData.push_back(this->recentData[i]);
-    std::cout << "  - Sensor " << (i+1) << ": IP=" << this->recentData[i].ip 
+    std::cout << "  - Sensor " << (i+1) 
+              << ": IP=" << this->recentData[i].ip 
+              << ", Type=" << this->recentData[i].sensorType
               << ", Data=" << this->recentData[i].data 
               << ", Age=" << (currentTime - this->recentData[i].lastModified) << "s"
               << std::endl;
@@ -566,46 +524,170 @@ void SensorServer::sendRecentData(int clientSocket, GenNumReq& messageContent) {
   }
 }
 
-void SensorServer::updateRecentSensorData(const std::string& sensorIP, const std::string& data) {
+void SensorServer::updateRecentSensorData(const std::string& sensorIP, 
+                                          const std::string& sensorType,
+                                          const std::string& data) {
   time_t currentTime = time(nullptr);
   bool found = false;
   
-  // Buscar si ya existe un registro para esta IP
-  for (auto& sensor : this->recentData) {
-    if (sensor.ip == sensorIP) {
+  // DEBUG: Mostrar lo que está llegando
+  std::cout << "\n========== UPDATE RECENT SENSOR DATA ==========" << std::endl;
+  std::cout << "INPUT - IP: '" << sensorIP << "' (length: " << sensorIP.length() << ")" << std::endl;
+  std::cout << "INPUT - Type: '" << sensorType << "' (length: " << sensorType.length() << ")" << std::endl;
+  std::cout << "INPUT - Data: '" << data << "' (length: " << data.length() << ")" << std::endl;
+  
+  // Mostrar en hexadecimal para detectar caracteres ocultos
+  std::cout << "Type in HEX: ";
+  for (char c : sensorType) {
+    printf("%02X ", (unsigned char)c);
+  }
+  std::cout << std::endl;
+  
+  // Buscar si ya existe un registro para esta IP Y TIPO
+  std::cout << "\nSearching in existing sensors (total: " << this->recentData.size() << ")..." << std::endl;
+  
+  for (size_t idx = 0; idx < this->recentData.size(); ++idx) {
+    auto& sensor = this->recentData[idx];
+    
+    std::cout << "  [" << idx << "] Comparing with:" << std::endl;
+    std::cout << "       Stored IP: '" << sensor.ip << "'" << std::endl;
+    std::cout << "       Stored Type: '" << sensor.sensorType << "'" << std::endl;
+    std::cout << "       Stored Data: '" << sensor.data << "'" << std::endl;
+    
+    bool ipMatch = (sensor.ip == sensorIP);
+    bool typeMatch = (sensor.sensorType == sensorType);
+    
+    std::cout << "       IP Match: " << (ipMatch ? "YES" : "NO") << std::endl;
+    std::cout << "       Type Match: " << (typeMatch ? "YES" : "NO") << std::endl;
+    
+    if (ipMatch && typeMatch) {
       // Actualizar datos existentes
+      std::cout << "  ✓ MATCH FOUND! Updating sensor at index " << idx << std::endl;
+      std::cout << "    Old data: '" << sensor.data << "'" << std::endl;
+      std::cout << "    New data: '" << data << "'" << std::endl;
+      
       sensor.data = data;
       sensor.lastModified = static_cast<uint32_t>(currentTime);
       found = true;
-      std::cout << "Updated recent data for sensor IP: " << sensorIP << std::endl;
+      
+      std::cout << "  ✓ Updated successfully!" << std::endl;
       break;
     }
   }
   
   // Si no existe, agregar nuevo registro
   if (!found) {
+    std::cout << "\n✓ NO MATCH FOUND - Adding NEW sensor" << std::endl;
+    
     sensorRecentData newSensor;
     newSensor.ip = sensorIP;
+    newSensor.sensorType = sensorType;
     newSensor.data = data;
     newSensor.lastModified = static_cast<uint32_t>(currentTime);
+    
     this->recentData.push_back(newSensor);
-    std::cout << "Added new sensor to recent data: " << sensorIP << std::endl;
+    
+    std::cout << "  New sensor added:" << std::endl;
+    std::cout << "    IP: '" << newSensor.ip << "'" << std::endl;
+    std::cout << "    Type: '" << newSensor.sensorType << "'" << std::endl;
+    std::cout << "    Data: '" << newSensor.data << "'" << std::endl;
+    std::cout << "  Vector size is now: " << this->recentData.size() << std::endl;
   }
   
   // Limpiar sensores que han excedido el tiempo de olvido
+  std::cout << "\nCleaning expired sensors..." << std::endl;
   auto it = this->recentData.begin();
+  size_t removedCount = 0;
+  
   while (it != this->recentData.end()) {
     double elapsedTime = difftime(currentTime, it->lastModified);
     
     if (elapsedTime > SENSOR_FORGET_TIME) {
-      std::cout << "Removing expired sensor from recent data: " << it->ip 
+      std::cout << "  ✗ Removing expired sensor: IP=" << it->ip 
+                << ", Type='" << it->sensorType << "'"
                 << " (inactive for " << elapsedTime << " seconds)" << std::endl;
       it = this->recentData.erase(it);
+      removedCount++;
     } else {
       ++it;
     }
   }
   
-  // Mostrar estado actual del vector
-  std::cout << "Current active sensors in memory: " << this->recentData.size() << std::endl;
+  std::cout << "Removed " << removedCount << " expired sensor(s)" << std::endl;
+  
+  // Mostrar estado final del vector
+  std::cout << "\n========== FINAL STATE ==========" << std::endl;
+  std::cout << "Total active sensors: " << this->recentData.size() << std::endl;
+  for (size_t i = 0; i < this->recentData.size(); ++i) {
+    std::cout << "  [" << i << "] IP='" << this->recentData[i].ip 
+              << "', Type='" << this->recentData[i].sensorType 
+              << "', Data='" << this->recentData[i].data << "'" << std::endl;
+  }
+  std::cout << "================================\n" << std::endl;
+}
+
+void SensorServer::addToSensorLog(senAddLog& messageContent) {
+  std::lock_guard<std::mutex> lock(this->storageMutex);
+
+  std::cout << "\n========== ADD TO SENSOR LOG ==========" << std::endl;
+  std::cout << "Received senAddLog message:" << std::endl;
+  std::cout << "  Origin IP: '" << messageContent.originIP << "'" << std::endl;
+  std::cout << "  Sensor Type: '" << messageContent.fileName.sensorType << "'" << std::endl;
+  std::cout << "  Data: '" << messageContent.data << "'" << std::endl;
+  
+  // Mostrar el tipo en hexadecimal
+  std::cout << "  Type (HEX): ";
+  for (char c : messageContent.fileName.sensorType) {
+    printf("%02X ", (unsigned char)c);
+  }
+  std::cout << std::endl;
+
+  // Actualizar datos recientes ANTES de guardar en archivo
+  std::cout << "\nCalling updateRecentSensorData..." << std::endl;
+  this->updateRecentSensorData(messageContent.originIP, 
+                                messageContent.fileName.sensorType,
+                                messageContent.data);
+  
+  std::string fileName = this->getSensorFileName(messageContent.fileName);
+  std::cout << "\nSaving to file: " << fileName << std::endl;
+  
+  // Obtener tamaño actual del archivo
+  uint32_t sizeBeforeWrite = 0;
+  if (this->storage.fileExists(fileName)) {
+    sizeBeforeWrite = this->storage.getFileSize(fileName);
+    std::cout << "File exists, current size: " << sizeBeforeWrite << " bytes" << std::endl;
+  } else {
+    std::cout << "File doesn't exist, creating..." << std::endl;
+    this->storage.createFile(fileName);
+  }
+  
+  // Agregar datos del sensor
+  uint32_t dataSize = messageContent.data.size();
+  this->storage.appendFile(fileName, messageContent.data.data(), dataSize);
+  
+  // Add newline for better formatting
+  std::string newline = "\n";
+  this->storage.appendFile(fileName, newline.data(), newline.size());
+  
+  // Calcular nuevo tamaño
+  uint32_t newSize = sizeBeforeWrite + dataSize + newline.size();
+  std::cout << "✓ Added " << (dataSize + newline.size()) << " bytes to " << fileName 
+            << " (size: " << sizeBeforeWrite << " → " << newSize << ")" << std::endl;
+  
+  // Leer últimas líneas del archivo para mostrar
+  const uint32_t READ_SIZE = 1024;
+  char buffer[READ_SIZE];
+  memset(buffer, 0, READ_SIZE);
+  
+  uint32_t totalFileSize = this->storage.getFileSize(fileName);
+  uint32_t readSize = std::min(totalFileSize, READ_SIZE - 1);
+  
+  this->storage.readFile(fileName, buffer, readSize);
+  buffer[readSize] = '\0';
+  
+  std::cout << "\nFile contents (last " << readSize << " bytes):" << std::endl;
+  std::cout << "--- BEGIN ---" << std::endl;
+  std::cout << buffer << std::endl;
+  std::cout << "--- END ---" << std::endl;
+  std::cout << "======================================\n" << std::endl;
 }

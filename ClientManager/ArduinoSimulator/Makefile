@@ -1,30 +1,42 @@
+# Makefile para Arduino Simulator
+
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -pthread -I../Util -I../FileSystem/src
-LDFLAGS = -pthread
-
+CXXFLAGS = -std=c++17 -Wall -Wextra -pthread -I../Util
 TARGET = arduino_simulator
-SOURCES = ArduinoSimulator.cpp SimulatorMain.cpp
-UTIL_SOURCES = ../Util/Socket.cpp
 
+# Directorios
+SRC_DIR = .
+UTIL_DIR = ../Util
+
+# Archivos fuente
+SOURCES = SimulatorMain.cpp \
+          ArduinoSimulator.cpp \
+          $(UTIL_DIR)/Socket.cpp
+
+# Archivos objeto
 OBJECTS = $(SOURCES:.cpp=.o)
-UTIL_OBJECTS = $(UTIL_SOURCES:../Util/%.cpp=%.o)
-ALL_OBJECTS = $(OBJECTS) $(UTIL_OBJECTS)
 
+# Regla principal
 all: $(TARGET)
 
-$(TARGET): $(ALL_OBJECTS)
-	$(CXX) $(CXXFLAGS) -o $@ $(ALL_OBJECTS) $(LDFLAGS)
+$(TARGET): $(OBJECTS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS)
+	@echo "✓ Compilación exitosa: $(TARGET)"
 
+# Regla para compilar archivos .cpp a .o
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-%.o: ../Util/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-run: $(TARGET)
-	./$(TARGET) 127.0.0.1 8080 3
-
+# Limpiar archivos compilados
 clean:
-	rm -f *.o $(TARGET)
+	rm -f $(OBJECTS) $(TARGET)
+	@echo "✓ Archivos temporales eliminados"
 
-.PHONY: all run clean
+# Ejecutar el simulador
+run: $(TARGET)
+	./$(TARGET)
+
+# Regla para recompilar todo
+rebuild: clean all
+
+.PHONY: all clean run rebuild

@@ -4,25 +4,23 @@
 #include <vector>
 #include <QListWidget>
 #include <QListWidgetItem>
+#include "Messages.hpp"
 
 class dataMenuManager
 {
 public:
     dataMenuManager();
 
-    void setPointers(QListWidget* user_list);
+    void updateList(QListWidget* data_list, const std::vector<sensorRecentData>* sensorsData);
 
-    void updateList();
+    void setSelectedSensor(QListWidgetItem* sensor);
 
-    void setSelectedArduino(QListWidgetItem* user);
+    QListWidgetItem* getSelectedSensor();
 
-    void turnOff();
-
-    void getData();
+    sensorRecentData* getSelectedSensorInfo(const std::vector<sensorRecentData>* sensorsData);
 
 private:
-    QListWidget* user_list;
-    QListWidgetItem* selectedArduino;
+    QListWidgetItem* selectedSensor;
 };
 
 #endif // DATAMENUMANAGER_H

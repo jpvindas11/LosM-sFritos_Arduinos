@@ -455,10 +455,6 @@ moc_menuwindow.cpp: ../../menuwindow.h \
 		../../userdataqt.h \
 		../../../ClientManager/Util/User.hpp \
 		../../datamenumanager.h \
-		../../changepassdialog.h \
-		../../arduinomenumanager.h \
-		../../setrankdialog.h \
-		../../../ClientManager/Util/Socket.hpp \
 		../../../ClientManager/Util/Messages.hpp \
 		../../../common/bitsery/include/bitsery/bitsery.h \
 		../../../common/bitsery/include/bitsery/deserializer.h \
@@ -478,6 +474,10 @@ moc_menuwindow.cpp: ../../menuwindow.h \
 		../../../common/bitsery/include/bitsery/ext/std_bitset.h \
 		../../../common/bitsery/include/bitsery/ext/std_variant.h \
 		../../../common/bitsery/include/bitsery/ext/utils/composite_type_overloads.h \
+		../../changepassdialog.h \
+		../../arduinomenumanager.h \
+		../../setrankdialog.h \
+		../../../ClientManager/Util/Socket.hpp \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	/usr/lib/qt5/bin/moc $(DEFINES) --include /home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp/build/Desktop-Debug/moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientApp -I/home/juan/Escritorio/LosM-sFritos_Arduinos/ClientManager/Util -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../menuwindow.h -o moc_menuwindow.cpp
@@ -541,7 +541,27 @@ confirmdeleteuserdialog.o: ../../confirmdeleteuserdialog.cpp ../../confirmdelete
 		ui_confirmdeleteuserdialog.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o confirmdeleteuserdialog.o ../../confirmdeleteuserdialog.cpp
 
-datamenumanager.o: ../../datamenumanager.cpp ../../datamenumanager.h
+datamenumanager.o: ../../datamenumanager.cpp ../../datamenumanager.h \
+		../../../ClientManager/Util/Messages.hpp \
+		../../../common/bitsery/include/bitsery/bitsery.h \
+		../../../common/bitsery/include/bitsery/deserializer.h \
+		../../../common/bitsery/include/bitsery/details/serialization_common.h \
+		../../../common/bitsery/include/bitsery/traits/core/traits.h \
+		../../../common/bitsery/include/bitsery/details/not_defined_type.h \
+		../../../common/bitsery/include/bitsery/details/adapter_common.h \
+		../../../common/bitsery/include/bitsery/common.h \
+		../../../common/bitsery/include/bitsery/serializer.h \
+		../../../common/bitsery/include/bitsery/adapter/buffer.h \
+		../../../common/bitsery/include/bitsery/details/adapter_bit_packing.h \
+		../../../common/bitsery/include/bitsery/traits/string.h \
+		../../../common/bitsery/include/bitsery/traits/core/std_defaults.h \
+		../../../common/bitsery/include/bitsery/traits/vector.h \
+		../../../common/bitsery/include/bitsery/traits/array.h \
+		../../../common/bitsery/include/bitsery/brief_syntax/bitset.h \
+		../../../common/bitsery/include/bitsery/ext/std_bitset.h \
+		../../../common/bitsery/include/bitsery/ext/std_variant.h \
+		../../../common/bitsery/include/bitsery/ext/utils/composite_type_overloads.h \
+		../../../ClientManager/Util/User.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o datamenumanager.o ../../datamenumanager.cpp
 
 newuserdialog.o: ../../newuserdialog.cpp ../../newuserdialog.h \
@@ -620,10 +640,6 @@ menuwindow.o: ../../menuwindow.cpp ../../menuwindow.h \
 		../../userdataqt.h \
 		../../../ClientManager/Util/User.hpp \
 		../../datamenumanager.h \
-		../../changepassdialog.h \
-		../../arduinomenumanager.h \
-		../../setrankdialog.h \
-		../../../ClientManager/Util/Socket.hpp \
 		../../../ClientManager/Util/Messages.hpp \
 		../../../common/bitsery/include/bitsery/bitsery.h \
 		../../../common/bitsery/include/bitsery/deserializer.h \
@@ -643,6 +659,10 @@ menuwindow.o: ../../menuwindow.cpp ../../menuwindow.h \
 		../../../common/bitsery/include/bitsery/ext/std_bitset.h \
 		../../../common/bitsery/include/bitsery/ext/std_variant.h \
 		../../../common/bitsery/include/bitsery/ext/utils/composite_type_overloads.h \
+		../../changepassdialog.h \
+		../../arduinomenumanager.h \
+		../../setrankdialog.h \
+		../../../ClientManager/Util/Socket.hpp \
 		../../mainwindow.h \
 		../../../ClientManager/Util/IPConstants.hpp \
 		ui_menuwindow.h \
@@ -672,7 +692,8 @@ Socket.o: ../../../ClientManager/Util/Socket.cpp ../../../ClientManager/Util/Soc
 		../../../common/bitsery/include/bitsery/brief_syntax/bitset.h \
 		../../../common/bitsery/include/bitsery/ext/std_bitset.h \
 		../../../common/bitsery/include/bitsery/ext/std_variant.h \
-		../../../common/bitsery/include/bitsery/ext/utils/composite_type_overloads.h
+		../../../common/bitsery/include/bitsery/ext/utils/composite_type_overloads.h \
+		../../../ClientManager/Util/User.hpp
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Socket.o ../../../ClientManager/Util/Socket.cpp
 
 usermenumanager.o: ../../usermenumanager.cpp ../../usermenumanager.h \

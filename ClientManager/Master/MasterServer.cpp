@@ -141,6 +141,7 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     case MessageType::SEN_FILE_METD_REQ:
     case MessageType::SEN_FILE_BLOCKNUM_REQ:
     case MessageType::SEN_FILE_BLOCK_REQ:
+    case MessageType::SEN_RECENT_DATA_REQ:
     case MessageType::ADD_SENSOR:
     case MessageType::DELETE_SENSOR:
     case MessageType::MODIFY_SENSOR:

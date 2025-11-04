@@ -116,6 +116,8 @@ int main(int argc, char* argv[]) {
   std::cout << "Server running. Press Ctrl+C to stop.\n" << std::endl;
   std::cout << "Listening on:" << std::endl;
 
+  server.setDestinationIPs(authServerIP, storageServerIP, logsServerIP);
+
   server.waitForAllListeners();
 
   return EXIT_SUCCESS;

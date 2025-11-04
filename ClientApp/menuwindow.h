@@ -11,6 +11,7 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QString>
+#include <QTimer>
 
 namespace Ui {
 class MenuWindow;
@@ -53,6 +54,10 @@ private slots:
 
     void on_arduino_turn_clicked();
 
+    void on_data_list_itemClicked(QListWidgetItem *item);
+
+    void updateSensorDataAutomatically();
+
 private:
     Ui::MenuWindow *ui;
     userDataQt currentUser;
@@ -64,14 +69,20 @@ private:
 
     void askForUsers();
 
+    void askForSensorData();
+
     userMenuManager userMenu;
 
     arduinoMenuManager arduinoMenu;
 
     dataMenuManager dataMenu;
 
+    std::vector<sensorRecentData> sensorsData;
+
     // Saved users
     std::vector<UserInfo> users;
+
+    QTimer *sensorUpdateTimer;
 };
 
 #endif // MENUWINDOW_H
