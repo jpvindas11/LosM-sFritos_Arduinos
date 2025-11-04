@@ -96,6 +96,70 @@ void AuthenticationServer::acceptAllConnections() {
     }
 }
 
+std::string AuthenticationServer::getCurrentTimestamp() {
+    time_t now = time(nullptr);
+    struct tm* tm_info = localtime(&now);
+    
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "[%04d-%02d-%02d %02d:%02d:%02d]",
+             tm_info->tm_year + 1900,
+             tm_info->tm_mon + 1,
+             tm_info->tm_mday,
+             tm_info->tm_hour,
+             tm_info->tm_min,
+             tm_info->tm_sec);
+    
+    return std::string(buffer);
+}
+
+void AuthenticationServer::sendUserLog(const std::string& username, 
+                                       const std::string& action) {
+    // Crear socket solo para este envío
+    Socket logSocket;
+    
+    if (!logSocket.create()) {
+        std::cerr << "WARNING: No se pudo crear socket para logs" << std::endl;
+        return;
+    }
+    
+    if (!logSocket.connectToServer(this->logsIP, PORT_MASTER_LOGS)) {
+        std::cerr << "WARNING: No se pudo conectar al servidor de logs en " 
+                  << this->logsIP << ":" << PORT_MASTER_LOGS << std::endl;
+        return;
+    }
+    
+    // Preparar mensaje
+    genMessage request;
+    request.MID = static_cast<uint8_t>(MessageType::ADD_USER_LOG);
+    
+    addUserLog logData;
+    logData.id_token = 0; // No necesitas token para logs internos
+    logData.userName = username;
+    
+    // Formato: [TIMESTAMP] usuario: acción
+    std::string logMessage = getCurrentTimestamp() + " " + username + ": " + action + "\n";
+    
+    // Verificar que no exceda el límite de bitsery (1024 chars para logInfo)
+    if (logMessage.length() >= 1024) {
+        logMessage = logMessage.substr(0, 1020) + "...\n";
+    }
+    
+    logData.logInfo = logMessage;
+    request.content = logData;
+    
+    // Enviar
+    ssize_t sent = logSocket.bSendData(logSocket.getSocketFD(), request);
+    
+    if (sent > 0) {
+        std::cout << "Log enviado: " << action << " para " << username << std::endl;
+    } else {
+        std::cerr << "WARNING: Error al enviar log para " << username << std::endl;
+    }
+    
+    // El socket se cierra automáticamente al salir del scope
+}
+
+
 void AuthenticationServer::handleClientConnection(int clientSocket) {
     genMessage receivedMsg;
 
@@ -253,6 +317,10 @@ genMessage AuthenticationServer::processLoginRequest(const authLoginReq& req) {
     response.content = authLoginSuccess{userToken};
     
     std::cout << "Login exitoso: " << req.user << std::endl;
+
+    // Enviar log - ¡UNA LÍNEA!
+    sendUserLog(req.user, "inicio sesión");
+
     return response;
 }
 
@@ -282,6 +350,10 @@ genMessage AuthenticationServer::processLogoutRequest(const authLogout& req) {
     response.content = okCommonMsg{"Logout logrado"};
     
     std::cout << "Logout exitoso: " << req.user << std::endl;
+    
+    // Una línea
+    sendUserLog(req.user, "cerró sesión");
+
     return response;
 }
 
@@ -299,15 +371,20 @@ genMessage AuthenticationServer::processCreateUserRequest(const authCreateUser& 
     if (this->registerUser(req.newUser, req.pass, req.rank, req.rank)) {
         response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
         response.content = okCommonMsg{"Usuario registrado"};
+        
+        std::cout << "Usuario registrado correctamente: " << req.newUser << std::endl;
+        
+        // Log con más contexto
+        std::string logMsg = "fue registrado con rango " + std::to_string(req.rank);
+        sendUserLog(req.newUser, logMsg);
     } else {
         response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
         response.content = errorCommonMsg{"No se pudo registrar al user"};
     }
 
-    std::cout << "Usuario registrado correctamente: " << req.newUser << std::endl;
-
     return response;
 }
+
 genMessage AuthenticationServer::processDeleteUserRequest(const authDeleteUser& req) {
     std::lock_guard<std::mutex> lock(requestMutex);
     genMessage response;
@@ -322,15 +399,18 @@ genMessage AuthenticationServer::processDeleteUserRequest(const authDeleteUser& 
     if (this->deleteUser(req.deleteUser)) {
         response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
         response.content = okCommonMsg{"Usuario eliminado"};
+        
+        std::cout << "Usuario eliminado correctamente: " << req.deleteUser << std::endl;
+        
+        sendUserLog(req.deleteUser, "fue eliminado del sistema");
     } else {
         response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
         response.content = errorCommonMsg{"No se pudo eliminar al user"};
     }
 
-    std::cout << "Usuario eliminado correctamente: " << req.deleteUser << std::endl;
-
     return response;
 }
+
 genMessage AuthenticationServer::processModPassRequest(const authModifyUserPass& req) {
     std::lock_guard<std::mutex> lock(requestMutex);
     genMessage response;
@@ -347,17 +427,18 @@ genMessage AuthenticationServer::processModPassRequest(const authModifyUserPass&
         response.content = okCommonMsg{"Usuario modificado"};
 
         std::cout << "Usuario modificado (password) correctamente: " << req.user << std::endl;
+        
+        sendUserLog(req.user, "cambió su contraseña");
     } else {
         response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
         response.content = errorCommonMsg{"No se pudo cambiar el password"};
-        return response;
     }
-
 
     return response;
 }
+
 genMessage AuthenticationServer::processModRankRequest(const authModifyUserRank& req) {
-   std::lock_guard<std::mutex> lock(requestMutex);
+    std::lock_guard<std::mutex> lock(requestMutex);
     genMessage response;
 
     auto it = users.find(req.user);
@@ -372,6 +453,9 @@ genMessage AuthenticationServer::processModRankRequest(const authModifyUserRank&
     response.content = okCommonMsg{"Usuario modificado"};
 
     std::cout << "Usuario modificado (rank) correctamente: " << req.user << std::endl;
+
+    std::string logMsg = "cambió a rango " + std::to_string(static_cast<int>(req.rank));
+    sendUserLog(req.user, logMsg);
 
     return response;
 }
@@ -467,6 +551,7 @@ bool AuthenticationServer::registerUser(const std::string& username,
     users[username] = newUser;
     
     std::cout << "Usuario '" << username << "' registrado exitosamente" << std::endl;
+
     return true;
 }
 
@@ -849,4 +934,8 @@ void AuthenticationServer::changePermissions(const std::string& username,
     }
     
     delete[] buffer;
+}
+
+void AuthenticationServer::setLogIP(std::string IP) {
+    this->logsIP = IP;
 }

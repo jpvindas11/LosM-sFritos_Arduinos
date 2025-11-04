@@ -106,14 +106,15 @@ void LogsServer::sendUserLogs(int clientSocket, userLogRequestCommon& message) {
   this->storageMutex.lock();
   if (!this->storage.fileExists(message.userName)){
     this->storageMutex.unlock();
-    this->sendErrorMessage(clientSocket,
-                                 "ERROR: USER LOG FILE IS NOT IN THE DATABASE");
+    // CORREGIDO: Mensaje más corto que cabe en MAX_COMMON_MSG_LENGTH (32)
+    this->sendErrorMessage(clientSocket, "User log file not found");
     return;
   }
   uint32_t fileSize = this->storage.getFileSize(message.userName);
   this->storageMutex.unlock();
   if (fileSize == 0) {
-    this->sendErrorMessage(clientSocket,"ERROR: EMPTY FILE");
+    // CORREGIDO: Mensaje más corto
+    this->sendErrorMessage(clientSocket, "Empty log file");
     return;
   }
 
@@ -214,7 +215,14 @@ void LogsServer:: deleteUser(userLogRequestCommon& message) {
 void LogsServer::sendErrorMessage(int clientSocket, const std::string& error) {
   genMessage message;
   errorCommonMsg errorContent;
-  errorContent.message = error;
+
+  if (error.length() >= MAX_COMMON_MSG_LENGTH) {
+    errorContent.message = error.substr(0, MAX_COMMON_MSG_LENGTH - 1);
+    std::cerr << "WARNING: Error message truncated to fit MAX_COMMON_MSG_LENGTH" << std::endl;
+  } else {
+    errorContent.message = error;
+  }
+  
   message.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
   message.content = errorContent;
   this->listeningSocket.bSendData(clientSocket, message);

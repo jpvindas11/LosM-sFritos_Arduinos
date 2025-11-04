@@ -12,6 +12,7 @@
 #include "../../Util/Semaphore.hpp"
 #include "../../Util/Socket.hpp"
 #include "../../Util/User.hpp"
+#include "../../Util/IPConstants.hpp"
 
 /// @brief Estructura para datos de usuario almacenados en memoria
 struct AuthUser {
@@ -34,6 +35,7 @@ private:
     std::mutex requestMutex;
     Socket listeningSocket;
     std::string serverIP;
+    std::string logsIP;
     int listeningPort;
 
     void generateSalt(unsigned char* salt);
@@ -58,6 +60,10 @@ private:
     void hexLiterals(const unsigned char* input, size_t inputLen, char* output, size_t outputLen);
     void hexToBytes(const std::string& hexString, unsigned char* output, size_t outputLen);
 
+    void sendUserLog(const std::string& username, const std::string& action);
+
+    std::string getCurrentTimestamp();
+
 public:
     explicit AuthenticationServer();
     virtual ~AuthenticationServer();
@@ -77,6 +83,7 @@ public:
     void changePermissions(const std::string& username, char newType, char newPermission);
 
     void printUsers();
+    void setLogIP(std::string IP);
     std::unordered_map<std::string, AuthUser>* getUserMap();
 };
 

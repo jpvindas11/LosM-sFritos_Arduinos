@@ -2,6 +2,7 @@
 
 #include "Handler.hpp"
 #include "LogsServer.hpp"
+#include "../Util/IPConstants.hpp"
 
 int main() {
   signal(SIGINT, Handler::signalHandler);
@@ -9,7 +10,7 @@ int main() {
 
   LogsServer& server = LogsServer::getInstance();
 
-  server.run("127.0.0.1", 9090);
+  server.run("0.0.0.0", PORT_MASTER_LOGS);
 
   return EXIT_SUCCESS;
 }
