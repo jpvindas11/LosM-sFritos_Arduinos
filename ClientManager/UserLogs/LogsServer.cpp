@@ -67,6 +67,9 @@ void LogsServer::processClientInThread(int clientSocket) {
     std::cerr << "Error handling client (socket: " << clientSocket << "): " 
               << e.what() << std::endl;
   }
+  this->storageMutex.lock();
+    this->storage.inspectDisk();
+  this->storageMutex.unlock();
   
   // Cerrar el socket del cliente
   std::cout << "Closing client socket: " << clientSocket << std::endl;
@@ -198,6 +201,7 @@ void LogsServer:: addUserLogProcc(addUserLog& message) {
     }
     this->storage.appendFile(message.userName, message.logInfo.data(),
                                                         message.logInfo.size());
+    this->storage.printFileDetails(message.userName);
   this->storageMutex.unlock();
 }
 
