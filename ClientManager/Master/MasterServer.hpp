@@ -30,6 +30,8 @@ class MasterServer {
   std::vector<MasterEntryPoint*> listeners;
 
   void handleMID(int client, Socket* socket);
+  void handleServerStatusRequest(int client, genMessage& request);
+  uint8_t checkServerConnection(const std::string& ip, int port);
 
  public:
   MasterServer();

@@ -47,7 +47,9 @@ enum class MessageType : uint8_t {
     LOG_USER_REQUEST,
     LOG_USER_RESP,
     ADD_USER_LOG,
-    DELETE_USER_LOGS
+    DELETE_USER_LOGS,
+    SERVER_STATUS_REQ,
+    SERVER_STATUS_RES,
 };
 
 struct token {
@@ -243,6 +245,23 @@ struct addUserLog {
     std::string logInfo;
 };
 
+struct serverStatus {
+    std::string serverName;
+    std::string serverIP;
+    uint16_t serverPort;
+    uint8_t isConnected;
+    uint32_t lastCheck;
+};
+
+struct serverStatusReq {
+    uint32_t id_token;
+};
+
+struct serverStatusRes {
+    uint32_t id_token;
+    std::vector<serverStatus> servers;
+};
+
 struct genMessage {
     uint8_t MID;
     std::variant<
@@ -270,7 +289,9 @@ struct genMessage {
         okCommonMsg,
         userLogRequestCommon,
         userLogResp,
-        addUserLog
+        addUserLog,
+        serverStatusReq,
+        serverStatusRes
     > content;
 };
 
@@ -502,6 +523,26 @@ namespace bitsery {
         auto& mid = m.MID;
         s.value1b(mid);
         s.ext(m.content, bitsery::ext::StdVariant{});
+    }
+
+    template <typename S>
+    void serialize(S& s, serverStatus& ss) {
+        s.text1b(ss.serverName, 20);
+        s.text1b(ss.serverIP, 16);
+        s.value2b(ss.serverPort);
+        s.value1b(ss.isConnected);
+        s.value4b(ss.lastCheck);
+    }
+
+    template <typename S>
+    void serialize(S& s, serverStatusReq& m) {
+        s.value4b(m.id_token);
+    }
+
+    template <typename S>
+    void serialize(S& s, serverStatusRes& m) {
+        s.value4b(m.id_token);
+        s.container(m.servers, 10);
     }
 
 }

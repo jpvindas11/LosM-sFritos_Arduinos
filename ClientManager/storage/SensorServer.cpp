@@ -271,62 +271,121 @@ void SensorServer::sendFileBlockNumber(int clientSocket, genSenFileReq& messageC
 
 void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent) {
   std::string fileName = messageContent.fileName.Filename;
-  iNode inode;
   
-  // Trata de leer los datos de archivo
-  if (this->storage.getFileInfo(fileName, &inode)) {
-    uint8_t totalBlocks = 0;
-    for (size_t idx = 0; idx < TOTAL_DIRECT_POINTERS; ++idx) {
-      if (inode.directBlocks[idx] != BLOCK_FREE_SLOT) {
-        ++totalBlocks;
-      }
-    }
+  std::cout << "\n========== SEND FILE BLOCK ==========" << std::endl;
+  std::cout << "Requested file: '" << fileName << "'" << std::endl;
+  
+  // Verificar que el archivo existe
+  if (!this->storage.fileExists(fileName)) {
+    std::cerr << "✗ File not found: " << fileName << std::endl;
     
-    uint32_t blockSize = BLOCK_SIZE;
-    uint32_t localPage = 0;
-    
-    for (int i = 0; i < totalBlocks; i += 2) {
-      // Crea mensaje genérico y de respuesta
-      genMessage reply;
-      senFileBlockRes res;
-      res.id_token = messageContent.id_token;
-      res.fileName = messageContent.fileName;
-      res.usedBlocks = totalBlocks;
-      res.page = localPage++;
-      res.totalPages = (totalBlocks + 1) / 2;
-      
-      // Lee bloque 1 desde buffer
-      char buffer1[blockSize];
-      memset(buffer1, 0, blockSize);
-      uint32_t readSize = blockSize;
-      if (this->storage.readFile(fileName, blockSize * i, buffer1, readSize)) {
-        res.firstBlock = std::string(buffer1, readSize);
-      }
-      
-      // Lee bloque 2 desde buffer (si existe)
-      if (i + 1 < totalBlocks) {
-        char buffer2[blockSize];
-        memset(buffer2, 0, blockSize);
-        readSize = blockSize;
-        if (this->storage.readFile(fileName, blockSize * (i + 1), buffer2, readSize)) {
-          res.secondBlock = std::string(buffer2, readSize);
-        }
-      }
-      
-      // Envía la respuesta
-      reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
-      reply.content = res;
-      this->listeningSocket.bSendData(clientSocket, reply);
-    }
-  } else {
-    // mensaje de error
     genMessage reply;
     errorCommonMsg err;
-    err.message = "No se pudo obtener los metadatos del archivo " + fileName;
+    err.message = "Archivo no encontrado";
     reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
     reply.content = err;
     this->listeningSocket.bSendData(clientSocket, reply);
+    return;
   }
+  
+  // Obtener tamaño del archivo
+  uint32_t totalFileSize = this->storage.getFileSize(fileName);
+  std::cout << "File size: " << totalFileSize << " bytes" << std::endl;
+  
+  if (totalFileSize == 0) {
+    std::cerr << "✗ File is empty" << std::endl;
+    
+    genMessage reply;
+    errorCommonMsg err;
+    err.message = "Archivo vacio";
+    reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+    reply.content = err;
+    this->listeningSocket.bSendData(clientSocket, reply);
+    return;
+  }
+  
+  // Cada mensaje puede llevar 2 bloques de 1024 bytes
+  const uint32_t BLOCK_SIZE_MSG = 1024;
+  const uint32_t BLOCKS_PER_MSG = 2;
+  const uint32_t BYTES_PER_MSG = BLOCK_SIZE_MSG * BLOCKS_PER_MSG; // 2048 bytes
+  
+  // Calcular total de mensajes necesarios
+  uint32_t totalPages = (totalFileSize + BYTES_PER_MSG - 1) / BYTES_PER_MSG;
+  
+  std::cout << "Total pages to send: " << totalPages << std::endl;
+  std::cout << "Bytes per page: " << BYTES_PER_MSG << std::endl;
+  
+  // Enviar archivo en páginas
+  uint32_t cursor = 0; // Posición actual en el archivo
+  uint32_t currentPage = 0;
+  
+  while (cursor < totalFileSize) {
+    genMessage reply;
+    senFileBlockRes res;
+    
+    res.id_token = messageContent.id_token;
+    res.fileName = messageContent.fileName;
+    res.page = currentPage;
+    res.totalPages = totalPages;
+    res.usedBlocks = 0; // No usado realmente
+    
+    // PRIMER BLOQUE (hasta 1024 bytes)
+    uint32_t remainingBytes = totalFileSize - cursor;
+    uint32_t block1Size = std::min(BLOCK_SIZE_MSG, remainingBytes);
+    
+    if (block1Size > 0) {
+      char buffer1[BLOCK_SIZE_MSG];
+      memset(buffer1, 0, BLOCK_SIZE_MSG);
+      uint32_t readSize = block1Size;
+      
+      // Usar readFile con cursor (offset)
+      if (this->storage.readFile(fileName, cursor, buffer1, readSize)) {
+        res.firstBlock = std::string(buffer1, readSize);
+        cursor += readSize;
+        
+        std::cout << "  Page " << (currentPage + 1) << "/" << totalPages 
+                  << ": Block1 = " << readSize << " bytes (cursor now at " << cursor << ")" << std::endl;
+      } else {
+        std::cerr << "✗ Failed to read block1" << std::endl;
+        break;
+      }
+    }
+    
+    // SEGUNDO BLOQUE (hasta 1024 bytes más, si quedan datos)
+    if (cursor < totalFileSize) {
+      remainingBytes = totalFileSize - cursor;
+      uint32_t block2Size = std::min(BLOCK_SIZE_MSG, remainingBytes);
+      
+      char buffer2[BLOCK_SIZE_MSG];
+      memset(buffer2, 0, BLOCK_SIZE_MSG);
+      uint32_t readSize = block2Size;
+      
+      if (this->storage.readFile(fileName, cursor, buffer2, readSize)) {
+        res.secondBlock = std::string(buffer2, readSize);
+        cursor += readSize;
+        
+        std::cout << "  Page " << (currentPage + 1) << "/" << totalPages 
+                  << ": Block2 = " << readSize << " bytes (cursor now at " << cursor << ")" << std::endl;
+      } else {
+        std::cerr << "✗ Failed to read block2" << std::endl;
+      }
+    }
+    
+    // Enviar el mensaje
+    reply.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
+    reply.content = res;
+    
+    if (!this->listeningSocket.bSendData(clientSocket, reply)) {
+      std::cerr << "✗ Failed to send page " << currentPage << std::endl;
+      return;
+    }
+    
+    std::cout << "  ✓ Page " << (currentPage + 1) << " sent successfully" << std::endl;
+    currentPage++;
+  }
+  
+  std::cout << "✓ Sent " << currentPage << " pages for file: " << fileName << std::endl;
+  std::cout << "====================================\n" << std::endl;
 }
 
 void SensorServer::addToSensorServer(addSensor& messageContent) {

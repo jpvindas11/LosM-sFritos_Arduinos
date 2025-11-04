@@ -27,7 +27,7 @@ public:
     QGroupBox *groupBox_usertype;
     QRadioButton *radioButton_c;
     QRadioButton *radioButton_h;
-    QRadioButton *radioButton_s;
+    QRadioButton *radioButton_o;
     QRadioButton *radioButton_u;
 
     void setupUi(QDialog *setRankDialog)
@@ -55,12 +55,12 @@ public:
         radioButton_h = new QRadioButton(groupBox_usertype);
         radioButton_h->setObjectName(QString::fromUtf8("radioButton_h"));
         radioButton_h->setGeometry(QRect(0, 40, 141, 24));
-        radioButton_s = new QRadioButton(groupBox_usertype);
-        radioButton_s->setObjectName(QString::fromUtf8("radioButton_s"));
-        radioButton_s->setGeometry(QRect(0, 60, 141, 24));
+        radioButton_o = new QRadioButton(groupBox_usertype);
+        radioButton_o->setObjectName(QString::fromUtf8("radioButton_o"));
+        radioButton_o->setGeometry(QRect(0, 80, 141, 24));
         radioButton_u = new QRadioButton(groupBox_usertype);
         radioButton_u->setObjectName(QString::fromUtf8("radioButton_u"));
-        radioButton_u->setGeometry(QRect(0, 80, 141, 24));
+        radioButton_u->setGeometry(QRect(0, 60, 141, 24));
 
         retranslateUi(setRankDialog);
         QObject::connect(buttonBox, SIGNAL(accepted()), setRankDialog, SLOT(accept()));
@@ -76,7 +76,7 @@ public:
         groupBox_usertype->setTitle(QCoreApplication::translate("setRankDialog", "Tipo de Usuario", nullptr));
         radioButton_c->setText(QCoreApplication::translate("setRankDialog", "Consultante", nullptr));
         radioButton_h->setText(QCoreApplication::translate("setRankDialog", "Admin. Hardware", nullptr));
-        radioButton_s->setText(QCoreApplication::translate("setRankDialog", "Admin. Software", nullptr));
+        radioButton_o->setText(QCoreApplication::translate("setRankDialog", "Due\303\261o", nullptr));
         radioButton_u->setText(QCoreApplication::translate("setRankDialog", "Admin. Usuarios", nullptr));
     } // retranslateUi
 

@@ -89,24 +89,24 @@
      <string>Admin. Hardware</string>
     </property>
    </widget>
-   <widget class="QRadioButton" name="radioButton_s">
+   <widget class="QRadioButton" name="radioButton_o">
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>60</y>
+      <y>80</y>
       <width>141</width>
       <height>24</height>
      </rect>
     </property>
     <property name="text">
-     <string>Admin. Software</string>
+     <string>Dueño</string>
     </property>
    </widget>
    <widget class="QRadioButton" name="radioButton_u">
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>80</y>
+      <y>60</y>
       <width>141</width>
       <height>24</height>
      </rect>

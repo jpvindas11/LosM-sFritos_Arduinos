@@ -29,7 +29,6 @@ public:
     QLabel *main_label;
     QGroupBox *groupBox;
     QPushButton *b_usuarios;
-    QPushButton *b_arduinos;
     QPushButton *b_nodos;
     QPushButton *b_consulta;
     QPushButton *b_cerrarSesion;
@@ -63,9 +62,6 @@ public:
         b_usuarios = new QPushButton(groupBox);
         b_usuarios->setObjectName(QString::fromUtf8("b_usuarios"));
         b_usuarios->setGeometry(QRect(0, 60, 141, 26));
-        b_arduinos = new QPushButton(groupBox);
-        b_arduinos->setObjectName(QString::fromUtf8("b_arduinos"));
-        b_arduinos->setGeometry(QRect(0, 120, 141, 26));
         b_nodos = new QPushButton(groupBox);
         b_nodos->setObjectName(QString::fromUtf8("b_nodos"));
         b_nodos->setGeometry(QRect(0, 90, 141, 26));
@@ -139,7 +135,6 @@ public:
         main_label->setText(QCoreApplication::translate("MenuWindow", "Men\303\272 Principal", nullptr));
         groupBox->setTitle(QCoreApplication::translate("MenuWindow", "Opciones", nullptr));
         b_usuarios->setText(QCoreApplication::translate("MenuWindow", "Usuarios", nullptr));
-        b_arduinos->setText(QCoreApplication::translate("MenuWindow", "Arduinos", nullptr));
         b_nodos->setText(QCoreApplication::translate("MenuWindow", "Nodos", nullptr));
         b_consulta->setText(QCoreApplication::translate("MenuWindow", "Consulta", nullptr));
         b_cerrarSesion->setText(QCoreApplication::translate("MenuWindow", "Cerrar Sesi\303\263n", nullptr));

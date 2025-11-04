@@ -4,6 +4,9 @@
 #include "newuserdialog.h"
 #include <QListWidgetItem>
 #include "confirmdeleteuserdialog.h"
+#include <QTextEdit>
+#include <QFont>
+#include <QLayout>
 
 MenuWindow::MenuWindow(QWidget *parent) :
     QMainWindow(parent), ui(new Ui::MenuWindow)
@@ -16,11 +19,84 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
 MenuWindow::~MenuWindow()
 {
-
     if (sensorUpdateTimer) {
         sensorUpdateTimer->stop();
     }
     delete ui;
+
+    std::string IP = currentUser.getIP();
+    int port = currentUser.getPort();
+
+    // Crear socket temporal para el logout
+    Socket* tempSocket = nullptr;
+
+    try {
+        tempSocket = new Socket();
+
+        // Crear y configurar el socket
+        if (!tempSocket->create()) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+            return;
+        }
+
+        // Conectar al servidor
+        if (!tempSocket->connectToServer(IP, port)) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
+            return;
+        }
+
+        // Crear mensaje de logout usando Bitsery
+        genMessage logout;
+        logout.MID = static_cast<uint8_t>(MessageType::AUTH_LOGOUT);
+
+        authLogout authLogoutReq;
+        authLogoutReq.user = currentUser.getUser();
+        logout.content = authLogoutReq;
+
+        // Enviar solicitud de logout
+        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), logout);
+        if (sent <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de logout");
+            return;
+        }
+
+        // Recibir respuesta
+        genMessage response;
+        ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+
+        if (received <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo recibir respuesta del servidor");
+            return;
+        }
+
+        // Verificar tipo de respuesta
+        if (response.MID == static_cast<uint8_t>(MessageType::OK_COMMON_MSG)) {
+            try {
+                delete tempSocket; // Limpiar socket antes de cambiar ventana
+
+                MainWindow* login = new MainWindow();
+                login->show();
+                this->hide();
+
+            } catch (const std::runtime_error& e) {
+                QMessageBox::critical(this, "Error", "Error al procesar respuesta del servidor");
+            }
+        }
+        else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+            errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
+        }
+
+    } catch (const std::exception& e) {
+        if (tempSocket) delete tempSocket;
+        QMessageBox::critical(this, "Error de conexión",
+                              QString("No se pudo conectar al servidor: %1").arg(e.what()));
+    }
 
 }
 
@@ -39,18 +115,15 @@ void MenuWindow::setCurrentUser(userDataQt user) {
 void MenuWindow::hideFuctionsForRanks(int rank) {
     // Primero ocultar todos los botones sensibles
     this->ui->b_usuarios->move(-100, -100);
-    this->ui->b_arduinos->move(-100, -100);
     this->ui->b_nodos->move(-100, -100);
     this->ui->b_consulta->move(-100, -100);
 
     // Luego mostrar solo los permitidos según el rango
     switch(rank) {
-        case UR_HARDWAREMANAGER:
-            this->ui->b_arduinos->move(0, 30);
-            break;
         case UR_USERMANAGER:
             this->ui->b_usuarios->move(0, 30);
             break;
+        case UR_HARDWAREMANAGER:
         case UR_SOFTWAREMANAGER:
             this->ui->b_nodos->move(0, 30);
             break;
@@ -61,8 +134,7 @@ void MenuWindow::hideFuctionsForRanks(int rank) {
             // OWNER tiene acceso a todo
             this->ui->b_consulta->move(0, 30);
             this->ui->b_usuarios->move(0, 60);
-            this->ui->b_arduinos->move(0, 90);
-            this->ui->b_nodos->move(0, 120);
+            this->ui->b_nodos->move(0, 90);
             break;
         default:
             this->ui->b_consulta->move(0, 30);
@@ -77,7 +149,6 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText)
     ui->main_label->setText(labelText);
 
     ui->b_usuarios->setEnabled(true);
-    ui->b_arduinos->setEnabled(true);
     ui->b_consulta->setEnabled(true);
     ui->b_nodos->setEnabled(true);
 
@@ -301,22 +372,6 @@ void MenuWindow::on_b_usuarios_clicked()
 }
 
 
-void MenuWindow::on_b_arduinos_clicked()
-{
-    setActiveMenu(ui->b_arduinos, "Arduinos");
-
-    // Scroll list
-    this->ui->arduino_list->move(280,30);
-
-    // Turn button
-    this->ui->arduino_turn->move(170, 30);
-    this->ui->b_consultar->move(-170, 90);
-
-    // this->arduinoMenu.setSelectedArduino(nullptr);
-
-    // this->arduinoMenu.updateList();
-}
-
 void MenuWindow::on_b_cerrarSesion_clicked()
 {
     std::string IP = currentUser.getIP();
@@ -398,6 +453,42 @@ void MenuWindow::on_user_list_itemClicked(QListWidgetItem *item)
 {
     this->userMenu.setSelectedUser(item);
     this->userMenu.hideDeleteButton(ui->user_delete, &this->currentUser);
+
+    // Obtener información del usuario seleccionado
+    UserInfo* selectedUser = this->userMenu.getSelectedUserInfo(&this->users);
+
+    if (selectedUser) {
+        // Crear mensaje box con opciones
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("Usuario: " + QString::fromStdString(selectedUser->user));
+
+        QString info = QString(
+                           "═══════════════════════════════════════\n"
+                           "INFORMACIÓN DEL USUARIO\n"
+                           "═══════════════════════════════════════\n\n"
+                           "Usuario:        %1\n"
+                           "Rango:          %2\n"
+                           "Estado:         %3\n\n"
+                           "¿Qué deseas hacer?"
+                           ).arg(QString::fromStdString(selectedUser->user))
+                           .arg(selectedUser->rank)
+                           .arg(selectedUser->isConnected ? "Conectado" : "Desconectado");
+
+        msgBox.setText(info);
+        msgBox.setIcon(QMessageBox::Question);
+
+        // Agregar botones personalizados
+        QPushButton* logsButton = msgBox.addButton("Ver Logs", QMessageBox::ActionRole);
+        QPushButton* closeButton = msgBox.addButton("Cerrar", QMessageBox::RejectRole);
+
+        msgBox.exec();
+
+        // Verificar qué botón se presionó
+        if (msgBox.clickedButton() == logsButton) {
+            // Solicitar y mostrar logs
+            askForUserLogs(selectedUser->user);
+        }
+    }
 }
 
 
@@ -412,6 +503,12 @@ void MenuWindow::on_user_add_clicked()
         int port = currentUser.getPort();
         std::cout << IP << std::endl;
         std::cout << port << std::endl;
+
+        // Cancel if non-owner tried to create an owner
+        if (currentUser.getRank() != UR_OWNER && dialog.getRank() == USER_OWNER) {
+            QMessageBox::critical(this, "Error", "Solo dueños pueden crear otros DUEÑOS");
+            return;
+        }
 
         // Crear socket temporal para la creación de usuario
         Socket* tempSocket = nullptr;
@@ -511,6 +608,18 @@ void MenuWindow::on_user_delete_clicked()
         // Aquí enviarías el mensaje de eliminación al servidor
         std::string IP = currentUser.getIP();
         int port = currentUser.getPort();
+
+        // Cancel if non-owner tried to create an owner
+        if (currentUser.getRank() != UR_OWNER && userDel->rank == USER_OWNER) {
+            QMessageBox::critical(this, "Error", "Solo dueños pueden eliminar a otro DUEÑO");
+            return;
+        }
+
+        // Cancel if non-owner tried to create an owner
+        if (userDel->isConnected) {
+            QMessageBox::critical(this, "Error", "No puedes eliminar a un usuario en linea");
+            return;
+        }
 
         Socket* tempSocket = nullptr;
         try {
@@ -666,6 +775,12 @@ void MenuWindow::on_user_change_rank_clicked()
         std::string IP = currentUser.getIP();
         int port = currentUser.getPort();
 
+        // Cancel if non-owner tried to create an owner
+        if (currentUser.getRank() != UR_OWNER && dialog.getRank() == USER_OWNER) {
+            QMessageBox::critical(this, "Error", "Solo dueños pueden asignar el rango DUEÑO");
+            return;
+        }
+
         Socket* tempSocket = nullptr;
         try {
             tempSocket = new Socket();
@@ -715,7 +830,13 @@ void MenuWindow::on_user_change_rank_clicked()
 
 void MenuWindow::on_b_nodos_clicked()
 {
-    setActiveMenu(ui->b_nodos, "Nodos Conectados (Sin Implementar)");
+    setActiveMenu(ui->b_nodos, "Nodos Conectados");
+
+    // Mostrar la lista de arduinos/servidores
+    this->ui->arduino_list->move(280, 30);
+
+    // Solicitar estado de servidores
+    askForServerStatus();
 }
 
 
@@ -738,14 +859,12 @@ void MenuWindow::on_data_list_itemClicked(QListWidgetItem *item)
 {
     this->dataMenu.setSelectedSensor(item);
 
-    // Mostrar detalles del sensor seleccionado
     sensorRecentData* sensor = this->dataMenu.getSelectedSensorInfo(&this->sensorsData);
+
     if (sensor) {
-        // Calcular tiempo transcurrido
         time_t currentTime = time(nullptr);
         uint32_t secondsAgo = currentTime - sensor->lastModified;
 
-        // Formatear el tiempo de forma más legible
         QString timeStr;
         if (secondsAgo < 60) {
             timeStr = QString("%1 segundo(s)").arg(secondsAgo);
@@ -755,11 +874,9 @@ void MenuWindow::on_data_list_itemClicked(QListWidgetItem *item)
             timeStr = QString("%1 hora(s)").arg(secondsAgo / 3600);
         }
 
-        // Parsear los datos para mostrarlos de forma más legible
         QString dataStr = QString::fromStdString(sensor->data);
         QString parsedValue;
 
-        // Extraer solo el valor (entre ':' y ',')
         int colonPos = dataStr.indexOf(':');
         int commaPos = dataStr.indexOf(',');
         if (colonPos != -1 && commaPos != -1) {
@@ -768,52 +885,625 @@ void MenuWindow::on_data_list_itemClicked(QListWidgetItem *item)
             parsedValue = dataStr;
         }
 
-        // Limpiar el tipo de sensor
         QString sensorType = QString::fromStdString(sensor->sensorType);
         sensorType = sensorType.replace(":", "");
 
-        QString details = QString("═══════════════════════════\n"
-                                  "INFORMACIÓN DEL SENSOR\n"
-                                  "═══════════════════════════\n\n"
-                                  "Tipo:                %1\n"
-                                  "IP:                  %2\n"
-                                  "Valor:               %3\n"
-                                  "Última actualización: %4 atrás\n\n"
-                                  "Datos completos:\n%5")
-                              .arg(sensorType)
-                              .arg(QString::fromStdString(sensor->ip))
-                              .arg(parsedValue)
-                              .arg(timeStr)
-                              .arg(dataStr);
+        QString info = QString(
+                           "═══════════════════════════════════════\n"
+                           "INFORMACIÓN DEL SENSOR\n"
+                           "═══════════════════════════════════════\n\n"
+                           "Tipo:                %1\n"
+                           "IP:                  %2\n"
+                           "Valor actual:        %3\n"
+                           "Última actualización: %4 atrás\n\n"
+                           "¿Qué deseas hacer?"
+                           ).arg(sensorType)
+                           .arg(QString::fromStdString(sensor->ip))
+                           .arg(parsedValue)
+                           .arg(timeStr);
 
         QMessageBox msgBox(this);
-        msgBox.setWindowTitle("Detalles del Sensor");
-        msgBox.setText(details);
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.setWindowTitle("Sensor: " + sensorType);
+        msgBox.setText(info);
+        msgBox.setIcon(QMessageBox::Question);
+
+        QPushButton* logsButton = msgBox.addButton("Ver Historial", QMessageBox::ActionRole);
+        QPushButton* closeButton = msgBox.addButton("Cerrar", QMessageBox::RejectRole);
+
         msgBox.exec();
+
+        if (msgBox.clickedButton() == logsButton) {
+            askForSensorLogs(sensor->ip, sensor->sensorType);
+        }
     } else {
         QMessageBox::warning(this, "Error", "No se pudo obtener información del sensor");
     }
 }
 
-void MenuWindow::on_arduino_list_itemClicked(QListWidgetItem *item)
-{
-    // this->arduinoMenu.setSelectedArduino(item);
-}
+void MenuWindow::askForUserLogs(const std::string& username) {
+    std::cout << "\n========== ASK FOR USER LOGS ==========" << std::endl;
+    std::cout << "Requesting logs for user: " << username << std::endl;
 
+    std::string IP = "127.0.0.1"; // IP del servidor de logs
+    int port = 14005; // Puerto del servidor de logs (PORT_MASTER_LOGS)
 
-void MenuWindow::on_arduino_turn_clicked()
-{
-    this->arduinoMenu.turnOff();
-}
+    Socket* tempSocket = nullptr;
 
-void MenuWindow::on_arduino_consultar_Clicked(){
-    // setActiveMenu("")
-    // this->dataMenu.getData();
-    // this->dataMenu.updateList();
+    try {
+        tempSocket = new Socket();
+
+        if (!tempSocket->create()) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+            return;
+        }
+
+        if (!tempSocket->connectToServer(IP, port)) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error",
+                                  "No se pudo conectar al servidor de logs en " +
+                                      QString::fromStdString(IP) + ":" + QString::number(port));
+            return;
+        }
+
+        std::cout << "✓ Connected to logs server" << std::endl;
+
+        // Crear mensaje de solicitud
+        genMessage logsRequest;
+        logsRequest.MID = static_cast<uint8_t>(MessageType::LOG_USER_REQUEST);
+
+        userLogRequestCommon request;
+        request.id_token = 0; // No necesitamos token para esto
+        request.userName = username;
+
+        logsRequest.content = request;
+
+        std::cout << "Sending LOG_USER_REQUEST for: " << username << std::endl;
+
+        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), logsRequest);
+        if (sent <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de logs");
+            return;
+        }
+
+        std::cout << "✓ Request sent (" << sent << " bytes)" << std::endl;
+
+        // Recibir todas las páginas de logs
+        QString allLogs;
+        bool receivingPages = true;
+        int pagesReceived = 0;
+        uint32_t totalPages = 0;
+
+        while (receivingPages) {
+            genMessage response;
+            ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+
+            if (received <= 0) {
+                std::cerr << "✗ Error receiving response or connection closed" << std::endl;
+                break;
+            }
+
+            std::cout << "Response MID: " << static_cast<int>(response.MID) << std::endl;
+
+            if (response.MID == static_cast<uint8_t>(MessageType::LOG_USER_RESP)) {
+                try {
+                    userLogResp logsResponse = getMessageContent<userLogResp>(response);
+
+                    totalPages = logsResponse.totalPages;
+                    pagesReceived++;
+
+                    std::cout << "Received page " << logsResponse.page
+                              << " of " << logsResponse.totalPages << std::endl;
+
+                    // Procesar primer bloque
+                    if (!logsResponse.firstBlock.empty()) {
+                        std::string block1 = logsResponse.firstBlock;
+                        // Eliminar padding de nulls
+                        size_t nullPos = block1.find('\0');
+                        if (nullPos != std::string::npos) {
+                            block1 = block1.substr(0, nullPos);
+                        }
+                        allLogs += QString::fromStdString(block1);
+                    }
+
+                    // Procesar segundo bloque
+                    if (!logsResponse.secondBlock.empty()) {
+                        std::string block2 = logsResponse.secondBlock;
+                        size_t nullPos = block2.find('\0');
+                        if (nullPos != std::string::npos) {
+                            block2 = block2.substr(0, nullPos);
+                        }
+                        allLogs += QString::fromStdString(block2);
+                    }
+
+                    // Verificar si es la última página
+                    if (logsResponse.page >= logsResponse.totalPages) {
+                        std::cout << "✓ All pages received (" << pagesReceived
+                                  << " pages)" << std::endl;
+                        receivingPages = false;
+                    }
+
+                } catch (const std::runtime_error& e) {
+                    std::cerr << "✗ Error processing response: " << e.what() << std::endl;
+                    QMessageBox::critical(this, "Error",
+                                          "Error al procesar respuesta del servidor de logs");
+                    break;
+                }
+            }
+            else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+                errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
+                std::cerr << "✗ Server error: " << errorMsg.message << std::endl;
+
+                delete tempSocket;
+
+                // Mostrar mensaje informativo si no hay logs
+                if (std::string(errorMsg.message).find("not found") != std::string::npos ||
+                    std::string(errorMsg.message).find("Empty") != std::string::npos) {
+                    QMessageBox::information(this, "Sin logs",
+                                             QString("El usuario '%1' no tiene logs registrados todavía.")
+                                                 .arg(QString::fromStdString(username)));
+                } else {
+                    QMessageBox::critical(this, "Error",
+                                          QString::fromStdString(errorMsg.message));
+                }
+                return;
+            }
+        }
+
+        delete tempSocket;
+
+        // Mostrar logs en un popup
+        if (!allLogs.isEmpty()) {
+            // Contar número de líneas
+            int logCount = allLogs.count('\n');
+
+            // Crear mensaje formateado
+            QString formattedLogs = QString(
+                                        "═══════════════════════════════════════\n"
+                                        "       LOGS DE USUARIO\n"
+                                        "═══════════════════════════════════════\n\n"
+                                        "Usuario:        %1\n"
+                                        "Total de logs:  %2\n"
+                                        "Páginas:        %3\n\n"
+                                        "═══════════════════════════════════════\n"
+                                        "HISTORIAL DE ACTIVIDAD:\n"
+                                        "═══════════════════════════════════════\n\n%4"
+                                        ).arg(QString::fromStdString(username))
+                                        .arg(logCount)
+                                        .arg(totalPages)
+                                        .arg(allLogs);
+
+            // Crear QMessageBox personalizado con scroll
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle("Logs de Usuario - " + QString::fromStdString(username));
+            msgBox.setIcon(QMessageBox::Information);
+            msgBox.setStandardButtons(QMessageBox::Ok);
+
+            // Usar QTextEdit para permitir scroll si hay muchos logs
+            QTextEdit* textEdit = new QTextEdit();
+            textEdit->setReadOnly(true);
+            textEdit->setPlainText(formattedLogs);
+            textEdit->setMinimumSize(600, 400);
+            textEdit->setFont(QFont("Courier New", 9)); // Fuente monoespaciada
+
+            msgBox.layout()->addWidget(textEdit);
+            msgBox.exec();
+
+        } else {
+            QMessageBox::information(this, "Sin logs",
+                                     QString("El usuario '%1' no tiene logs registrados.")
+                                         .arg(QString::fromStdString(username)));
+        }
+
+        std::cout << "==========================================\n" << std::endl;
+
+    } catch (const std::exception& e) {
+        if (tempSocket) delete tempSocket;
+        std::cerr << "✗ Exception: " << e.what() << std::endl;
+        QMessageBox::critical(this, "Error de conexión",
+                              QString("No se pudo conectar al servidor de logs: %1").arg(e.what()));
+    }
 }
 
 void MenuWindow::updateSensorDataAutomatically() {
     askForSensorData();
+}
+
+
+void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string& sensorType) {
+    std::cout << "\n========== ASK FOR SENSOR LOGS ==========" << std::endl;
+    std::cout << "Requesting logs for sensor:" << std::endl;
+    std::cout << "  IP: " << sensorIP << std::endl;
+    std::cout << "  Type: " << sensorType << std::endl;
+
+    std::string IP = currentUser.getIP();
+    int port = currentUser.getPort();
+
+    std::cout << "Connecting to Master: " << IP << ":" << port << std::endl;
+
+    Socket* tempSocket = nullptr;
+
+    try {
+        tempSocket = new Socket();
+
+        if (!tempSocket->create()) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+            return;
+        }
+
+        if (!tempSocket->connectToServer(IP, port)) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error",
+                                  "No se pudo conectar al servidor Master en " +
+                                      QString::fromStdString(IP) + ":" + QString::number(port));
+            return;
+        }
+
+        std::cout << "✓ Connected to Master server" << std::endl;
+
+        // PASO 1: Solicitar lista de archivos de sensores
+        genMessage fileNamesRequest;
+        fileNamesRequest.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_REQ);
+        GenNumReq request;
+        request.id_token = 0;
+        fileNamesRequest.content = request;
+
+        std::cout << "Sending SEN_FILE_NAMES_REQ..." << std::endl;
+
+        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), fileNamesRequest);
+        if (sent <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de nombres");
+            return;
+        }
+
+        std::cout << "✓ Request sent, waiting for response..." << std::endl;
+
+        // Recibir todos los nombres de archivos
+        std::vector<std::string> allLogFiles;
+        bool receivingPages = true;
+        int pagesReceived = 0;
+
+        while (receivingPages) {
+            genMessage response;
+            ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+
+            if (received <= 0) {
+                std::cerr << "✗ Error receiving file names (received: " << received << ")" << std::endl;
+                break;
+            }
+
+            std::cout << "Response MID: " << static_cast<int>(response.MID) << std::endl;
+
+            if (response.MID == static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES)) {
+                senFileNamesRes fileNamesRes = getMessageContent<senFileNamesRes>(response);
+                pagesReceived++;
+
+                std::cout << "✓ Received page " << (fileNamesRes.page + 1)
+                          << " of " << fileNamesRes.totalPages
+                          << " (files in page: " << fileNamesRes.fileNames.names.size() << ")" << std::endl;
+
+                for (const auto& fileReq : fileNamesRes.fileNames.names) {
+                    if (!fileReq.Filename.empty()) {
+                        allLogFiles.push_back(fileReq.Filename);
+                        std::cout << "    - " << fileReq.Filename << std::endl;
+                    }
+                }
+
+                if (fileNamesRes.page + 1 >= fileNamesRes.totalPages) {
+                    std::cout << "✓ All pages received (" << pagesReceived << " pages)" << std::endl;
+                    receivingPages = false;
+                }
+            } else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+                errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
+                delete tempSocket;
+                std::cerr << "✗ Server error: " << errorMsg.message << std::endl;
+                QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
+                return;
+            } else {
+                std::cerr << "✗ Unexpected message type: " << static_cast<int>(response.MID) << std::endl;
+                break;
+            }
+        }
+
+        std::cout << "\nTotal files received: " << allLogFiles.size() << std::endl;
+
+        if (allLogFiles.empty()) {
+            delete tempSocket;
+            QMessageBox::information(this, "Sin archivos",
+                                     "No se encontraron archivos de logs en el servidor");
+            return;
+        }
+
+        // PASO 2: Filtrar archivos que pertenecen a este sensor
+        std::vector<std::string> sensorLogFiles;
+        std::string cleanType = sensorType;
+        cleanType.erase(std::remove(cleanType.begin(), cleanType.end(), ':'), cleanType.end());
+
+        std::cout << "\nFiltering files for type: '" << cleanType << "'" << std::endl;
+
+        for (const auto& filename : allLogFiles) {
+            if (filename.find(cleanType) == 0 && filename.find(".log") != std::string::npos) {
+                sensorLogFiles.push_back(filename);
+                std::cout << "  ✓ Match: " << filename << std::endl;
+            }
+        }
+
+        if (sensorLogFiles.empty()) {
+            delete tempSocket;
+            QMessageBox::information(this, "Sin logs",
+                                     QString("No se encontraron logs para el sensor tipo '%1'\n\n"
+                                             "Archivos totales revisados: %2")
+                                         .arg(QString::fromStdString(cleanType))
+                                         .arg(allLogFiles.size()));
+            return;
+        }
+
+        std::cout << "\n✓ Found " << sensorLogFiles.size() << " log files for this sensor" << std::endl;
+
+        // PASO 3: Solicitar contenido de cada archivo
+        QString allLogs;
+        int totalEntries = 0;
+        int filesProcessed = 0;
+
+        for (const auto& logFile : sensorLogFiles) {
+            std::cout << "\n[" << (filesProcessed + 1) << "/" << sensorLogFiles.size()
+            << "] Requesting: " << logFile << std::endl;
+
+            genMessage fileBlockReq;
+            fileBlockReq.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_REQ);
+            genSenFileReq blockRequest;
+            blockRequest.id_token = 0;
+            blockRequest.fileName.Filename = logFile;
+            fileBlockReq.content = blockRequest;
+
+            sent = tempSocket->bSendData(tempSocket->getSocketFD(), fileBlockReq);
+            if (sent <= 0) {
+                std::cerr << "✗ Could not request file: " << logFile << std::endl;
+                continue;
+            }
+
+            bool receivingBlocks = true;
+            QString fileContent;
+            int blocksReceived = 0;
+
+            while (receivingBlocks) {
+                genMessage blockResponse;
+                ssize_t blockReceived = tempSocket->bReceiveData(tempSocket->getSocketFD(), blockResponse);
+
+                if (blockReceived <= 0) {
+                    std::cerr << "✗ Error receiving blocks" << std::endl;
+                    break;
+                }
+
+                if (blockResponse.MID == static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP)) {
+                    senFileBlockRes blockRes = getMessageContent<senFileBlockRes>(blockResponse);
+                    blocksReceived++;
+
+                    std::cout << "  ✓ Block " << (blockRes.page + 1)
+                              << "/" << blockRes.totalPages << std::endl;
+
+                    if (!blockRes.firstBlock.empty()) {
+                        std::string block1 = blockRes.firstBlock;
+                        size_t nullPos = block1.find('\0');
+                        if (nullPos != std::string::npos) {
+                            block1 = block1.substr(0, nullPos);
+                        }
+                        fileContent += QString::fromStdString(block1);
+                    }
+
+                    if (!blockRes.secondBlock.empty()) {
+                        std::string block2 = blockRes.secondBlock;
+                        size_t nullPos = block2.find('\0');
+                        if (nullPos != std::string::npos) {
+                            block2 = block2.substr(0, nullPos);
+                        }
+                        fileContent += QString::fromStdString(block2);
+                    }
+
+                    if (blockRes.page + 1 >= blockRes.totalPages) {
+                        std::cout << "  ✓ Complete (" << blocksReceived << " blocks)" << std::endl;
+                        receivingBlocks = false;
+                    }
+                } else if (blockResponse.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+                    errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(blockResponse);
+                    std::cerr << "  ✗ Error: " << errorMsg.message << std::endl;
+                    break;
+                } else {
+                    std::cerr << "  ✗ Unexpected response: " << static_cast<int>(blockResponse.MID) << std::endl;
+                    break;
+                }
+            }
+
+            if (!fileContent.isEmpty()) {
+                allLogs += QString("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+                allLogs += QString("📁 Archivo: %1\n").arg(QString::fromStdString(logFile));
+                allLogs += QString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+                allLogs += fileContent;
+
+                int entries = fileContent.count('\n');
+                totalEntries += entries;
+                filesProcessed++;
+
+                std::cout << "  ✓ Added " << entries << " entries" << std::endl;
+            }
+        }
+
+        delete tempSocket;
+
+        std::cout << "\n✓ Total files processed: " << filesProcessed
+                  << "/" << sensorLogFiles.size() << std::endl;
+        std::cout << "✓ Total entries: " << totalEntries << std::endl;
+
+        // PASO 4: Mostrar logs
+        if (!allLogs.isEmpty()) {
+            QString formattedLogs = QString(
+                                        "═══════════════════════════════════════\n"
+                                        "       HISTORIAL DEL SENSOR\n"
+                                        "═══════════════════════════════════════\n\n"
+                                        "Tipo:            %1\n"
+                                        "IP:              %2\n"
+                                        "Archivos:        %3\n"
+                                        "Total registros: %4\n\n"
+                                        "═══════════════════════════════════════\n"
+                                        "DATOS HISTÓRICOS:\n"
+                                        "═══════════════════════════════════════\n%5"
+                                        ).arg(QString::fromStdString(cleanType))
+                                        .arg(QString::fromStdString(sensorIP))
+                                        .arg(filesProcessed)
+                                        .arg(totalEntries)
+                                        .arg(allLogs);
+
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle("Historial - " + QString::fromStdString(cleanType));
+            msgBox.setIcon(QMessageBox::Information);
+            msgBox.setStandardButtons(QMessageBox::Ok);
+
+            QTextEdit* textEdit = new QTextEdit();
+            textEdit->setReadOnly(true);
+            textEdit->setPlainText(formattedLogs);
+            textEdit->setMinimumSize(700, 500);
+            textEdit->setFont(QFont("Courier New", 9));
+
+            msgBox.layout()->addWidget(textEdit);
+            msgBox.exec();
+
+        } else {
+            QMessageBox::information(this, "Sin datos",
+                                     QString("No se pudieron cargar datos de los %1 archivos encontrados")
+                                         .arg(sensorLogFiles.size()));
+        }
+
+        std::cout << "==========================================\n" << std::endl;
+
+    } catch (const std::exception& e) {
+        if (tempSocket) delete tempSocket;
+        std::cerr << "✗ Exception: " << e.what() << std::endl;
+        QMessageBox::critical(this, "Error de conexión",
+                              QString("Error: %1").arg(e.what()));
+    }
+}
+
+void MenuWindow::askForServerStatus() {
+    std::cout << "\n========== ASK FOR SERVER STATUS ==========" << std::endl;
+
+    std::string IP = currentUser.getIP();
+    int port = currentUser.getPort();
+
+    std::cout << "Connecting to: " << IP << ":" << port << std::endl;
+
+    Socket* tempSocket = nullptr;
+
+    try {
+        tempSocket = new Socket();
+
+        if (!tempSocket->create()) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+            return;
+        }
+
+        if (!tempSocket->connectToServer(IP, port)) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
+            return;
+        }
+
+        std::cout << "✓ Connected to master server" << std::endl;
+
+        genMessage statusRequest;
+        statusRequest.MID = static_cast<uint8_t>(MessageType::SERVER_STATUS_REQ);
+        serverStatusReq request;
+        request.id_token = 0;
+        statusRequest.content = request;
+
+        std::cout << "Sending SERVER_STATUS_REQ message..." << std::endl;
+
+        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), statusRequest);
+        if (sent <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud");
+            return;
+        }
+
+        std::cout << "✓ Request sent (" << sent << " bytes)" << std::endl;
+        std::cout << "Waiting for response..." << std::endl;
+
+        genMessage response;
+        ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+
+        if (received <= 0) {
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", "No se pudo recibir respuesta");
+            return;
+        }
+
+        std::cout << "✓ Response received (" << received << " bytes)" << std::endl;
+        std::cout << "Response MID: " << static_cast<int>(response.MID) << std::endl;
+
+        if (response.MID == static_cast<uint8_t>(MessageType::SERVER_STATUS_RES)) {
+            try {
+                serverStatusRes statusRes = getMessageContent<serverStatusRes>(response);
+
+                std::cout << "\n========== RECEIVED SERVER STATUS ==========" << std::endl;
+                std::cout << "Total servers: " << statusRes.servers.size() << std::endl;
+
+                // Limpiar lista ANTES de agregar items
+                this->ui->arduino_list->clear();
+
+                // Agregar cada servidor a la lista
+                for (const auto& server : statusRes.servers) {
+                    QString statusIcon = server.isConnected ? "🟢" : "🔴";
+                    QString statusText = server.isConnected ? "ONLINE" : "OFFLINE";
+
+                    QString itemText = QString("%1 %2 - %3 (%4:%5)")
+                                           .arg(statusIcon)
+                                           .arg(QString::fromStdString(server.serverName))
+                                           .arg(statusText)
+                                           .arg(QString::fromStdString(server.serverIP))
+                                           .arg(server.serverPort);
+
+                    QListWidgetItem* item = new QListWidgetItem(itemText);
+
+                    if (server.isConnected) {
+                        item->setBackground(QColor(200, 255, 200));
+                    } else {
+                        item->setBackground(QColor(255, 200, 200));
+                    }
+
+                    this->ui->arduino_list->addItem(item);
+
+                    std::cout << "  [" << server.serverName << "] "
+                              << (server.isConnected ? "ONLINE" : "OFFLINE")
+                              << " at " << server.serverIP << ":" << server.serverPort << std::endl;
+                }
+
+                delete tempSocket;
+                std::cout << "✓ List updated with " << statusRes.servers.size() << " servers" << std::endl;
+                std::cout << "==========================================\n" << std::endl;
+
+            } catch (const std::runtime_error& e) {
+                delete tempSocket;
+                std::cerr << "✗ Error processing response: " << e.what() << std::endl;
+                QMessageBox::critical(this, "Error", "Error al procesar respuesta del servidor");
+            }
+        } else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+            errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
+            delete tempSocket;
+            std::cerr << "✗ Server error: " << errorMsg.message << std::endl;
+            QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
+        } else {
+            delete tempSocket;
+            std::cerr << "✗ Unexpected response MID: " << static_cast<int>(response.MID) << std::endl;
+            QMessageBox::critical(this, "Error", "Respuesta inesperada del servidor");
+        }
+
+    } catch (const std::exception& e) {
+        if (tempSocket) delete tempSocket;
+        std::cerr << "✗ Exception: " << e.what() << std::endl;
+        QMessageBox::critical(this, "Error de conexión",
+                              QString("No se pudo conectar al servidor: %1").arg(e.what()));
+    }
 }

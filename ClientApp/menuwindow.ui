@@ -55,19 +55,6 @@
       <string>Usuarios</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="b_arduinos">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>120</y>
-       <width>141</width>
-       <height>26</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Arduinos</string>
-     </property>
-    </widget>
     <widget class="QPushButton" name="b_nodos">
      <property name="geometry">
       <rect>

@@ -31,8 +31,8 @@ public:
     QGroupBox *groupBox_usertype;
     QRadioButton *radioButton_c;
     QRadioButton *radioButton_h;
-    QRadioButton *radioButton_s;
     QRadioButton *radioButton_u;
+    QRadioButton *radioButton_o;
 
     void setupUi(QDialog *newUserDialog)
     {
@@ -70,12 +70,12 @@ public:
         radioButton_h = new QRadioButton(groupBox_usertype);
         radioButton_h->setObjectName(QString::fromUtf8("radioButton_h"));
         radioButton_h->setGeometry(QRect(0, 40, 141, 24));
-        radioButton_s = new QRadioButton(groupBox_usertype);
-        radioButton_s->setObjectName(QString::fromUtf8("radioButton_s"));
-        radioButton_s->setGeometry(QRect(0, 60, 141, 24));
         radioButton_u = new QRadioButton(groupBox_usertype);
         radioButton_u->setObjectName(QString::fromUtf8("radioButton_u"));
-        radioButton_u->setGeometry(QRect(0, 80, 141, 24));
+        radioButton_u->setGeometry(QRect(0, 60, 141, 24));
+        radioButton_o = new QRadioButton(groupBox_usertype);
+        radioButton_o->setObjectName(QString::fromUtf8("radioButton_o"));
+        radioButton_o->setGeometry(QRect(0, 80, 141, 24));
 
         retranslateUi(newUserDialog);
         QObject::connect(buttonBox, SIGNAL(accepted()), newUserDialog, SLOT(accept()));
@@ -94,9 +94,9 @@ public:
         label_3->setText(QCoreApplication::translate("newUserDialog", "Crear un usuario nuevo", nullptr));
         groupBox_usertype->setTitle(QCoreApplication::translate("newUserDialog", "Tipo de Usuario", nullptr));
         radioButton_c->setText(QCoreApplication::translate("newUserDialog", "Consultante", nullptr));
-        radioButton_h->setText(QCoreApplication::translate("newUserDialog", "Admin. Hardware", nullptr));
-        radioButton_s->setText(QCoreApplication::translate("newUserDialog", "Admin. Software", nullptr));
+        radioButton_h->setText(QCoreApplication::translate("newUserDialog", "Admin. Nodos", nullptr));
         radioButton_u->setText(QCoreApplication::translate("newUserDialog", "Admin. Usuarios", nullptr));
+        radioButton_o->setText(QCoreApplication::translate("newUserDialog", "Due\303\261o", nullptr));
     } // retranslateUi
 
 };

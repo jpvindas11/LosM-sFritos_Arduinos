@@ -148,6 +148,9 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     targetIP = this->storageServerIP;
     targetPort = PORT_MASTER_STORAGE;
     break;
+    case MessageType::SERVER_STATUS_REQ:
+      handleServerStatusRequest(client, clientRequest);
+      return;
     default:
     // Error
     targetIP = "ERR";
@@ -174,11 +177,6 @@ void MasterServer::handleArduinoConnection(int client, Socket* socket) {
   std::string targetIP;
   int targetPort;
 
-  // Esto aqui lo hice un toque a la carrera
-  // Solo estoy admitiendo SEND ADD LOG desde la entrada de Arduinos
-  // Si ocupan mas, metan otro case
-  // Deberia en lugar de iniciar un worker, devolver un mensaje de error codificado en bitsery
-
   switch (msgType) {
     case MessageType::SEN_ADD_LOG:
     targetIP = this->storageServerIP;
@@ -193,4 +191,86 @@ void MasterServer::handleArduinoConnection(int client, Socket* socket) {
 
   auto* worker = new MasterWorker(client, targetIP, targetPort, clientRequest);
   worker->startThread();
+}
+
+void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
+    std::cout << "========== SERVER STATUS REQUEST ==========" << std::endl;
+    std::cout << "Auth IP: '" << this->authServerIP << "'" << std::endl;
+    std::cout << "Storage IP: '" << this->storageServerIP << "'" << std::endl;
+    std::cout << "Logs IP: '" << this->logsServerIP << "'" << std::endl;
+    
+    genMessage response;
+    response.MID = static_cast<uint8_t>(MessageType::SERVER_STATUS_RES);
+    
+    serverStatusRes statusRes;
+    statusRes.id_token = 0;
+    
+    // AUTH
+    serverStatus authStatus;
+    authStatus.serverName = "AUTH";
+    authStatus.serverIP = this->authServerIP;
+    authStatus.serverPort = PORT_MASTER_AUTH;
+    authStatus.isConnected = checkServerConnection(this->authServerIP, PORT_MASTER_AUTH);
+    authStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
+    statusRes.servers.push_back(authStatus);
+    std::cout << "Added AUTH server: " << authStatus.serverIP << ":" 
+              << authStatus.serverPort << " - " 
+              << (authStatus.isConnected ? "ONLINE" : "OFFLINE") << std::endl;
+    
+    // STORAGE
+    serverStatus storageStatus;
+    storageStatus.serverName = "STORAGE";
+    storageStatus.serverIP = this->storageServerIP;
+    storageStatus.serverPort = PORT_MASTER_STORAGE;
+    storageStatus.isConnected = checkServerConnection(this->storageServerIP, PORT_MASTER_STORAGE);
+    storageStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
+    statusRes.servers.push_back(storageStatus);
+    std::cout << "Added STORAGE server: " << storageStatus.serverIP << ":" 
+              << storageStatus.serverPort << " - " 
+              << (storageStatus.isConnected ? "ONLINE" : "OFFLINE") << std::endl;
+    
+    // LOGS
+    serverStatus logsStatus;
+    logsStatus.serverName = "LOGS";
+    logsStatus.serverIP = this->logsServerIP;
+    logsStatus.serverPort = PORT_MASTER_LOGS;
+    logsStatus.isConnected = checkServerConnection(this->logsServerIP, PORT_MASTER_LOGS);
+    logsStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
+    statusRes.servers.push_back(logsStatus);
+    std::cout << "Added LOGS server: " << logsStatus.serverIP << ":" 
+              << logsStatus.serverPort << " - " 
+              << (logsStatus.isConnected ? "ONLINE" : "OFFLINE") << std::endl;
+    
+    std::cout << "Total servers in response: " << statusRes.servers.size() << std::endl;
+    
+    response.content = statusRes;
+    
+    Socket clientSocket;
+    ssize_t sent = clientSocket.bSendData(client, response);
+    std::cout << "Response sent: " << sent << " bytes" << std::endl;
+    std::cout << "==========================================\n" << std::endl;
+    
+    close(client);
+}
+
+uint8_t MasterServer::checkServerConnection(const std::string& ip, int port) {
+    Socket testSocket;
+    
+    if (!testSocket.create()) {
+        return 0;
+    }
+    
+    struct timeval tv;
+    tv.tv_sec = 2;
+    tv.tv_usec = 0;
+    setsockopt(testSocket.getSocketFD(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(testSocket.getSocketFD(), SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    
+    bool connected = testSocket.connectToServer(ip, port);
+    
+    if (connected) {
+        close(testSocket.getSocketFD());
+    }
+    
+    return connected ? 1 : 0;
 }

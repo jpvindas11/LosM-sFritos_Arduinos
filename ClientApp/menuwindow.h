@@ -30,8 +30,6 @@ public:
 private slots:
     void on_b_usuarios_clicked();
 
-    void on_b_arduinos_clicked();
-
     void on_b_cerrarSesion_clicked();
 
     void on_user_list_itemClicked(QListWidgetItem *item);
@@ -48,15 +46,10 @@ private slots:
 
     void on_b_consulta_clicked();
 
-    void on_arduino_list_itemClicked(QListWidgetItem *item);
-
-    void on_arduino_consultar_Clicked();
-
-    void on_arduino_turn_clicked();
-
     void on_data_list_itemClicked(QListWidgetItem *item);
 
     void updateSensorDataAutomatically();
+
 
 private:
     Ui::MenuWindow *ui;
@@ -71,9 +64,13 @@ private:
 
     void askForSensorData();
 
-    userMenuManager userMenu;
+    void askForUserLogs(const std::string& username);
 
-    arduinoMenuManager arduinoMenu;
+    void askForSensorLogs(const std::string& sensorIP, const std::string& sensorType);
+
+    void askForServerStatus();
+
+    userMenuManager userMenu;
 
     dataMenuManager dataMenu;
 

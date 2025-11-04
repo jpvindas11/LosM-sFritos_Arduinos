@@ -134,10 +134,10 @@
      </rect>
     </property>
     <property name="text">
-     <string>Admin. Hardware</string>
+     <string>Admin. Nodos</string>
     </property>
    </widget>
-   <widget class="QRadioButton" name="radioButton_s">
+   <widget class="QRadioButton" name="radioButton_u">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -147,10 +147,10 @@
      </rect>
     </property>
     <property name="text">
-     <string>Admin. Software</string>
+     <string>Admin. Usuarios</string>
     </property>
    </widget>
-   <widget class="QRadioButton" name="radioButton_u">
+   <widget class="QRadioButton" name="radioButton_o">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -160,7 +160,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Admin. Usuarios</string>
+     <string>Dueño</string>
     </property>
    </widget>
   </widget>
