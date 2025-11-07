@@ -19,10 +19,12 @@
  */
 
 class LogsServer;
+class SensorServer;
 
 class FileSystem {
 protected:
     friend class LogsServer;
+    friend class SensorServer;
     // Super bloque que guarda los metadatos del file system
     SuperBlock superBlock;
 

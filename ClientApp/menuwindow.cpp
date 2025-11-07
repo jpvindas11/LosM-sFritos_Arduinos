@@ -1122,268 +1122,261 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
 
     std::cout << "Connecting to Master: " << IP << ":" << port << std::endl;
 
-    Socket* tempSocket = nullptr;
+    // ========================================
+    // PASO 1: Obtener lista de archivos
+    // ========================================
+    Socket* tempSocket = new Socket();
 
-    try {
-        tempSocket = new Socket();
-
-        if (!tempSocket->create()) {
-            delete tempSocket;
-            QMessageBox::critical(this, "Error", "No se pudo crear el socket");
-            return;
-        }
-
-        if (!tempSocket->connectToServer(IP, port)) {
-            delete tempSocket;
-            QMessageBox::critical(this, "Error",
-                                  "No se pudo conectar al servidor Master en " +
-                                      QString::fromStdString(IP) + ":" + QString::number(port));
-            return;
-        }
-
-        std::cout << "✓ Connected to Master server" << std::endl;
-
-        // PASO 1: Solicitar lista de archivos de sensores
-        genMessage fileNamesRequest;
-        fileNamesRequest.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_REQ);
-        GenNumReq request;
-        request.id_token = 0;
-        fileNamesRequest.content = request;
-
-        std::cout << "Sending SEN_FILE_NAMES_REQ..." << std::endl;
-
-        ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), fileNamesRequest);
-        if (sent <= 0) {
-            delete tempSocket;
-            QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de nombres");
-            return;
-        }
-
-        std::cout << "✓ Request sent, waiting for response..." << std::endl;
-
-        // Recibir todos los nombres de archivos
-        std::vector<std::string> allLogFiles;
-        bool receivingPages = true;
-        int pagesReceived = 0;
-
-        while (receivingPages) {
-            genMessage response;
-            ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
-
-            if (received <= 0) {
-                std::cerr << "✗ Error receiving file names (received: " << received << ")" << std::endl;
-                break;
-            }
-
-            std::cout << "Response MID: " << static_cast<int>(response.MID) << std::endl;
-
-            if (response.MID == static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES)) {
-                senFileNamesRes fileNamesRes = getMessageContent<senFileNamesRes>(response);
-                pagesReceived++;
-
-                std::cout << "✓ Received page " << (fileNamesRes.page + 1)
-                          << " of " << fileNamesRes.totalPages
-                          << " (files in page: " << fileNamesRes.fileNames.names.size() << ")" << std::endl;
-
-                for (const auto& fileReq : fileNamesRes.fileNames.names) {
-                    if (!fileReq.Filename.empty()) {
-                        allLogFiles.push_back(fileReq.Filename);
-                        std::cout << "    - " << fileReq.Filename << std::endl;
-                    }
-                }
-
-                if (fileNamesRes.page + 1 >= fileNamesRes.totalPages) {
-                    std::cout << "✓ All pages received (" << pagesReceived << " pages)" << std::endl;
-                    receivingPages = false;
-                }
-            } else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
-                errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
-                delete tempSocket;
-                std::cerr << "✗ Server error: " << errorMsg.message << std::endl;
-                QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
-                return;
-            } else {
-                std::cerr << "✗ Unexpected message type: " << static_cast<int>(response.MID) << std::endl;
-                break;
-            }
-        }
-
-        std::cout << "\nTotal files received: " << allLogFiles.size() << std::endl;
-
-        if (allLogFiles.empty()) {
-            delete tempSocket;
-            QMessageBox::information(this, "Sin archivos",
-                                     "No se encontraron archivos de logs en el servidor");
-            return;
-        }
-
-        // PASO 2: Filtrar archivos que pertenecen a este sensor
-        std::vector<std::string> sensorLogFiles;
-        std::string cleanType = sensorType;
-        cleanType.erase(std::remove(cleanType.begin(), cleanType.end(), ':'), cleanType.end());
-
-        std::cout << "\nFiltering files for type: '" << cleanType << "'" << std::endl;
-
-        for (const auto& filename : allLogFiles) {
-            if (filename.find(cleanType) == 0 && filename.find(".log") != std::string::npos) {
-                sensorLogFiles.push_back(filename);
-                std::cout << "  ✓ Match: " << filename << std::endl;
-            }
-        }
-
-        if (sensorLogFiles.empty()) {
-            delete tempSocket;
-            QMessageBox::information(this, "Sin logs",
-                                     QString("No se encontraron logs para el sensor tipo '%1'\n\n"
-                                             "Archivos totales revisados: %2")
-                                         .arg(QString::fromStdString(cleanType))
-                                         .arg(allLogFiles.size()));
-            return;
-        }
-
-        std::cout << "\n✓ Found " << sensorLogFiles.size() << " log files for this sensor" << std::endl;
-
-        // PASO 3: Solicitar contenido de cada archivo
-        QString allLogs;
-        int totalEntries = 0;
-        int filesProcessed = 0;
-
-        for (const auto& logFile : sensorLogFiles) {
-            std::cout << "\n[" << (filesProcessed + 1) << "/" << sensorLogFiles.size()
-            << "] Requesting: " << logFile << std::endl;
-
-            genMessage fileBlockReq;
-            fileBlockReq.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_REQ);
-            genSenFileReq blockRequest;
-            blockRequest.id_token = 0;
-            blockRequest.fileName.Filename = logFile;
-            fileBlockReq.content = blockRequest;
-
-            sent = tempSocket->bSendData(tempSocket->getSocketFD(), fileBlockReq);
-            if (sent <= 0) {
-                std::cerr << "✗ Could not request file: " << logFile << std::endl;
-                continue;
-            }
-
-            bool receivingBlocks = true;
-            QString fileContent;
-            int blocksReceived = 0;
-
-            while (receivingBlocks) {
-                genMessage blockResponse;
-                ssize_t blockReceived = tempSocket->bReceiveData(tempSocket->getSocketFD(), blockResponse);
-
-                if (blockReceived <= 0) {
-                    std::cerr << "✗ Error receiving blocks" << std::endl;
-                    break;
-                }
-
-                if (blockResponse.MID == static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP)) {
-                    senFileBlockRes blockRes = getMessageContent<senFileBlockRes>(blockResponse);
-                    blocksReceived++;
-
-                    std::cout << "  ✓ Block " << (blockRes.page + 1)
-                              << "/" << blockRes.totalPages << std::endl;
-
-                    if (!blockRes.firstBlock.empty()) {
-                        std::string block1 = blockRes.firstBlock;
-                        size_t nullPos = block1.find('\0');
-                        if (nullPos != std::string::npos) {
-                            block1 = block1.substr(0, nullPos);
-                        }
-                        fileContent += QString::fromStdString(block1);
-                    }
-
-                    if (!blockRes.secondBlock.empty()) {
-                        std::string block2 = blockRes.secondBlock;
-                        size_t nullPos = block2.find('\0');
-                        if (nullPos != std::string::npos) {
-                            block2 = block2.substr(0, nullPos);
-                        }
-                        fileContent += QString::fromStdString(block2);
-                    }
-
-                    if (blockRes.page + 1 >= blockRes.totalPages) {
-                        std::cout << "  ✓ Complete (" << blocksReceived << " blocks)" << std::endl;
-                        receivingBlocks = false;
-                    }
-                } else if (blockResponse.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
-                    errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(blockResponse);
-                    std::cerr << "  ✗ Error: " << errorMsg.message << std::endl;
-                    break;
-                } else {
-                    std::cerr << "  ✗ Unexpected response: " << static_cast<int>(blockResponse.MID) << std::endl;
-                    break;
-                }
-            }
-
-            if (!fileContent.isEmpty()) {
-                allLogs += QString("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-                allLogs += QString("📁 Archivo: %1\n").arg(QString::fromStdString(logFile));
-                allLogs += QString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-                allLogs += fileContent;
-
-                int entries = fileContent.count('\n');
-                totalEntries += entries;
-                filesProcessed++;
-
-                std::cout << "  ✓ Added " << entries << " entries" << std::endl;
-            }
-        }
-
+    if (!tempSocket->create()) {
         delete tempSocket;
+        QMessageBox::critical(this, "Error", "No se pudo crear el socket");
+        return;
+    }
 
-        std::cout << "\n✓ Total files processed: " << filesProcessed
-                  << "/" << sensorLogFiles.size() << std::endl;
-        std::cout << "✓ Total entries: " << totalEntries << std::endl;
+    if (!tempSocket->connectToServer(IP, port)) {
+        delete tempSocket;
+        QMessageBox::critical(this, "Error", "No se pudo conectar al servidor Master");
+        return;
+    }
 
-        // PASO 4: Mostrar logs
-        if (!allLogs.isEmpty()) {
-            QString formattedLogs = QString(
-                                        "═══════════════════════════════════════\n"
-                                        "       HISTORIAL DEL SENSOR\n"
-                                        "═══════════════════════════════════════\n\n"
-                                        "Tipo:            %1\n"
-                                        "IP:              %2\n"
-                                        "Archivos:        %3\n"
-                                        "Total registros: %4\n\n"
-                                        "═══════════════════════════════════════\n"
-                                        "DATOS HISTÓRICOS:\n"
-                                        "═══════════════════════════════════════\n%5"
-                                        ).arg(QString::fromStdString(cleanType))
-                                        .arg(QString::fromStdString(sensorIP))
-                                        .arg(filesProcessed)
-                                        .arg(totalEntries)
-                                        .arg(allLogs);
+    std::cout << "✓ Connected to Master server" << std::endl;
 
-            QMessageBox msgBox(this);
-            msgBox.setWindowTitle("Historial - " + QString::fromStdString(cleanType));
-            msgBox.setIcon(QMessageBox::Information);
-            msgBox.setStandardButtons(QMessageBox::Ok);
+    genMessage fileNamesRequest;
+    fileNamesRequest.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_REQ);
+    GenNumReq request;
+    request.id_token = 0;
+    fileNamesRequest.content = request;
 
-            QTextEdit* textEdit = new QTextEdit();
-            textEdit->setReadOnly(true);
-            textEdit->setPlainText(formattedLogs);
-            textEdit->setMinimumSize(700, 500);
-            textEdit->setFont(QFont("Courier New", 9));
+    std::cout << "Sending SEN_FILE_NAMES_REQ..." << std::endl;
 
-            msgBox.layout()->addWidget(textEdit);
-            msgBox.exec();
+    ssize_t sent = tempSocket->bSendData(tempSocket->getSocketFD(), fileNamesRequest);
+    if (sent <= 0) {
+        delete tempSocket;
+        QMessageBox::critical(this, "Error", "No se pudo enviar la solicitud de nombres");
+        return;
+    }
 
-        } else {
-            QMessageBox::information(this, "Sin datos",
-                                     QString("No se pudieron cargar datos de los %1 archivos encontrados")
-                                         .arg(sensorLogFiles.size()));
+    std::cout << "✓ Request sent, waiting for response..." << std::endl;
+
+    // Recibir todos los nombres de archivos
+    std::vector<std::string> allLogFiles;
+    bool receivingPages = true;
+    int pagesReceived = 0;
+
+    while (receivingPages) {
+        genMessage response;
+        ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
+
+        if (received <= 0) {
+            std::cerr << "✗ Error receiving file names" << std::endl;
+            break;
         }
 
-        std::cout << "==========================================\n" << std::endl;
+        if (response.MID == static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_RES)) {
+            senFileNamesRes fileNamesRes = getMessageContent<senFileNamesRes>(response);
+            pagesReceived++;
 
-    } catch (const std::exception& e) {
-        if (tempSocket) delete tempSocket;
-        std::cerr << "✗ Exception: " << e.what() << std::endl;
-        QMessageBox::critical(this, "Error de conexión",
-                              QString("Error: %1").arg(e.what()));
+            std::cout << "✓ Received page " << (fileNamesRes.page + 1)
+                      << " of " << fileNamesRes.totalPages << std::endl;
+
+            for (const auto& fileReq : fileNamesRes.fileNames.names) {
+                if (!fileReq.Filename.empty()) {
+                    allLogFiles.push_back(fileReq.Filename);
+                }
+            }
+
+            if (fileNamesRes.page + 1 >= fileNamesRes.totalPages) {
+                receivingPages = false;
+            }
+        } else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+            errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
+            delete tempSocket;
+            QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
+            return;
+        }
     }
+
+    // 🔴 IMPORTANTE: Cerrar la conexión después de recibir nombres
+    delete tempSocket;
+    tempSocket = nullptr;
+
+    std::cout << "\nTotal files received: " << allLogFiles.size() << std::endl;
+
+    if (allLogFiles.empty()) {
+        QMessageBox::information(this, "Sin archivos", "No se encontraron archivos de logs");
+        return;
+    }
+
+    // Filtrar archivos del sensor
+    std::vector<std::string> sensorLogFiles;
+    std::string cleanType = sensorType;
+    cleanType.erase(std::remove(cleanType.begin(), cleanType.end(), ':'), cleanType.end());
+
+    for (const auto& filename : allLogFiles) {
+        if (filename.find(cleanType) == 0 && filename.find(".log") != std::string::npos) {
+            sensorLogFiles.push_back(filename);
+        }
+    }
+
+    if (sensorLogFiles.empty()) {
+        QMessageBox::information(this, "Sin logs",
+                                 QString("No se encontraron logs para el sensor tipo '%1'")
+                                     .arg(QString::fromStdString(cleanType)));
+        return;
+    }
+
+    std::cout << "\n✓ Found " << sensorLogFiles.size() << " log files for this sensor" << std::endl;
+
+    // ========================================
+    // PASO 2: Obtener contenido de cada archivo
+    // ========================================
+    QString allLogs;
+    int totalEntries = 0;
+    int filesProcessed = 0;
+
+    for (const auto& logFile : sensorLogFiles) {
+        std::cout << "\n[" << (filesProcessed + 1) << "/" << sensorLogFiles.size()
+        << "] Requesting: " << logFile << std::endl;
+
+        // 🟢 CREAR NUEVA CONEXIÓN PARA CADA ARCHIVO
+        Socket* fileSocket = new Socket();
+
+        if (!fileSocket->create()) {
+            std::cerr << "✗ Could not create socket for file: " << logFile << std::endl;
+            delete fileSocket;
+            continue;
+        }
+
+        if (!fileSocket->connectToServer(IP, port)) {
+            std::cerr << "✗ Could not connect for file: " << logFile << std::endl;
+            delete fileSocket;
+            continue;
+        }
+
+        // Solicitar bloques del archivo
+        genMessage fileBlockReq;
+        fileBlockReq.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_REQ);
+        genSenFileReq blockRequest;
+        blockRequest.id_token = 0;
+        blockRequest.fileName.Filename = logFile;
+        fileBlockReq.content = blockRequest;
+
+        sent = fileSocket->bSendData(fileSocket->getSocketFD(), fileBlockReq);
+        if (sent <= 0) {
+            std::cerr << "✗ Could not request file: " << logFile << std::endl;
+            delete fileSocket;
+            continue;
+        }
+
+        // Recibir bloques
+        bool receivingBlocks = true;
+        QString fileContent;
+        int blocksReceived = 0;
+
+        while (receivingBlocks) {
+            genMessage blockResponse;
+            ssize_t blockReceived = fileSocket->bReceiveData(fileSocket->getSocketFD(), blockResponse);
+
+            if (blockReceived <= 0) {
+                std::cerr << "✗ Error receiving blocks" << std::endl;
+                break;
+            }
+
+            if (blockResponse.MID == static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP)) {
+                senFileBlockRes blockRes = getMessageContent<senFileBlockRes>(blockResponse);
+                blocksReceived++;
+
+                std::cout << "  ✓ Block " << (blockRes.page + 1)
+                          << "/" << blockRes.totalPages << std::endl;
+
+                if (!blockRes.firstBlock.empty()) {
+                    std::string block1 = blockRes.firstBlock;
+                    size_t nullPos = block1.find('\0');
+                    if (nullPos != std::string::npos) {
+                        block1 = block1.substr(0, nullPos);
+                    }
+                    fileContent += QString::fromStdString(block1);
+                }
+
+                if (!blockRes.secondBlock.empty()) {
+                    std::string block2 = blockRes.secondBlock;
+                    size_t nullPos = block2.find('\0');
+                    if (nullPos != std::string::npos) {
+                        block2 = block2.substr(0, nullPos);
+                    }
+                    fileContent += QString::fromStdString(block2);
+                }
+
+                if (blockRes.page + 1 >= blockRes.totalPages) {
+                    std::cout << "  ✓ Complete (" << blocksReceived << " blocks)" << std::endl;
+                    receivingBlocks = false;
+                }
+            } else if (blockResponse.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
+                errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(blockResponse);
+                std::cerr << "  ✗ Error: " << errorMsg.message << std::endl;
+                break;
+            }
+        }
+
+        // 🔴 IMPORTANTE: Cerrar conexión después de cada archivo
+        delete fileSocket;
+        fileSocket = nullptr;
+
+        if (!fileContent.isEmpty()) {
+            allLogs += QString("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            allLogs += QString("📁 Archivo: %1\n").arg(QString::fromStdString(logFile));
+            allLogs += QString("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            allLogs += fileContent;
+
+            int entries = fileContent.count('\n');
+            totalEntries += entries;
+            filesProcessed++;
+        }
+    }
+
+    std::cout << "\n✓ Total files processed: " << filesProcessed
+              << "/" << sensorLogFiles.size() << std::endl;
+    std::cout << "✓ Total entries: " << totalEntries << std::endl;
+
+    // Mostrar resultados
+    if (!allLogs.isEmpty()) {
+        QString formattedLogs = QString(
+                                    "═══════════════════════════════════════\n"
+                                    "       HISTORIAL DEL SENSOR\n"
+                                    "═══════════════════════════════════════\n\n"
+                                    "Tipo:            %1\n"
+                                    "IP:              %2\n"
+                                    "Archivos:        %3\n"
+                                    "Total registros: %4\n\n"
+                                    "═══════════════════════════════════════\n"
+                                    "DATOS HISTÓRICOS:\n"
+                                    "═══════════════════════════════════════\n%5"
+                                    ).arg(QString::fromStdString(cleanType))
+                                    .arg(QString::fromStdString(sensorIP))
+                                    .arg(filesProcessed)
+                                    .arg(totalEntries)
+                                    .arg(allLogs);
+
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("Historial - " + QString::fromStdString(cleanType));
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.setStandardButtons(QMessageBox::Ok);
+
+        QTextEdit* textEdit = new QTextEdit();
+        textEdit->setReadOnly(true);
+        textEdit->setPlainText(formattedLogs);
+        textEdit->setMinimumSize(700, 500);
+        textEdit->setFont(QFont("Courier New", 9));
+
+        msgBox.layout()->addWidget(textEdit);
+        msgBox.exec();
+    } else {
+        QMessageBox::information(this, "Sin datos",
+                                 QString("No se pudieron cargar datos de los %1 archivos encontrados")
+                                     .arg(sensorLogFiles.size()));
+    }
+
+    std::cout << "==========================================\n" << std::endl;
 }
 
 void MenuWindow::askForServerStatus() {
