@@ -148,6 +148,12 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     targetIP = this->storageServerIP;
     targetPort = PORT_MASTER_STORAGE;
     break;
+
+    case MessageType::LOG_USER_REQUEST:
+    targetIP = this->logsServerIP;
+    targetPort = PORT_MASTER_LOGS;
+    break;
+
     case MessageType::SERVER_STATUS_REQ:
       handleServerStatusRequest(client, clientRequest);
       return;

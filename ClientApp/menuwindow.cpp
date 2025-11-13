@@ -924,8 +924,8 @@ void MenuWindow::askForUserLogs(const std::string& username) {
     std::cout << "\n========== ASK FOR USER LOGS ==========" << std::endl;
     std::cout << "Requesting logs for user: " << username << std::endl;
 
-    std::string IP = "127.0.0.1"; // IP del servidor de logs
-    int port = 14005; // Puerto del servidor de logs (PORT_MASTER_LOGS)
+    std::string IP = currentUser.getIP(); // IP del servidor de logs
+    int port = currentUser.getPort(); // Puerto del servidor de logs (PORT_MASTER_LOGS)
 
     Socket* tempSocket = nullptr;
 
