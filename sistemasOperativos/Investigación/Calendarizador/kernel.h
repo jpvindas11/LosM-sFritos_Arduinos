@@ -14,6 +14,15 @@ typedef enum {
     PROC_TERMINATED
 } proc_state_t;
 
+// Estructura de memoria compartida
+#define SHM_SIZE 256
+typedef struct shm_region {
+    u32 id;
+    u8 used;
+    u8 data[SHM_SIZE];
+    u32 ref_count;
+} shm_region_t;
+
 typedef struct pcb {
     u32 pid;
     proc_state_t state;
@@ -21,6 +30,8 @@ typedef struct pcb {
     u32 burst_time;  
     u32 remaining;   
     struct pcb *next;
+    u32 shm_id;
+    void *shm_addr;
 } pcb_t;
 
 typedef struct {
@@ -35,6 +46,13 @@ void sys_terminate_process(u32 pid);
 void sys_yield(void);
 void sys_wait_io(u32 pid);
 void sys_signal_io(u32 pid);
+
+// IPC - Memoria Compartida
+u32 sys_shm_create(void);
+void* sys_shm_attach(u32 pid, u32 shm_id);
+void sys_shm_write(u32 pid, const char *msg);
+void sys_shm_read(u32 pid, char *buf);
+void sys_shm_detach(u32 pid);
 
 void scheduler_rr(u32 quantum);
 

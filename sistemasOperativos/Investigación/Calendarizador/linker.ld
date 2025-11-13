@@ -1,22 +1,25 @@
-/* linker.ld — enlaza en formato ELF 32-bit */
+/* filepath: /home/axel/Escritorio/LosM-sFritos_Arduinos/sistemasOperativos/Investigación/Calendarizador/linker.ld */
 ENTRY(_start)
 
 SECTIONS
 {
-  . = 0x00100000;         /* cargar kernel en 1MB */
+  . = 0x00100000;
 
-  .multiboot : { *(.multiboot) }
-
-  .text : {
+  .text ALIGN(4K) : {
+    *(.multiboot)
     *(.text*)
   }
 
-  .rodata : { *(.rodata*) }
+  .rodata ALIGN(4K) : {
+    *(.rodata*)
+  }
 
-  .data : { *(.data*) }
+  .data ALIGN(4K) : {
+    *(.data*)
+  }
 
-  .bss : {
-    *(.bss*)
+  .bss ALIGN(4K) : {
     *(COMMON)
+    *(.bss*)
   }
 }

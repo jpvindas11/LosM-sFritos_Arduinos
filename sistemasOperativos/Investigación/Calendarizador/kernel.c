@@ -2,14 +2,18 @@
 #include "kernel.h"
 
 #define MAX_PROCS 16
+#define MAX_SHM 8
+
 static pcb_t PROC_TABLE[MAX_PROCS];
 static u8    PROC_USED[MAX_PROCS];
+static shm_region_t SHM_TABLE[MAX_SHM];
 
 static queue_t READY_Q;
 static queue_t WAIT_Q;
 
 static pcb_t *current = 0;
 static u32 NEXT_PID = 1;
+static u32 NEXT_SHM_ID = 1;
 
 #define VGA_WIDTH  80
 #define VGA_HEIGHT 25
@@ -128,6 +132,8 @@ static pcb_t* alloc_pcb(void) {
     for (u32 i = 0; i < MAX_PROCS; i++) {
         if (!PROC_USED[i]) {
             PROC_USED[i] = 1;
+            PROC_TABLE[i].shm_id = 0;
+            PROC_TABLE[i].shm_addr = 0;
             return &PROC_TABLE[i];
         }
     }
@@ -203,7 +209,6 @@ void sys_signal_io(u32 pid) {
     p->state = PROC_READY;
     q_enqueue(&READY_Q, p);
 }
-
 
 static void dispatch(pcb_t *p) {
     current = p;
@@ -282,23 +287,170 @@ void scheduler_rr(u32 quantum) {
     }
 }
 
+u32 sys_shm_create(void) {
+    for (u32 i = 0; i < MAX_SHM; i++) {
+        if (!SHM_TABLE[i].used) {
+            SHM_TABLE[i].id = NEXT_SHM_ID++;
+            SHM_TABLE[i].used = 1;
+            SHM_TABLE[i].ref_count = 0;
+            
+            for (u32 j = 0; j < SHM_SIZE; j++) {
+                SHM_TABLE[i].data[j] = 0;
+            }
+            
+            kputs("shm_create ID:");
+            kputu(SHM_TABLE[i].id);
+            delay(500000000000);
+            
+            return SHM_TABLE[i].id;
+        }
+    }
+    kputs("Error: sin espacio para SHM");
+    return 0;
+}
+
+void* sys_shm_attach(u32 pid, u32 shm_id) {
+    pcb_t *p = find_pcb(pid);
+    if (!p) {
+        kputs("Error: proceso no encontrado");
+        return 0;
+    }
+    
+    shm_region_t *shm = 0;
+    for (u32 i = 0; i < MAX_SHM; i++) {
+        if (SHM_TABLE[i].used && SHM_TABLE[i].id == shm_id) {
+            shm = &SHM_TABLE[i];
+            break;
+        }
+    }
+    
+    if (!shm) {
+        kputs("Error: SHM no encontrada");
+        return 0;
+    }
+    
+    p->shm_id = shm_id;
+    p->shm_addr = (void*)shm->data;
+    shm->ref_count++;
+    
+    kputs("shm_attach PID:");
+    kputu(pid);
+    kputs("to SHM:");
+    kputu(shm_id);
+    delay(500000000000);
+    
+    return p->shm_addr;
+}
+
+void sys_shm_write(u32 pid, const char *msg) {
+    pcb_t *p = find_pcb(pid);
+    if (!p || !p->shm_addr) {
+        kputs("Error: proceso sin SHM adjuntada");
+        return;
+    }
+    
+    u8 *data = (u8*)p->shm_addr;
+    u32 i = 0;
+    while (msg[i] && i < SHM_SIZE - 1) {
+        data[i] = msg[i];
+        i++;
+    }
+    data[i] = '\0';
+    
+    kputs("shm_write PID:");
+    kputu(pid);
+    kputs("msg:");
+    kputs(msg);
+    delay(500000000000);
+}
+
+void sys_shm_read(u32 pid, char *buf) {
+    pcb_t *pcb = find_pcb(pid);
+    if (!pcb || !pcb->shm_addr) {
+        kputs("Error: proceso sin SHM adjuntada");
+        return;
+    }
+    
+    u8 *data = (u8*)pcb->shm_addr;
+    u32 i = 0;
+    while (data[i] && i < SHM_SIZE - 1) {
+        buf[i] = data[i];
+        i++;
+    }
+    buf[i] = '\0';
+    
+    kputs("shm_read PID:");
+    kputu(pid);
+    kputs("msg:");
+    kputs(buf);
+    delay(500000000000);
+}
+
+void sys_shm_detach(u32 pid) {
+    pcb_t *p = find_pcb(pid);
+    if (!p || !p->shm_id) return;
+    
+    for (u32 i = 0; i < MAX_SHM; i++) {
+        if (SHM_TABLE[i].used && SHM_TABLE[i].id == p->shm_id) {
+            SHM_TABLE[i].ref_count--;
+            
+            if (SHM_TABLE[i].ref_count == 0) {
+                SHM_TABLE[i].used = 0;
+                kputs("shm_destroy ID:");
+                kputu(SHM_TABLE[i].id);
+            }
+            break;
+        }
+    }
+    
+    p->shm_id = 0;
+    p->shm_addr = 0;
+    
+    kputs("shm_detach PID:");
+    kputu(pid);
+    delay(500000000000);
+}
+
 void kmain(void) {
     // Inicializa colas y tabla
     q_init(&READY_Q);
     q_init(&WAIT_Q);
     for (u32 i = 0; i < MAX_PROCS; i++) { PROC_USED[i] = 0; }
+    for (u32 i = 0; i < MAX_SHM; i++) { SHM_TABLE[i].used = 0; }
 
     vga_clear();
-    kputs("Kernel RR start");
+    kputs("Kernel con RR e IPC");
 
-    // Crea algunos procesos de ejemplo
-    sys_create_process(7);   // PID 1
-    sys_create_process(20);   // PID 2
-    sys_create_process(11);  // PID 3
+    // Crear región de memoria compartida
+    u32 shm_id = sys_shm_create();
+
+    // Crea procesos que usarán IPC
+    sys_create_process(7);   // Escritor
+    sys_create_process(20);  // Lector
+    sys_create_process(11);  // Proceso normal
+
+    // Adjuntar memoria compartida a procesos 1 y 2
+    sys_shm_attach(1, shm_id);
+    sys_shm_attach(2, shm_id);
+
+    // PID 1 escribe un mensaje
+    sys_shm_write(1, "PID 1");
+
+    // PID 2 lee el mensaje
+    char buffer[SHM_SIZE];
+    sys_shm_read(2, buffer);
 
     // Simula que el PID 2 entra a I/O al inicio
     sys_wait_io(2);
 
+    kputs("Iniciando Scheduler");
+    
     // Quantum fijo de 3 unidades de tiempo
     scheduler_rr(3);
+
+    kputs("Kernel finalizado");
+    
+    // Liberar recursos al finalizar
+    sys_shm_detach(1);
+    sys_shm_detach(2);
 }
