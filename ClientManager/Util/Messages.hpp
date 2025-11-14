@@ -16,6 +16,14 @@
 
 #define MAX_COMMON_MSG_LENGTH 32
 
+enum class ServerType: uint8_t {
+    SV_MASTER,
+    SV_AUTH,
+    SV_LOGS_USER,
+    SV_STORAGE,
+    SV_SENSOR_PROXY,
+};
+
 enum class MessageType : uint8_t {
     FILE_NUMBER_REQ,
     FILE_NUMBER_REP,
@@ -50,6 +58,8 @@ enum class MessageType : uint8_t {
     DELETE_USER_LOGS,
     SERVER_STATUS_REQ,
     SERVER_STATUS_RES,
+    SERVER_DISCOVER_REQ,
+    SERVER_DISCOVER_RES,
 };
 
 struct token {
@@ -262,6 +272,17 @@ struct serverStatusRes {
     std::vector<serverStatus> servers;
 };
 
+struct serverDiscoverReq {
+    std::string clientName;
+};
+
+struct serverDiscoverRes {
+    std::string serverName;
+    std::string serverIP;
+    uint16_t serverTCPPort;
+    uint8_t serverType;
+};
+
 struct genMessage {
     uint8_t MID;
     std::variant<
@@ -291,7 +312,9 @@ struct genMessage {
         userLogResp,
         addUserLog,
         serverStatusReq,
-        serverStatusRes
+        serverStatusRes,
+        serverDiscoverReq,
+        serverDiscoverRes
     > content;
 };
 
@@ -543,6 +566,19 @@ namespace bitsery {
     void serialize(S& s, serverStatusRes& m) {
         s.value4b(m.id_token);
         s.container(m.servers, 10);
+    }
+
+    template <typename S>
+    void serialize(S& s, serverDiscoverReq& m) {
+        s.text1b(m.clientName, 20);
+    }
+
+    template <typename S>
+    void serialize(S& s, serverDiscoverRes& m) {
+        s.text1b(m.serverName, 20);
+        s.text1b(m.serverIP, 16);
+        s.value2b(m.serverTCPPort);
+        s.value1b(m.serverType);
     }
 
 }
