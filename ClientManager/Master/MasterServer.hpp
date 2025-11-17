@@ -7,7 +7,9 @@
 #include <cstring>
 #include <string>
 #include "../Util/Socket.hpp"
+#include "../Util/UDPSocket.hpp"
 #include "../Util/IPConstants.hpp"
+#include "../Util/ServerDiscover.hpp"
 
 #include "MasterWorker.hpp"
 
@@ -23,6 +25,7 @@ class MasterServer {
 
   Socket userEntryPoint;
   Socket arduinoEntryPoint;
+  UDPSocket discoveryPoint;
 
   int userPort;
   int arduinoPort;
@@ -52,6 +55,8 @@ class MasterServer {
 
   void handleUserConnection(int client, Socket* socket);
   void handleArduinoConnection(int client, Socket* socket);
+
+  std::string lookForServer(int port);
 };
 
 #endif

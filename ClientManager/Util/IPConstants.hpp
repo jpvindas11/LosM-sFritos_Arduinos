@@ -13,4 +13,12 @@ typedef enum SERVER_PORTS {
     PORT_PROXY_LISTENER,
 } SERVER_PORTS;
 
+typedef enum SERVER_DISCOVER_PORTS {
+    DISC_MASTER = 15000,
+    DISC_AUTH,
+    DISC_STORAGE,
+    DISC_USER_LOGS,
+    DISC_PROXY,
+};
+
 #endif

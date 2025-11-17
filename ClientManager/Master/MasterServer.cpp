@@ -132,7 +132,7 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     case MessageType::AUTH_USER_MODIFY_PASS:
     case MessageType::AUTH_USER_MODIFY_RANK:
     case MessageType::AUTH_USER_REQUEST:
-    targetIP = this->authServerIP;
+    targetIP = lookForServer(DISC_AUTH);
     targetPort = PORT_MASTER_AUTH;
     break;
 
@@ -279,4 +279,17 @@ uint8_t MasterServer::checkServerConnection(const std::string& ip, int port) {
     }
     
     return connected ? 1 : 0;
+}
+
+std::string MasterServer::lookForServer(int port) {
+    ServerDiscover discover(port);
+
+    std::vector<ServerDiscover::DiscoveredServer> servers = discover.discoverServers(3);
+
+    if (servers.empty()) {
+        std::cout << "No se encontraron servidores disponibles" << std::endl;
+        return "NOSERVER";
+    }
+
+    return servers[0].ip;
 }
