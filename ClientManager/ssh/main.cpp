@@ -2,22 +2,7 @@
 #include "FileManager.hpp"
 #include <iostream>
 
-int main() {
-    FileManager fileManager;
-    std::vector<std::string> lines = fileManager.readFile("Proxy.txt");
-    
-    // Verificar que hay suficientes datos para al menos un servidor
-    if (lines.size() < 4) {
-        std::cerr << "Error: archivo Proxy.txt no tiene suficientes datos." << std::endl;
-        return 1;
-    }
-    
-    // Calcular número de servidores (cada servidor usa 4 líneas: host, user, password, command)
-    int numServers = lines.size() / 4;
-    
-    std::cout << "Iniciando " << numServers << " servidor(es)..." << std::endl;
-    
-    // Procesar cada servidor
+void leerComandosDeArchivo(int numServers, const std::vector<std::string>& lines) {
     for (int i = 0; i < numServers; i++) {
         int offset = i * 4;
         std::string host = lines[offset];
@@ -58,6 +43,36 @@ int main() {
         
         std::cout << "Servidor " << (i + 1) << " iniciado exitosamente." << std::endl;
         client.disconnect();
+    }
+    
+}
+
+int main() {
+    FileManager fileManager;
+    std::vector<std::string> lines = fileManager.readFile("Proxy.txt");
+    
+    // Verificar que hay suficientes datos para al menos un servidor
+    if (lines.size() < 4) {
+        std::cerr << "Error: archivo Proxy.txt no tiene suficientes datos." << std::endl;
+        return 1;
+    }
+    
+    // Calcular número de servidores (cada servidor usa 4 líneas: host, user, password, command)
+    int numServers = lines.size() / 4;
+    
+    std::cout << "Iniciando " << numServers << " servidor(es)..." << std::endl;
+    
+    // Procesar cada servidor
+    leerComandosDeArchivo(numServers, lines);
+
+    // Finalización server
+    std::cout << "Finalizando servidores..." << std::endl;
+    std::string input;
+    std::cin >> input; // Limpiar el buffer de entrada
+    if (input == "s") {
+        lines.clear();
+        lines = fileManager.readFile("apagar.txt");
+        leerComandosDeArchivo(numServers, lines);
     }
     
     std::cout << "\nTodos los servidores han sido procesados." << std::endl;

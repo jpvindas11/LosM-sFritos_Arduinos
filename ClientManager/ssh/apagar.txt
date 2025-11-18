@@ -1,0 +1,3 @@
+192.168.100.103,axel,Axel200.,pkill proxy
+192.168.100.103,axel,Axel200.,pkill storage
+192.168.100.103,axel,Axel200.,pkill authserver
