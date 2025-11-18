@@ -102,19 +102,19 @@ void DialogManagePC::setPCIndex(int index) {
     switch(index) {
     case 0:
         this->ui->title->setText("PC 1");
-        this->targetPC = "10.1.137.7";
+        this->targetPC = "172.16.123.53";
         break;
     case 1:
         this->ui->title->setText("PC 2");
-        this->targetPC = "10.1.137.7";
+        this->targetPC = "172.16.123.54";
         break;
     case 2:
         this->ui->title->setText("PC 3");
-        this->targetPC = "10.1.137.7";
+        this->targetPC = "172.16.123.51";
         break;
     case 3:
         this->ui->title->setText("PC 4");
-        this->targetPC = "10.1.137.7";
+        this->targetPC = "172.16.123.52";
         break;
     default:
         this->close();
