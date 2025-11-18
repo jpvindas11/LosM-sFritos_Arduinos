@@ -81,6 +81,19 @@
       <string>Consulta</string>
      </property>
     </widget>
+    <widget class="QPushButton" name="b_compus">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>180</y>
+       <width>141</width>
+       <height>26</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Computadoras</string>
+     </property>
+    </widget>
    </widget>
    <widget class="QPushButton" name="b_cerrarSesion">
     <property name="geometry">
@@ -124,8 +137,8 @@
    <widget class="QListWidget" name="user_list">
     <property name="geometry">
      <rect>
-      <x>280</x>
-      <y>30</y>
+      <x>510</x>
+      <y>70</y>
       <width>501</width>
       <height>481</height>
      </rect>
@@ -176,8 +189,8 @@
    <widget class="QListWidget" name="arduino_list">
     <property name="geometry">
      <rect>
-      <x>280</x>
-      <y>60</y>
+      <x>510</x>
+      <y>70</y>
       <width>501</width>
       <height>481</height>
      </rect>
@@ -199,8 +212,8 @@
    <widget class="QListWidget" name="data_list">
     <property name="geometry">
      <rect>
-      <x>220</x>
-      <y>110</y>
+      <x>510</x>
+      <y>70</y>
       <width>601</width>
       <height>481</height>
      </rect>
@@ -219,6 +232,58 @@
      <string>Consultar</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="pc1_button">
+    <property name="geometry">
+     <rect>
+      <x>380</x>
+      <y>60</y>
+      <width>101</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PC 1</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pc2_button">
+    <property name="geometry">
+     <rect>
+      <x>530</x>
+      <y>60</y>
+      <width>101</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PC 2</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pc3_button">
+    <property name="geometry">
+     <rect>
+      <x>380</x>
+      <y>210</y>
+      <width>101</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PC 3</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pc4_button">
+    <property name="geometry">
+     <rect>
+      <x>530</x>
+      <y>210</y>
+      <width>101</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PC 4</string>
+    </property>
+   </widget>
    <zorder>b_consultar</zorder>
    <zorder>main_label</zorder>
    <zorder>groupBox</zorder>
@@ -232,6 +297,10 @@
    <zorder>arduino_list</zorder>
    <zorder>arduino_turn</zorder>
    <zorder>data_list</zorder>
+   <zorder>pc1_button</zorder>
+   <zorder>pc2_button</zorder>
+   <zorder>pc3_button</zorder>
+   <zorder>pc4_button</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

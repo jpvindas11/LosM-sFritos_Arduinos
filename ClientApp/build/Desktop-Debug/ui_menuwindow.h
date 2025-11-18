@@ -31,6 +31,7 @@ public:
     QPushButton *b_usuarios;
     QPushButton *b_nodos;
     QPushButton *b_consulta;
+    QPushButton *b_compus;
     QPushButton *b_cerrarSesion;
     QPushButton *user_add;
     QPushButton *user_delete;
@@ -42,6 +43,10 @@ public:
     QPushButton *arduino_turn;
     QListWidget *data_list;
     QPushButton *b_consultar;
+    QPushButton *pc1_button;
+    QPushButton *pc2_button;
+    QPushButton *pc3_button;
+    QPushButton *pc4_button;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -68,6 +73,9 @@ public:
         b_consulta = new QPushButton(groupBox);
         b_consulta->setObjectName(QString::fromUtf8("b_consulta"));
         b_consulta->setGeometry(QRect(0, 150, 141, 26));
+        b_compus = new QPushButton(groupBox);
+        b_compus->setObjectName(QString::fromUtf8("b_compus"));
+        b_compus->setGeometry(QRect(0, 180, 141, 26));
         b_cerrarSesion = new QPushButton(centralwidget);
         b_cerrarSesion->setObjectName(QString::fromUtf8("b_cerrarSesion"));
         b_cerrarSesion->setGeometry(QRect(0, 520, 141, 26));
@@ -79,7 +87,7 @@ public:
         user_delete->setGeometry(QRect(170, 70, 87, 26));
         user_list = new QListWidget(centralwidget);
         user_list->setObjectName(QString::fromUtf8("user_list"));
-        user_list->setGeometry(QRect(280, 30, 501, 481));
+        user_list->setGeometry(QRect(510, 70, 501, 481));
         user_change_pass = new QPushButton(centralwidget);
         user_change_pass->setObjectName(QString::fromUtf8("user_change_pass"));
         user_change_pass->setGeometry(QRect(170, 140, 87, 26));
@@ -92,16 +100,28 @@ public:
         label_cambios->setAlignment(Qt::AlignCenter);
         arduino_list = new QListWidget(centralwidget);
         arduino_list->setObjectName(QString::fromUtf8("arduino_list"));
-        arduino_list->setGeometry(QRect(280, 60, 501, 481));
+        arduino_list->setGeometry(QRect(510, 70, 501, 481));
         arduino_turn = new QPushButton(centralwidget);
         arduino_turn->setObjectName(QString::fromUtf8("arduino_turn"));
         arduino_turn->setGeometry(QRect(170, 230, 87, 31));
         data_list = new QListWidget(centralwidget);
         data_list->setObjectName(QString::fromUtf8("data_list"));
-        data_list->setGeometry(QRect(220, 110, 601, 481));
+        data_list->setGeometry(QRect(510, 70, 601, 481));
         b_consultar = new QPushButton(centralwidget);
         b_consultar->setObjectName(QString::fromUtf8("b_consultar"));
         b_consultar->setGeometry(QRect(170, 270, 87, 31));
+        pc1_button = new QPushButton(centralwidget);
+        pc1_button->setObjectName(QString::fromUtf8("pc1_button"));
+        pc1_button->setGeometry(QRect(380, 60, 101, 101));
+        pc2_button = new QPushButton(centralwidget);
+        pc2_button->setObjectName(QString::fromUtf8("pc2_button"));
+        pc2_button->setGeometry(QRect(530, 60, 101, 101));
+        pc3_button = new QPushButton(centralwidget);
+        pc3_button->setObjectName(QString::fromUtf8("pc3_button"));
+        pc3_button->setGeometry(QRect(380, 210, 101, 101));
+        pc4_button = new QPushButton(centralwidget);
+        pc4_button->setObjectName(QString::fromUtf8("pc4_button"));
+        pc4_button->setGeometry(QRect(530, 210, 101, 101));
         MenuWindow->setCentralWidget(centralwidget);
         b_consultar->raise();
         main_label->raise();
@@ -116,6 +136,10 @@ public:
         arduino_list->raise();
         arduino_turn->raise();
         data_list->raise();
+        pc1_button->raise();
+        pc2_button->raise();
+        pc3_button->raise();
+        pc4_button->raise();
         menubar = new QMenuBar(MenuWindow);
         menubar->setObjectName(QString::fromUtf8("menubar"));
         menubar->setGeometry(QRect(0, 0, 800, 22));
@@ -137,6 +161,7 @@ public:
         b_usuarios->setText(QCoreApplication::translate("MenuWindow", "Usuarios", nullptr));
         b_nodos->setText(QCoreApplication::translate("MenuWindow", "Nodos", nullptr));
         b_consulta->setText(QCoreApplication::translate("MenuWindow", "Consulta", nullptr));
+        b_compus->setText(QCoreApplication::translate("MenuWindow", "Computadoras", nullptr));
         b_cerrarSesion->setText(QCoreApplication::translate("MenuWindow", "Cerrar Sesi\303\263n", nullptr));
         user_add->setText(QCoreApplication::translate("MenuWindow", "Agregar", nullptr));
         user_delete->setText(QCoreApplication::translate("MenuWindow", "Eliminar", nullptr));
@@ -145,6 +170,10 @@ public:
         label_cambios->setText(QCoreApplication::translate("MenuWindow", "Cambios", nullptr));
         arduino_turn->setText(QCoreApplication::translate("MenuWindow", "Encender", nullptr));
         b_consultar->setText(QCoreApplication::translate("MenuWindow", "Consultar", nullptr));
+        pc1_button->setText(QCoreApplication::translate("MenuWindow", "PC 1", nullptr));
+        pc2_button->setText(QCoreApplication::translate("MenuWindow", "PC 2", nullptr));
+        pc3_button->setText(QCoreApplication::translate("MenuWindow", "PC 3", nullptr));
+        pc4_button->setText(QCoreApplication::translate("MenuWindow", "PC 4", nullptr));
     } // retranslateUi
 
 };

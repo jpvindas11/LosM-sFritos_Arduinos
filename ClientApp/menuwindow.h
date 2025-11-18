@@ -6,6 +6,7 @@
 #include "changepassdialog.h"
 #include "arduinomenumanager.h"
 #include "setrankdialog.h"
+#include "dialogmanagepc.h"
 #include "Socket.hpp"
 #include "User.hpp"
 #include <QMainWindow>
@@ -50,6 +51,18 @@ private slots:
 
     void updateSensorDataAutomatically();
 
+
+    void on_b_compus_clicked();
+
+    void on_compus_list_itemClicked(QListWidgetItem *item);
+
+    void on_pc1_button_clicked();
+
+    void on_pc2_button_clicked();
+
+    void on_pc3_button_clicked();
+
+    void on_pc4_button_clicked();
 
 private:
     Ui::MenuWindow *ui;

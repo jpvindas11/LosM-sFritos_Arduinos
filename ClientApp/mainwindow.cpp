@@ -15,12 +15,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_ip_clicked()
 {
-    QString ip = ui->lineEdit_IP->text();
-
-    if (ip.isEmpty()) {
-        QMessageBox::warning(this, "Error", "Por favor ingrese una IP");
-        return;
-    }
+    ServerDiscover discoverer(DISC_MASTER);
+    std::string ipGrab = discoverer.lookForServer();
 
     // Crear socket temporal para verificar conexión
     Socket testSocket;
@@ -31,9 +27,8 @@ void MainWindow::on_pushButton_ip_clicked()
     }
 
     // Intentar conectar
-    if (!testSocket.connectToServer(ip.toStdString(), PORT_MASTER_USERS)) {
+    if (!testSocket.connectToServer(ipGrab, PORT_MASTER_USERS)) {
         QMessageBox::critical(this, "Error", "No se pudo conectar al servidor");
-        ui->lineEdit_IP->clear();
         isConnected = false;
         testSocket.closeSocket();
         return;
@@ -43,7 +38,7 @@ void MainWindow::on_pushButton_ip_clicked()
     isConnected = true;
     testSocket.closeSocket();
 
-    this->currentData.setNetwork(ip.toStdString(), PORT_MASTER_USERS);
+    this->currentData.setNetwork(ipGrab, PORT_MASTER_USERS);
     QMessageBox::information(this, "Éxito", "Servidor disponible");
 }
 

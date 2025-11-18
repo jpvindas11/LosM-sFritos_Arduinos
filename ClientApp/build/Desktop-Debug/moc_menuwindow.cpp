@@ -22,8 +22,8 @@ QT_BEGIN_MOC_NAMESPACE
 QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_MenuWindow_t {
-    QByteArrayData data[15];
-    char stringdata0[302];
+    QByteArrayData data[21];
+    char stringdata0[437];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -46,7 +46,13 @@ QT_MOC_LITERAL(10, 178, 27), // "on_user_change_rank_clicked"
 QT_MOC_LITERAL(11, 206, 18), // "on_b_nodos_clicked"
 QT_MOC_LITERAL(12, 225, 21), // "on_b_consulta_clicked"
 QT_MOC_LITERAL(13, 247, 24), // "on_data_list_itemClicked"
-QT_MOC_LITERAL(14, 272, 29) // "updateSensorDataAutomatically"
+QT_MOC_LITERAL(14, 272, 29), // "updateSensorDataAutomatically"
+QT_MOC_LITERAL(15, 302, 19), // "on_b_compus_clicked"
+QT_MOC_LITERAL(16, 322, 26), // "on_compus_list_itemClicked"
+QT_MOC_LITERAL(17, 349, 21), // "on_pc1_button_clicked"
+QT_MOC_LITERAL(18, 371, 21), // "on_pc2_button_clicked"
+QT_MOC_LITERAL(19, 393, 21), // "on_pc3_button_clicked"
+QT_MOC_LITERAL(20, 415, 21) // "on_pc4_button_clicked"
 
     },
     "MenuWindow\0on_b_usuarios_clicked\0\0"
@@ -58,7 +64,10 @@ QT_MOC_LITERAL(14, 272, 29) // "updateSensorDataAutomatically"
     "on_user_change_rank_clicked\0"
     "on_b_nodos_clicked\0on_b_consulta_clicked\0"
     "on_data_list_itemClicked\0"
-    "updateSensorDataAutomatically"
+    "updateSensorDataAutomatically\0"
+    "on_b_compus_clicked\0on_compus_list_itemClicked\0"
+    "on_pc1_button_clicked\0on_pc2_button_clicked\0"
+    "on_pc3_button_clicked\0on_pc4_button_clicked"
 };
 #undef QT_MOC_LITERAL
 
@@ -68,7 +77,7 @@ static const uint qt_meta_data_MenuWindow[] = {
        8,       // revision
        0,       // classname
        0,    0, // classinfo
-      11,   14, // methods
+      17,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
@@ -76,17 +85,23 @@ static const uint qt_meta_data_MenuWindow[] = {
        0,       // signalCount
 
  // slots: name, argc, parameters, tag, flags
-       1,    0,   69,    2, 0x08 /* Private */,
-       3,    0,   70,    2, 0x08 /* Private */,
-       4,    1,   71,    2, 0x08 /* Private */,
-       7,    0,   74,    2, 0x08 /* Private */,
-       8,    0,   75,    2, 0x08 /* Private */,
-       9,    0,   76,    2, 0x08 /* Private */,
-      10,    0,   77,    2, 0x08 /* Private */,
-      11,    0,   78,    2, 0x08 /* Private */,
-      12,    0,   79,    2, 0x08 /* Private */,
-      13,    1,   80,    2, 0x08 /* Private */,
-      14,    0,   83,    2, 0x08 /* Private */,
+       1,    0,   99,    2, 0x08 /* Private */,
+       3,    0,  100,    2, 0x08 /* Private */,
+       4,    1,  101,    2, 0x08 /* Private */,
+       7,    0,  104,    2, 0x08 /* Private */,
+       8,    0,  105,    2, 0x08 /* Private */,
+       9,    0,  106,    2, 0x08 /* Private */,
+      10,    0,  107,    2, 0x08 /* Private */,
+      11,    0,  108,    2, 0x08 /* Private */,
+      12,    0,  109,    2, 0x08 /* Private */,
+      13,    1,  110,    2, 0x08 /* Private */,
+      14,    0,  113,    2, 0x08 /* Private */,
+      15,    0,  114,    2, 0x08 /* Private */,
+      16,    1,  115,    2, 0x08 /* Private */,
+      17,    0,  118,    2, 0x08 /* Private */,
+      18,    0,  119,    2, 0x08 /* Private */,
+      19,    0,  120,    2, 0x08 /* Private */,
+      20,    0,  121,    2, 0x08 /* Private */,
 
  // slots: parameters
     QMetaType::Void,
@@ -99,6 +114,12 @@ static const uint qt_meta_data_MenuWindow[] = {
     QMetaType::Void,
     QMetaType::Void,
     QMetaType::Void, 0x80000000 | 5,    6,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void, 0x80000000 | 5,    6,
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
     QMetaType::Void,
 
        0        // eod
@@ -121,6 +142,12 @@ void MenuWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 8: _t->on_b_consulta_clicked(); break;
         case 9: _t->on_data_list_itemClicked((*reinterpret_cast< QListWidgetItem*(*)>(_a[1]))); break;
         case 10: _t->updateSensorDataAutomatically(); break;
+        case 11: _t->on_b_compus_clicked(); break;
+        case 12: _t->on_compus_list_itemClicked((*reinterpret_cast< QListWidgetItem*(*)>(_a[1]))); break;
+        case 13: _t->on_pc1_button_clicked(); break;
+        case 14: _t->on_pc2_button_clicked(); break;
+        case 15: _t->on_pc3_button_clicked(); break;
+        case 16: _t->on_pc4_button_clicked(); break;
         default: ;
         }
     }
@@ -155,13 +182,13 @@ int MenuWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 11)
+        if (_id < 17)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 11;
+        _id -= 17;
     } else if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 11)
+        if (_id < 17)
             *reinterpret_cast<int*>(_a[0]) = -1;
-        _id -= 11;
+        _id -= 17;
     }
     return _id;
 }

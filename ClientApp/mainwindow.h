@@ -7,6 +7,7 @@
 #include "Socket.hpp"
 #include "Messages.hpp"
 #include "IPConstants.hpp"
+#include "ServerDiscover.hpp"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

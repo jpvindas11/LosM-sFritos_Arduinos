@@ -117,6 +117,7 @@ void MenuWindow::hideFuctionsForRanks(int rank) {
     this->ui->b_usuarios->move(-100, -100);
     this->ui->b_nodos->move(-100, -100);
     this->ui->b_consulta->move(-100, -100);
+    this->ui->b_compus->move(-100,-100);
 
     // Luego mostrar solo los permitidos según el rango
     switch(rank) {
@@ -124,6 +125,8 @@ void MenuWindow::hideFuctionsForRanks(int rank) {
             this->ui->b_usuarios->move(0, 30);
             break;
         case UR_HARDWAREMANAGER:
+            this->ui->b_compus->move(0, 30);
+            break;
         case UR_SOFTWAREMANAGER:
             this->ui->b_nodos->move(0, 30);
             break;
@@ -135,6 +138,7 @@ void MenuWindow::hideFuctionsForRanks(int rank) {
             this->ui->b_consulta->move(0, 30);
             this->ui->b_usuarios->move(0, 60);
             this->ui->b_nodos->move(0, 90);
+            this->ui->b_compus->move(0, 120);
             break;
         default:
             this->ui->b_consulta->move(0, 30);
@@ -151,6 +155,7 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText)
     ui->b_usuarios->setEnabled(true);
     ui->b_consulta->setEnabled(true);
     ui->b_nodos->setEnabled(true);
+    ui->b_compus->setEnabled(true);
 
     activeBtn->setEnabled(false);
 }
@@ -677,6 +682,10 @@ void MenuWindow::hideMenuWidgets() {
     this->ui->arduino_turn->move(-500, -100);
     this->ui->b_consultar->move(-500, -100);
     this->ui->data_list->move(-1000, -100);
+    this->ui->pc1_button->move(-1000,-100);
+    this->ui->pc2_button->move(-1000,-100);
+    this->ui->pc3_button->move(-1000,-100);
+    this->ui->pc4_button->move(-1000,-100);
 
     if (sensorUpdateTimer && sensorUpdateTimer->isActive()) {
         sensorUpdateTimer->stop();
@@ -1499,4 +1508,51 @@ void MenuWindow::askForServerStatus() {
         QMessageBox::critical(this, "Error de conexión",
                               QString("No se pudo conectar al servidor: %1").arg(e.what()));
     }
+}
+
+void MenuWindow::on_b_compus_clicked()
+{
+    setActiveMenu(ui->b_compus, "Computadoras");
+
+    this->ui->pc1_button->move(380, 60);
+    this->ui->pc2_button->move(530, 60);
+    this->ui->pc3_button->move(380, 210);
+    this->ui->pc4_button->move(530, 210);
+}
+
+void MenuWindow::on_pc1_button_clicked()
+{
+    DialogManagePC *dialog = new DialogManagePC(this);
+    dialog->setPCIndex(0);  // PC 1
+    dialog->exec();  // Abre el diálogo de forma modal
+    delete dialog;
+}
+
+void MenuWindow::on_pc2_button_clicked()
+{
+    DialogManagePC *dialog = new DialogManagePC(this);
+    dialog->setPCIndex(1);  // PC 2
+    dialog->exec();
+    delete dialog;
+}
+
+void MenuWindow::on_pc3_button_clicked()
+{
+    DialogManagePC *dialog = new DialogManagePC(this);
+    dialog->setPCIndex(2);  // PC 3
+    dialog->exec();
+    delete dialog;
+}
+
+void MenuWindow::on_pc4_button_clicked()
+{
+    DialogManagePC *dialog = new DialogManagePC(this);
+    dialog->setPCIndex(3);  // PC 4
+    dialog->exec();
+    delete dialog;
+}
+
+void MenuWindow::on_compus_list_itemClicked(QListWidgetItem *item)
+{
+
 }
