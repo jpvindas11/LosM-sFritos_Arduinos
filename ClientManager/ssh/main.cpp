@@ -2,42 +2,64 @@
 #include "FileManager.hpp"
 #include <iostream>
 
-
 int main() {
-    SSHClient client;
     FileManager fileManager;
-
     std::vector<std::string> lines = fileManager.readFile("Proxy.txt");
     
-    // Ejemplo de uso
-    std::string host = lines[0];
-    int port = 22;
-    std::string user = lines[1];
-    std::string password = lines[2];
-    std::string command = "cd Documentos/LosM-sFritos_Arduinos/ClientManager/Proxy/bin && ./proxy " + lines[3];
-    
-    if (!client.connect(host, port, user)) {
-        std::cerr << "Error connecting to SSH server." << std::endl;
-        return 1;
-    }
-
-    if (!client.authenticate(password)) {
-        std::cerr << "Error authenticating with SSH server." << std::endl;
-        return 1;
-    }
-
-    ssh_channel channel = client.createChannel();
-    if (channel == nullptr) {
-        std::cerr << "Error creating SSH channel." << std::endl;
-        return 1;
-    }
-    if (!client.executeCommand(channel, command, true)) {
-        std::cerr << "Error executing command on SSH server." << std::endl;
+    // Verificar que hay suficientes datos para al menos un servidor
+    if (lines.size() < 4) {
+        std::cerr << "Error: archivo Proxy.txt no tiene suficientes datos." << std::endl;
         return 1;
     }
     
-    std::cout << "Server started in background successfully." << std::endl;
+    // Calcular número de servidores (cada servidor usa 4 líneas: host, user, password, command)
+    int numServers = lines.size() / 4;
     
-    client.disconnect();
+    std::cout << "Iniciando " << numServers << " servidor(es)..." << std::endl;
+    
+    // Procesar cada servidor
+    for (int i = 0; i < numServers; i++) {
+        int offset = i * 4;
+        std::string host = lines[offset];
+        std::string user = lines[offset + 1];
+        std::string password = lines[offset + 2];
+        std::string command = lines[offset + 3];
+        
+        std::cout << "\n--- Servidor " << (i + 1) << " ---" << std::endl;
+        std::cout << "Host: " << host << std::endl;
+        std::cout << "User: " << user << std::endl;
+        
+        SSHClient client;
+        int port = 22;
+        
+        if (!client.connect(host, port, user)) {
+            std::cerr << "Error conectando al servidor " << (i + 1) << std::endl;
+            continue;
+        }
+        
+        if (!client.authenticate(password)) {
+            std::cerr << "Error autenticando en servidor " << (i + 1) << std::endl;
+            client.disconnect();
+            continue;
+        }
+        
+        ssh_channel channel = client.createChannel();
+        if (channel == nullptr) {
+            std::cerr << "Error creando canal SSH en servidor " << (i + 1) << std::endl;
+            client.disconnect();
+            continue;
+        }
+        
+        if (!client.executeCommand(channel, command, true)) {
+            std::cerr << "Error ejecutando comando en servidor " << (i + 1) << std::endl;
+            client.disconnect();
+            continue;
+        }
+        
+        std::cout << "Servidor " << (i + 1) << " iniciado exitosamente." << std::endl;
+        client.disconnect();
+    }
+    
+    std::cout << "\nTodos los servidores han sido procesados." << std::endl;
     return 0;
 }
