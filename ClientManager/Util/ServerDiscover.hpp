@@ -35,10 +35,10 @@ public:
             return servers;
         }
         
-        // Configurar timeout para recepción
-        udpSocket.setReceiveTimeout(0, 500000); // 500ms
+        // Configurar timeout para recepción (más corto para ser más responsivo)
+        udpSocket.setReceiveTimeout(0, 200000); // 200ms en lugar de 500ms
         
-        // Bind a cualquier puerto (el SO asignará uno automáticamente)
+        // Bind a cualquier puerto
         if (!udpSocket.bindSocket("0.0.0.0", 0)) {
             std::cerr << "ERROR: No se pudo hacer bind" << std::endl;
             return servers;
@@ -63,15 +63,19 @@ public:
         
         std::cout << "Broadcast enviado, esperando respuestas..." << std::endl;
         
-        // Escuchar respuestas durante el tiempo especificado
+        // Escuchar respuestas con early exit
         auto startTime = std::chrono::steady_clock::now();
+        int consecutiveTimeouts = 0;
+        const int maxConsecutiveTimeouts = 2; // Salir después de 2 timeouts consecutivos
         
         while (true) {
             auto currentTime = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
                 currentTime - startTime).count();
             
+            // Timeout máximo de seguridad
             if (elapsed >= timeoutSeconds) {
+                std::cout << "Timeout máximo alcanzado" << std::endl;
                 break;
             }
             
@@ -82,6 +86,9 @@ public:
             ssize_t bytesRead = udpSocket.receiveFrom(response, senderIP, senderPort);
             
             if (bytesRead > 0) {
+                // Resetear contador de timeouts al recibir algo
+                consecutiveTimeouts = 0;
+                
                 // Verificar si es una respuesta de descubrimiento
                 if (response.MID == static_cast<uint8_t>(MessageType::SERVER_DISCOVER_RES)) {
                     try {
@@ -108,10 +115,20 @@ public:
                         std::cerr << "ERROR al procesar respuesta: " << e.what() << std::endl;
                     }
                 }
+            } else {
+                // Timeout o error
+                consecutiveTimeouts++;
+                
+                // Early exit: si tenemos suficientes timeouts consecutivos, asumimos que no hay más servidores
+                if (consecutiveTimeouts >= maxConsecutiveTimeouts) {
+                    std::cout << "No se detectaron más respuestas, finalizando búsqueda" << std::endl;
+                    break;
+                }
             }
         }
         
         udpSocket.closeSocket();
+        std::cout << "Búsqueda completada. " << servers.size() << " servidor(es) encontrado(s)" << std::endl;
         return servers;
     }
     
@@ -131,7 +148,8 @@ public:
     }
 
     std::string lookForServer() {
-        std::vector<DiscoveredServer> servers = this->discoverServers(3);
+        // Para esta función, usamos un timeout más corto ya que solo necesitamos el primer servidor
+        std::vector<DiscoveredServer> servers = this->discoverServers(2);
 
         if (servers.empty()) {
             std::cout << "No se encontraron servidores disponibles" << std::endl;

@@ -12,7 +12,7 @@ BIN_DIR = bin
 # Archivos
 TARGET = $(BIN_DIR)/proxy
 SOURCES = main.cpp Proxy.cpp
-UTIL_SOURCES = $(UTIL_DIR)/Socket.cpp $(UTIL_DIR)/Semaphore.cpp $(UTIL_DIR)/Util.cpp
+UTIL_SOURCES = $(UTIL_DIR)/Socket.cpp $(UTIL_DIR)/UDPSocket.cpp $(UTIL_DIR)/Thread.cpp $(UTIL_DIR)/Semaphore.cpp $(UTIL_DIR)/Util.cpp
 
 # Objetos
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
@@ -45,7 +45,13 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 $(OBJ_DIR)/Socket.o: $(UTIL_DIR)/Socket.cpp
 	@echo "Compiling $<..."
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+$(OBJ_DIR)/UDPSocket.o: $(UTIL_DIR)/UDPSocket.cpp
+	@echo "Compiling $<..."
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 $(OBJ_DIR)/Semaphore.o: $(UTIL_DIR)/Semaphore.cpp
+	@echo "Compiling $<..."
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+$(OBJ_DIR)/Thread.o: $(UTIL_DIR)/Thread.cpp
 	@echo "Compiling $<..."
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 $(OBJ_DIR)/Util.o: $(UTIL_DIR)/Util.cpp

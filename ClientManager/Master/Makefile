@@ -12,7 +12,7 @@ BIN_DIR = bin
 # Archivos
 TARGET = $(BIN_DIR)/master
 SOURCES = main.cpp MasterServer.cpp MasterEntryPoint.cpp
-UTIL_SOURCES = $(UTIL_DIR)/Socket.cpp $(UTIL_DIR)/Semaphore.cpp $(UTIL_DIR)/Thread.cpp
+UTIL_SOURCES = $(UTIL_DIR)/Socket.cpp $(UTIL_DIR)/Semaphore.cpp $(UTIL_DIR)/Thread.cpp $(UTIL_DIR)/UDPSocket.cpp
 
 # Objetos
 OBJECTS = $(SOURCES:%.cpp=$(OBJ_DIR)/%.o)
@@ -50,6 +50,10 @@ $(OBJ_DIR)/Semaphore.o: $(UTIL_DIR)/Semaphore.cpp
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 $(OBJ_DIR)/Thread.o: $(UTIL_DIR)/Thread.cpp
+	@echo "Compiling $<..."
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+$(OBJ_DIR)/UDPSocket.o: $(UTIL_DIR)/UDPSocket.cpp
 	@echo "Compiling $<..."
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 

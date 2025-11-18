@@ -26,7 +26,6 @@ class MasterServer {
 
   Socket userEntryPoint;
   Socket arduinoEntryPoint;
-  UDPSocket discoveryPoint;
 
   int userPort;
   int arduinoPort;

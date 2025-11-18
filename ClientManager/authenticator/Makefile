@@ -11,7 +11,7 @@ BUILD_DIR = build
 BIN_DIR = bin
 
 # Archivos objeto
-UTIL_OBJS = $(BUILD_DIR)/Socket.o $(BUILD_DIR)/Thread.o $(BUILD_DIR)/Semaphore.o
+UTIL_OBJS = $(BUILD_DIR)/Socket.o $(BUILD_DIR)/UDPSocket.o $(BUILD_DIR)/Thread.o $(BUILD_DIR)/Semaphore.o
 FS_OBJS = $(BUILD_DIR)/FileSystem.o
 SRC_OBJS = $(BUILD_DIR)/AuthenticationServer.o $(BUILD_DIR)/main.o
 
@@ -37,6 +37,8 @@ $(BUILD_DIR)/main.o: $(SRC_DIR)/main.cpp | $(BUILD_DIR)
 
 # Compilar utilidades
 $(BUILD_DIR)/Socket.o: $(UTIL_DIR)/Socket.cpp $(UTIL_DIR)/Socket.hpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+$(BUILD_DIR)/UDPSocket.o: $(UTIL_DIR)/UDPSocket.cpp $(UTIL_DIR)/UDPSocket.hpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/Thread.o: $(UTIL_DIR)/Thread.cpp $(UTIL_DIR)/Thread.hpp | $(BUILD_DIR)

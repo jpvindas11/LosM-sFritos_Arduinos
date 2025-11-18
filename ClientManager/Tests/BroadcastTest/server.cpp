@@ -128,7 +128,7 @@ public:
             resData.serverIP = serverIP;
         }
         
-        resData.serverTCPPort = tcpPort;
+        // resData.serverTCPPort = tcpPort;
         resData.serverType = 0; // 0 = servidor de usuarios
         
         response.content = resData;

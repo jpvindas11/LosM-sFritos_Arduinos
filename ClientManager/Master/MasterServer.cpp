@@ -251,11 +251,6 @@ void MasterServer::handleArduinoConnection(int client, Socket* socket) {
 }
 
 void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
-    std::cout << "========== SERVER STATUS REQUEST ==========" << std::endl;
-    std::cout << "Auth IP: '" << this->authServerIP << "'" << std::endl;
-    std::cout << "Storage IP: '" << this->storageServerIP << "'" << std::endl;
-    std::cout << "Logs IP: '" << this->logsServerIP << "'" << std::endl;
-    
     genMessage response;
     response.MID = static_cast<uint8_t>(MessageType::SERVER_STATUS_RES);
     
@@ -264,10 +259,11 @@ void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
     
     // AUTH
     serverStatus authStatus;
+    ServerDiscover discovererA(DISC_AUTH);
     authStatus.serverName = "AUTH";
-    authStatus.serverIP = this->authServerIP;
+    authStatus.serverIP = discovererA.lookForServer();
     authStatus.serverPort = PORT_MASTER_AUTH;
-    authStatus.isConnected = checkServerConnection(this->authServerIP, PORT_MASTER_AUTH);
+    authStatus.isConnected = checkServerConnection(authStatus.serverIP, PORT_MASTER_AUTH);
     authStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
     statusRes.servers.push_back(authStatus);
     std::cout << "Added AUTH server: " << authStatus.serverIP << ":" 
@@ -276,10 +272,11 @@ void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
     
     // STORAGE
     serverStatus storageStatus;
+    ServerDiscover discovererS(DISC_STORAGE);
     storageStatus.serverName = "STORAGE";
-    storageStatus.serverIP = this->storageServerIP;
+    storageStatus.serverIP = discovererS.lookForServer();
     storageStatus.serverPort = PORT_MASTER_STORAGE;
-    storageStatus.isConnected = checkServerConnection(this->storageServerIP, PORT_MASTER_STORAGE);
+    storageStatus.isConnected = checkServerConnection(storageStatus.serverIP, PORT_MASTER_STORAGE);
     storageStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
     statusRes.servers.push_back(storageStatus);
     std::cout << "Added STORAGE server: " << storageStatus.serverIP << ":" 
@@ -288,10 +285,11 @@ void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
     
     // LOGS
     serverStatus logsStatus;
+    ServerDiscover discovererL(DISC_STORAGE);
     logsStatus.serverName = "LOGS";
-    logsStatus.serverIP = this->logsServerIP;
+    logsStatus.serverIP = discovererL.lookForServer();
     logsStatus.serverPort = PORT_MASTER_LOGS;
-    logsStatus.isConnected = checkServerConnection(this->logsServerIP, PORT_MASTER_LOGS);
+    logsStatus.isConnected = checkServerConnection(logsStatus.serverIP, PORT_MASTER_LOGS);
     logsStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
     statusRes.servers.push_back(logsStatus);
     std::cout << "Added LOGS server: " << logsStatus.serverIP << ":" 
