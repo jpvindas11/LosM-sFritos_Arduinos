@@ -12,6 +12,9 @@
 #include "../Util/Messages.hpp"
 #include "../Util/Queue.hpp"
 #include "../Util/Util.hpp"
+#include "../Util/ServerDiscoveryPoint.hpp"
+#include "../Util/ServerDiscover.hpp"
+#include "../Util/IPConstants.hpp"
 
 enum{
   ULTRASONICSENSOR = 100,
@@ -26,8 +29,8 @@ struct QueuedMessage {
 
 class Proxy {
  private:
-  std::string storageServerIP;
-  int storageServerPort;
+  std::string masterServerIP;
+  int masterServerPort;
   
   std::string proxyIP;
   int proxyPort;
@@ -37,12 +40,13 @@ class Proxy {
   Queue<QueuedMessage> messageQueue;
   
   std::thread storageHandlerThread;
+
+  ServerDiscoveryPoint* discoveryPoint;
   
   std::vector<std::thread> clientThreads;
   std::mutex threadsMutex;
   
-  int startProxy(std::string proxyIP, int proxyPort, std::string storageIP,
-    int storagePort);
+  int startProxy();
   int listenForConnections(std::string ip, int port);
   void acceptAllConnections();
   void forwardSensorData(genMessage& sensorData);
@@ -55,8 +59,7 @@ class Proxy {
   
   static Proxy& getInstance();
   
-  void run(std::string proxyIP, int proxyPort, 
-           std::string storageIP, int storagePort);
+  void run();
   void stopProxy();
   void handleArduinoConnection(int arduinoSocket);
   int arduinoType(std::string arduinoInformatuion);

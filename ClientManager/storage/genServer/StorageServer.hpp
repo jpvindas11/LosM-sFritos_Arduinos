@@ -5,10 +5,12 @@
 #include <cstring>
 #include <string>
 
-
+#include "../../Util/IPConstants.hpp"
+#include "../../Util/Messages.hpp"
 #include "../../FileSystem/src/FileSystem.hpp"
 #include "../../Util/Socket.hpp"
-
+#include "../Util/ServerDiscover.hpp"
+#include "../Util/ServerDiscoveryPoint.hpp"
 
 class StorageServer {
  protected:
@@ -17,13 +19,16 @@ class StorageServer {
   FileSystem storage;
   Socket listeningSocket;
 
+  ServerDiscoveryPoint* discoveryPoint;
+
  public:
   StorageServer();
   ~StorageServer() = default;
 
-  int openConnectionRequestSocket(std::string ip, int port);
+  int openConnectionRequestSocket(std::string ip, int port, std::string name, int disc_port, ServerType type);
 
-  int listenForConnections(std::string ip, int port);
+  int listenForConnections(std::string ip, int port,
+  std::string name, int disc_port, ServerType type);
 
   int acceptConnectionRequest();
 
@@ -34,7 +39,7 @@ class StorageServer {
     (void)client;
   }
 
-  void listenForever(std::string ip, int port);
+  void listenForever(std::string ip, int port, std::string name, int disc_port, ServerType type);
 };
 
 #endif //STORAGESERVER_H

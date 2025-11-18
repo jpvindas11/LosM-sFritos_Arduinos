@@ -18,7 +18,7 @@ typedef enum SERVER_DISCOVER_PORTS {
     DISC_AUTH,
     DISC_STORAGE,
     DISC_USER_LOGS,
-    DISC_PROXY,
+    DISC_SENSOR_PROXY,
 };
 
 #endif

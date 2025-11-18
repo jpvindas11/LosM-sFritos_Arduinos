@@ -279,7 +279,6 @@ struct serverDiscoverReq {
 struct serverDiscoverRes {
     std::string serverName;
     std::string serverIP;
-    uint16_t serverTCPPort;
     uint8_t serverType;
 };
 
@@ -577,7 +576,6 @@ namespace bitsery {
     void serialize(S& s, serverDiscoverRes& m) {
         s.text1b(m.serverName, 20);
         s.text1b(m.serverIP, 16);
-        s.value2b(m.serverTCPPort);
         s.value1b(m.serverType);
     }
 

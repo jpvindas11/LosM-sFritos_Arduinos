@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <vector>
 
-AuthenticationServer::AuthenticationServer() : connectedUsersCount(0), counterMutex(1) {
+AuthenticationServer::AuthenticationServer() : connectedUsersCount(0), counterMutex(1), discoveryPoint(nullptr) {
     this->fs = new FileSystem();
     this->fs->mount("diskAuth.bin");
 }
@@ -17,6 +17,12 @@ AuthenticationServer::AuthenticationServer() : connectedUsersCount(0), counterMu
 AuthenticationServer::~AuthenticationServer() {
     // El nuevo FileSystem maneja unmount automáticamente en su destructor
     delete fs;
+
+  if (discoveryPoint) {
+    discoveryPoint->stopDiscovery();
+    discoveryPoint->waitToFinish();
+    delete discoveryPoint;
+  }
 }
 
 int AuthenticationServer::initialize() {
@@ -57,6 +63,13 @@ int AuthenticationServer::openConnectionRequestSocket(std::string ip, int port) 
     
     this->serverIP = ip;
     this->listeningPort = port;
+
+    discoveryPoint = new ServerDiscoveryPoint(
+        "AUTH_SERVER_FRI",
+        ip,
+        DISC_AUTH,
+        ServerType::SV_AUTH
+    );
     
     return EXIT_SUCCESS;
 }
@@ -69,6 +82,14 @@ int AuthenticationServer::listenForConnections(std::string ip, int port) {
         std::cerr << "ERROR: Could not listen for connections" << std::endl;
         return EXIT_FAILURE;
     }
+
+    if (discoveryPoint->startThread() != EXIT_SUCCESS) {
+        std::cerr << "! Could not start discovery thread" << std::endl;
+        delete discoveryPoint;
+        discoveryPoint = nullptr;
+        return EXIT_FAILURE;
+    }
+    
     std::cout << "AuthenticationServer listening on " << ip << ":" << port << std::endl;
     return EXIT_SUCCESS;
 }
@@ -121,10 +142,13 @@ void AuthenticationServer::sendUserLog(const std::string& username,
         std::cerr << "WARNING: No se pudo crear socket para logs" << std::endl;
         return;
     }
+
+    ServerDiscover discoverer(DISC_USER_LOGS);
+    std::string logsIP = discoverer.lookForServer();
     
-    if (!logSocket.connectToServer(this->logsIP, PORT_MASTER_LOGS)) {
+    if (!logSocket.connectToServer(logsIP, PORT_MASTER_LOGS)) {
         std::cerr << "WARNING: No se pudo conectar al servidor de logs en " 
-                  << this->logsIP << ":" << PORT_MASTER_LOGS << std::endl;
+                  << logsIP << ":" << PORT_MASTER_LOGS << std::endl;
         return;
     }
     
@@ -934,8 +958,4 @@ void AuthenticationServer::changePermissions(const std::string& username,
     }
     
     delete[] buffer;
-}
-
-void AuthenticationServer::setLogIP(std::string IP) {
-    this->logsIP = IP;
 }

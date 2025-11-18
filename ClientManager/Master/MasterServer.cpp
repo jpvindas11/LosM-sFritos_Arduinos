@@ -6,12 +6,19 @@
 MasterServer::MasterServer() 
     :
       userPort(PORT_MASTER_USERS),
-      arduinoPort(PORT_MASTER_ARDUINO) {
+      arduinoPort(PORT_MASTER_ARDUINO),
+      discoveryPoint(nullptr) {
 }
 
 MasterServer::~MasterServer() {
   this->userEntryPoint.closeSocket();
   this->arduinoEntryPoint.closeSocket();
+
+  if (discoveryPoint) {
+    discoveryPoint->stopDiscovery();
+    discoveryPoint->waitToFinish();
+    delete discoveryPoint;
+  }
 
   for (auto* listener : listeners) {
     delete listener;
@@ -41,6 +48,21 @@ int MasterServer::startAllListeners(const std::string& ip) {
     }
   }
 
+  discoveryPoint = new ServerDiscoveryPoint(
+      "MASTER_SERVER_FRI",
+      ip,
+      DISC_MASTER,
+      ServerType::SV_MASTER
+  );
+  
+  if (discoveryPoint->startThread() != EXIT_SUCCESS) {
+    std::cerr << "! Could not start discovery thread" << std::endl;
+    delete discoveryPoint;
+    discoveryPoint = nullptr;
+    return EXIT_FAILURE;
+  }
+
+
   std::cout << "All listeners started successfully" << std::endl;
   return EXIT_SUCCESS;
 }
@@ -48,6 +70,10 @@ int MasterServer::startAllListeners(const std::string& ip) {
 void MasterServer::waitForAllListeners() {
   for (auto* listener : listeners) {
     listener->waitToFinish();
+  }
+
+  if (discoveryPoint) {
+    discoveryPoint->waitToFinish();
   }
 }
 
@@ -111,19 +137,17 @@ void MasterServer::listenForever(std::string ip, int port, Socket* socket,
 
 void MasterServer::handleUserConnection(int client, Socket* socket) {
   std::cout << "[USER] New connection on client " << client << std::endl;
-
-  Socket clientSocket;
-  genMessage clientRequest;
   
-  if (clientSocket.bReceiveData(client, clientRequest) <= 0) {
+  genMessage clientRequest;
+  if (socket->bReceiveData(client, clientRequest) <= 0) {
     close(client);
     return;
   }
-
+  
   MessageType msgType = static_cast<MessageType>(clientRequest.MID);
   std::string targetIP;
   int targetPort;
-
+  
   switch (msgType) {
     case MessageType::AUTH_LOGIN_REQ:
     case MessageType::AUTH_LOGOUT:
@@ -131,11 +155,13 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     case MessageType::AUTH_USER_DELETE:
     case MessageType::AUTH_USER_MODIFY_PASS:
     case MessageType::AUTH_USER_MODIFY_RANK:
-    case MessageType::AUTH_USER_REQUEST:
-    targetIP = lookForServer(DISC_AUTH);
-    targetPort = PORT_MASTER_AUTH;
-    break;
-
+    case MessageType::AUTH_USER_REQUEST: {
+      ServerDiscover discoverer(DISC_AUTH);
+      targetIP = discoverer.lookForServer();
+      targetPort = PORT_MASTER_AUTH;
+      break;
+    }
+    
     case MessageType::FILE_NUMBER_REQ:
     case MessageType::SEN_FILE_NAMES_REQ:
     case MessageType::SEN_FILE_METD_REQ:
@@ -144,26 +170,51 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     case MessageType::SEN_RECENT_DATA_REQ:
     case MessageType::ADD_SENSOR:
     case MessageType::DELETE_SENSOR:
-    case MessageType::MODIFY_SENSOR:
-    targetIP = this->storageServerIP;
-    targetPort = PORT_MASTER_STORAGE;
-    break;
-
-    case MessageType::LOG_USER_REQUEST:
-    targetIP = this->logsServerIP;
-    targetPort = PORT_MASTER_LOGS;
-    break;
-
+    case MessageType::MODIFY_SENSOR: {
+      ServerDiscover discoverer(DISC_STORAGE);
+      targetIP = discoverer.lookForServer();
+      targetPort = PORT_MASTER_STORAGE;
+      break;
+    }
+    
+    case MessageType::LOG_USER_REQUEST: {
+      ServerDiscover discoverer(DISC_USER_LOGS);
+      targetIP = discoverer.lookForServer();
+      targetPort = PORT_MASTER_LOGS;
+      break;
+    }
+    
     case MessageType::SERVER_STATUS_REQ:
       handleServerStatusRequest(client, clientRequest);
       return;
+    
     default:
-    // Error
-    targetIP = "ERR";
-    targetPort = PORT_MASTER_AUTH;
-    break;
+      std::cerr << "[ERROR] Unknown message type: " 
+        << static_cast<int>(clientRequest.MID) << std::endl;
+      targetIP = "ERR";
+      targetPort = PORT_MASTER_AUTH;
+      break;
   }
-
+  
+  // Verificar si se encontró un servidor válido
+  if (targetIP == "NOSERVER" || targetIP == "ERR") {
+    std::cerr << "[ERROR] No suitable server found for message type: " 
+      << static_cast<int>(msgType) << std::endl;
+    
+    // Enviar mensaje de error al cliente
+    genMessage errorResponse;
+    errorResponse.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+    errorCommonMsg errMsg;
+    errMsg.message = "No hay servidores disponibles";
+    errorResponse.content = errMsg;
+    socket->bSendData(client, errorResponse);
+    
+    close(client);
+    return;
+  }
+  
+  std::cout << "[ROUTING] Forwarding to " << targetIP << ":" << targetPort << std::endl;
+  
   auto* worker = new MasterWorker(client, targetIP, targetPort, clientRequest);
   worker->startThread();
 }
@@ -279,17 +330,4 @@ uint8_t MasterServer::checkServerConnection(const std::string& ip, int port) {
     }
     
     return connected ? 1 : 0;
-}
-
-std::string MasterServer::lookForServer(int port) {
-    ServerDiscover discover(port);
-
-    std::vector<ServerDiscover::DiscoveredServer> servers = discover.discoverServers(3);
-
-    if (servers.empty()) {
-        std::cout << "No se encontraron servidores disponibles" << std::endl;
-        return "NOSERVER";
-    }
-
-    return servers[0].ip;
 }

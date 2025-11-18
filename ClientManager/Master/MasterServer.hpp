@@ -10,6 +10,7 @@
 #include "../Util/UDPSocket.hpp"
 #include "../Util/IPConstants.hpp"
 #include "../Util/ServerDiscover.hpp"
+#include "../Util/ServerDiscoveryPoint.hpp"
 
 #include "MasterWorker.hpp"
 
@@ -31,6 +32,8 @@ class MasterServer {
   int arduinoPort;
 
   std::vector<MasterEntryPoint*> listeners;
+
+  ServerDiscoveryPoint* discoveryPoint;
 
   void handleMID(int client, Socket* socket);
   void handleServerStatusRequest(int client, genMessage& request);
@@ -55,8 +58,6 @@ class MasterServer {
 
   void handleUserConnection(int client, Socket* socket);
   void handleArduinoConnection(int client, Socket* socket);
-
-  std::string lookForServer(int port);
 };
 
 #endif

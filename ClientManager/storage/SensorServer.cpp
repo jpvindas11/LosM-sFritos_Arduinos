@@ -15,12 +15,14 @@ int SensorServer::startServer(std::string serverIP, int listeningPort) {
   if (!this->storage.mount("sensorStorage.bin")) {
     return EXIT_FAILURE;
   }
-  this->listenForever(this->serverIP, this->listeningPort);
+  this->listenForever(this->serverIP, this->listeningPort,
+    "STORAGE_SERVER", DISC_STORAGE, ServerType::SV_STORAGE);
   return EXIT_SUCCESS;
 }
 
 void SensorServer::stopServer() {  
   running.store(false);
+
   this->storage.unmount();
 }
 

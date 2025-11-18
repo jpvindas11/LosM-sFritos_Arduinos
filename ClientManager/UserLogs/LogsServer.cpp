@@ -14,7 +14,8 @@ int LogsServer::startServer(std::string serverIP, int listeningPort) {
   if (!this->storage.mount("userLogsStorage.bin")) {
     return EXIT_FAILURE;
   }
-  this->listenForever(this->serverIP, this->listeningPort);
+  this->listenForever(this->serverIP, this->listeningPort,
+    "USERLOG_SERVER", DISC_USER_LOGS, ServerType::SV_LOGS_USER);
   return EXIT_SUCCESS;
 }
 

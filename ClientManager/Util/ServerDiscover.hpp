@@ -96,8 +96,7 @@ public:
                         } else {
                             server.ip = resData.serverIP;
                         }
-                        
-                        server.port = resData.serverTCPPort;
+
                         server.serverType = resData.serverType;
                         
                         servers.push_back(server);
@@ -129,5 +128,16 @@ public:
         }
         
         return false;
+    }
+
+    std::string lookForServer() {
+        std::vector<DiscoveredServer> servers = this->discoverServers(3);
+
+        if (servers.empty()) {
+            std::cout << "No se encontraron servidores disponibles" << std::endl;
+            return "NOSERVER";
+        }
+
+        return servers[0].ip;
     }
 };

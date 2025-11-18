@@ -7,9 +7,14 @@
 #include <algorithm>
 #include <cstdio>
 
-Proxy::Proxy() : running(false), messageQueue(100) {}
+Proxy::Proxy() : running(false), messageQueue(100), discoveryPoint(nullptr) {}
 
 Proxy::~Proxy() {
+    if (discoveryPoint) {
+      discoveryPoint->stopDiscovery();
+      discoveryPoint->waitToFinish();
+      delete discoveryPoint;
+    }
     stopProxy();
 }
 
@@ -36,6 +41,20 @@ int Proxy::listenForConnections(std::string ip, int port) {
   
   if (!listeningSocket.listenSocket(5)) {
     std::cerr << "ERROR: Could not listen for connections\n";
+    return EXIT_FAILURE;
+  }
+
+  discoveryPoint = new ServerDiscoveryPoint(
+      "PROXY_ARDUINOS",
+      ip,
+      DISC_SENSOR_PROXY,
+      ServerType::SV_SENSOR_PROXY
+  );
+  
+  if (discoveryPoint->startThread() != EXIT_SUCCESS) {
+    std::cerr << "! Could not start discovery thread" << std::endl;
+    delete discoveryPoint;
+    discoveryPoint = nullptr;
     return EXIT_FAILURE;
   }
   
@@ -152,9 +171,13 @@ void Proxy::forwardSensorData(genMessage& sensorData) {
     std::cerr << "ERROR: Could not create storage socket\n";
     return;
   }
-  
-  if (!tempStorageSocket.connectToServer(storageServerIP, storageServerPort)) {
-    std::cerr << "ERROR: Could not connect to storage server\n";
+
+  // Find master
+  ServerDiscover discoverer(DISC_MASTER);
+  masterServerIP = discoverer.lookForServer();
+
+  if (!tempStorageSocket.connectToServer(masterServerIP, PORT_MASTER_ARDUINO)) {
+    std::cerr << "ERROR: Could not connect to master server\n";
     return;
   }
   
@@ -169,11 +192,9 @@ void Proxy::forwardSensorData(genMessage& sensorData) {
   tempStorageSocket.closeSocket();
 }
 
-int Proxy::startProxy(std::string proxyIP, int proxyPort, std::string storageIP, int storagePort) {
-  this->proxyIP = proxyIP;
-  this->proxyPort = proxyPort;
-  this->storageServerIP = storageIP;
-  this->storageServerPort = storagePort;
+int Proxy::startProxy() {
+  this->proxyIP = "0.0.0.0";
+  this->proxyPort = PORT_PROXY_LISTENER;
   
   if (listenForConnections(this->proxyIP, this->proxyPort) == EXIT_FAILURE) {
     return EXIT_FAILURE;
@@ -190,9 +211,9 @@ int Proxy::startProxy(std::string proxyIP, int proxyPort, std::string storageIP,
   return EXIT_SUCCESS;
 }
 
-void Proxy::run(std::string proxyIP, int proxyPort, std::string storageIP, int storagePort) {
+void Proxy::run() {
   try {
-    if (startProxy(proxyIP, proxyPort, storageIP, storagePort) == EXIT_SUCCESS) {
+    if (startProxy() == EXIT_SUCCESS) {
       acceptAllConnections();
     }
   } catch (const std::runtime_error& error) {

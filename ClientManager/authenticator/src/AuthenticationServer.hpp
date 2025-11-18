@@ -13,6 +13,9 @@
 #include "../../Util/Socket.hpp"
 #include "../../Util/User.hpp"
 #include "../../Util/IPConstants.hpp"
+#include "../../Util/UDPSocket.hpp"
+#include "../../Util/ServerDiscover.hpp"
+#include "../../Util/ServerDiscoveryPoint.hpp"
 
 /// @brief Estructura para datos de usuario almacenados en memoria
 struct AuthUser {
@@ -35,8 +38,9 @@ private:
     std::mutex requestMutex;
     Socket listeningSocket;
     std::string serverIP;
-    std::string logsIP;
     int listeningPort;
+
+    ServerDiscoveryPoint* discoveryPoint;
 
     void generateSalt(unsigned char* salt);
     bool hashPassword(const std::string& password, const unsigned char* salt, unsigned char* hash);
@@ -83,7 +87,6 @@ public:
     void changePermissions(const std::string& username, char newType, char newPermission);
 
     void printUsers();
-    void setLogIP(std::string IP);
     std::unordered_map<std::string, AuthUser>* getUserMap();
 };
 
