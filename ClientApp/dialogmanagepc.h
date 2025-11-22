@@ -32,7 +32,7 @@ private:
     int index;
     std::string targetPC;
 
-    std::string labUser = "lab3-5";
+    std::string labUser = "lab-3-5";
     std::string labPass = "Cata2960!";
 
 };

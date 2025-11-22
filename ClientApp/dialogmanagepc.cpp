@@ -31,22 +31,20 @@ void DialogManagePC::on_on_button_clicked()
 
     ssh_channel channel = ssh.createChannel();
     if (channel) {
-        // Construir la ruta del ejecutable según el servidor
+        // Construir la ruta COMPLETA del ejecutable según el servidor
         std::string serverPath;
-        std::string serverName = selectedServer.toLower().toStdString();
+        std::string serverName = selectedServer.toStdString();
 
         if (serverName == "Autenticacion") {
-            serverPath = "/home/lab3-5/servidores/autenticacion/authServer";
+            serverPath = "cd ~/servers/autenticacion/bin && ./authServer";
         } else if (serverName == "Almacenamiento") {
-            serverPath = "/home/lab3-5/servidores/almacenamiento/storage";
+            serverPath = "cd ~/servers/storage/bin && ./storage";
         } else if (serverName == "Logs Usuarios") {
-            serverPath = "/home/lab3-5/servidores/logs/UserLogs";
+            serverPath = "cd ~/servers/UserLogs/bin && ./UserLogs";
         } else if (serverName == "Proxy") {
-            serverPath = "/home/lab3-5/servidores/proxy/proxy";
+            serverPath = "cd ~/servers/Proxy/bin && ./proxy";
         }
-
-        // Ejecutar en background
-        std::string command = serverPath + " &";
+        std::string command = serverPath;
 
         if (ssh.executeCommand(channel, command, true)) {
             QMessageBox::information(this, "Éxito",
@@ -77,12 +75,26 @@ void DialogManagePC::on_off_button_clicked()
 
     ssh_channel channel = ssh.createChannel();
     if (channel) {
-        std::string serverName = selectedServer.toLower().toStdString();
+        std::string serverName = selectedServer.toStdString();
+        std::string processName;
 
-        // Matar el proceso por nombre
-        std::string command = "pkill -f " + serverName + "_server";
+        if (serverName == "Autenticacion") {
+            processName = "authServer";
+        } else if (serverName == "Almacenamiento") {
+            processName = "storage";
+        } else if (serverName == "Logs Usuarios") {
+            processName = "UserLogs";
+        } else if (serverName == "Proxy") {
+            processName = "proxy";
+        }
 
-        if (ssh.executeCommand(channel, command)) {
+        // SOLUCIÓN 1: Usar pkill con -9 (SIGKILL) y verificar con echo
+        std::string command = "pkill -9 -f " + processName + " && echo 'Killed' || echo 'Not found'";
+
+        // SOLUCIÓN 2: Alternativa más robusta
+        // std::string command = "killall -9 " + processName + " 2>&1 || echo 'Process not running'";
+
+        if (ssh.executeCommand(channel, command, false)) {
             QMessageBox::information(this, "Éxito",
                                      QString("Servidor %1 detenido correctamente").arg(selectedServer));
         } else {
@@ -102,19 +114,19 @@ void DialogManagePC::setPCIndex(int index) {
     switch(index) {
     case 0:
         this->ui->title->setText("PC 1");
-        this->targetPC = "172.16.123.53";
+        this->targetPC = "10.1.35.11";
         break;
     case 1:
         this->ui->title->setText("PC 2");
-        this->targetPC = "172.16.123.54";
+        this->targetPC = "10.1.35.12";
         break;
     case 2:
         this->ui->title->setText("PC 3");
-        this->targetPC = "172.16.123.51";
+        this->targetPC = "10.1.35.9";
         break;
     case 3:
         this->ui->title->setText("PC 4");
-        this->targetPC = "172.16.123.52";
+        this->targetPC = "10.1.35.10";
         break;
     default:
         this->close();
