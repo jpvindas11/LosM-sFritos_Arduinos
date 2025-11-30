@@ -1,4 +1,5 @@
 #include "VirtualMemoryManager.hpp"
+#include <bitset>
 
 
 VirtualMemoryManager::VirtualMemoryManager() {
@@ -10,7 +11,7 @@ VirtualMemoryManager::VirtualMemoryManager() {
 }
 
 VirtualMemoryManager::~VirtualMemoryManager() {
-  // hacer el flush y lberar la memoria utilizada para el disco
+  // hacer el flush y liberar la memoria utilizada para el disco
   if (this->disk->isMounted) {
     delete this->disk;
   }
@@ -19,7 +20,7 @@ VirtualMemoryManager::~VirtualMemoryManager() {
 }
 
 void VirtualMemoryManager::initializeManager() {
-  // incializar cada celda del arreglo en -1 (disponible)
+  // inicializar cada celda del arreglo en -1 (disponible)
   for (size_t index = 0; index < FRAME_COUNT; index++) {
     this->pageTable[index] = -1;
     this->timeTable[index] = -1;
@@ -39,6 +40,8 @@ void VirtualMemoryManager::initializeManager() {
   this->proccessFileCorrespondenceTable(tableContent, pages);
   // procesar los pares y rellenar el mapa de correspondencia
   this->fillCorrespondanceTable(pages);
+  // inicializar la tabla de protección
+  this->initializeProtectionTable();
 } 
 
 void VirtualMemoryManager::proccessFileCorrespondenceTable(char* tableContent, 
@@ -104,7 +107,7 @@ int64_t VirtualMemoryManager::getPhysicalPage(std::string& logicalPage) {
   for (const auto& pair: this->correspondanceTable) {
     // si la clave se corresponde con la página solicitada
     if (pair.first == logicalPage) {
-      // se retorna el valor númerico del bloque en el backingStorage
+      // se retorna el valor numérico del bloque en el backingStorage
       return std::stoll(pair.second);
     }
   }
@@ -120,14 +123,14 @@ int VirtualMemoryManager::allocatePage(std::string& requestedPage,
     return EXIT_FAILURE;
   }
   try {
-    // obtener el valor númerico de la página solicitada
+    // obtener el valor numérico de la página solicitada
     int64_t numericPage = std::stoll(requestedPage);
     // almacenar el número de página en la pageTable según el índice dado
     this->pageTable[storingFrameIndex] = numericPage;
     // establecer el tiempo de uso con el contador actual
     this->timeTable[storingFrameIndex] = this->timeCounter;
     // extraer el bloque en el backingStorage para la página solicitada
-    // y alamacentar en la memoria principal
+    // y almacenar en la memoria principal
     this->disk->readBlock(
                           (uint64_t)physicalPage, 
                           static_cast<void*>
@@ -231,4 +234,161 @@ void VirtualMemoryManager::printStatics() {
   std::cout<<"Cantidad de table hits: "<<this->tableHits
            <<". "<<tableHitsPercentage<<"\% de las solicitudes realizadas"
            <<std::endl;
+}
+
+void VirtualMemoryManager::initializeProtectionTable() {
+  // Inicializar cada entrada de la tabla de protección
+  for (int64_t index = 0; index < FRAME_COUNT; index++) {
+    // Por defecto, sin permisos hasta que se asigne una página
+    this->protectionTable[index].permissions = static_cast<uint8_t>(PagePermissions::NONE);
+    // No tiene propietario inicialmente
+    this->protectionTable[index].ownerProcessId = 0;
+    // La página no está bloqueada
+    this->protectionTable[index].isLocked = false;
+    // Contador de accesos en cero
+    this->protectionTable[index].accessCount = 0;
+    // Límite de página: por defecto FRAME_SIZE
+    this->pageBoundaries[index] = FRAME_SIZE;
+  }
+}
+
+void VirtualMemoryManager::setPagePermissions(int64_t frameIndex, uint8_t permissions, uint32_t ownerProcessId) {
+  // Validar el índice del frame
+  if (frameIndex < 0 || frameIndex >= FRAME_COUNT) {
+    std::cerr << "ERROR: Índice de frame inválido: " << frameIndex << std::endl;
+    return;
+  }
+  
+  // Asignar permisos a la página
+  this->protectionTable[frameIndex].permissions = permissions;
+  // Asignar el propietario
+  this->protectionTable[frameIndex].ownerProcessId = ownerProcessId;
+  // Reiniciar el contador de accesos
+  this->protectionTable[frameIndex].accessCount = 0;
+  
+  std::cout << "Permisos asignados a frame " << frameIndex 
+            << " para proceso " << ownerProcessId << std::endl;
+}
+
+bool VirtualMemoryManager::validateAccess(int64_t frameIndex, PagePermissions requestedPermission, uint32_t processId) {
+  // Validar el índice del frame
+  if (frameIndex < 0 || frameIndex >= FRAME_COUNT) {
+    std::cerr << "ERROR: Índice de frame inválido: " << frameIndex << std::endl;
+    return false;
+  }
+  
+  // Si la página está bloqueada (I/O en progreso), denegar acceso
+  if (this->protectionTable[frameIndex].isLocked) {
+    std::cerr << "ERROR: Página " << frameIndex << " está bloqueada (I/O en progreso)" << std::endl;
+    return false;
+  }
+  
+  // Si el proceso no es el propietario, denegar acceso
+  if (this->protectionTable[frameIndex].ownerProcessId != processId && 
+      this->protectionTable[frameIndex].ownerProcessId != 0) {
+    std::cerr << "ERROR: Proceso " << processId << " no es propietario de página " 
+              << frameIndex << std::endl;
+    return false;
+  }
+  
+  // Obtener los permisos actuales
+  uint8_t currentPermissions = this->protectionTable[frameIndex].permissions;
+  
+  // Verificar si el permiso solicitado está disponible
+  if ((currentPermissions & static_cast<uint8_t>(requestedPermission)) == 0) {
+    std::cerr << "ERROR: Proceso " << processId << " no tiene permiso " 
+              << static_cast<int>(requestedPermission) << " en página " 
+              << frameIndex << std::endl;
+    return false;
+  }
+  
+  // Incrementar contador de accesos
+  this->protectionTable[frameIndex].accessCount++;
+  
+  // Acceso permitido
+  return true;
+}
+
+void VirtualMemoryManager::setPageBoundary(int64_t frameIndex, uint32_t size) {
+  // Validar el índice del frame
+  if (frameIndex < 0 || frameIndex >= FRAME_COUNT) {
+    std::cerr << "ERROR: Índice de frame inválido: " << frameIndex << std::endl;
+    return;
+  }
+  
+  // Validar el tamaño (no puede exceder FRAME_SIZE)
+  if (size > FRAME_SIZE) {
+    std::cerr << "ADVERTENCIA: Tamaño " << size << " excede FRAME_SIZE (" 
+              << FRAME_SIZE << "). Ajustando a FRAME_SIZE." << std::endl;
+    size = FRAME_SIZE;
+  }
+  
+  // Establecer el límite
+  this->pageBoundaries[frameIndex] = size;
+  
+  std::cout << "Límite de página " << frameIndex << " establecido a " << size 
+            << " bytes" << std::endl;
+}
+
+bool VirtualMemoryManager::validateBoundary(int64_t frameIndex, uint32_t offset) {
+  // Validar el índice del frame
+  if (frameIndex < 0 || frameIndex >= FRAME_COUNT) {
+    std::cerr << "ERROR: Índice de frame inválido: " << frameIndex << std::endl;
+    return false;
+  }
+  
+  // Verificar si el offset está dentro de los límites
+  if (offset >= this->pageBoundaries[frameIndex]) {
+    std::cerr << "ERROR: Buffer overflow detectado - offset " << offset 
+              << " excede límite " << this->pageBoundaries[frameIndex] << std::endl;
+    return false;
+  }
+  
+  return true;
+}
+
+void VirtualMemoryManager::printPageProtection(int64_t frameIndex) {
+  // Validar el índice del frame
+  if (frameIndex < 0 || frameIndex >= FRAME_COUNT) {
+    std::cerr << "ERROR: Índice de frame inválido: " << frameIndex << std::endl;
+    return;
+  }
+  
+  PageProtection& prot = this->protectionTable[frameIndex];
+  
+  std::cout << "\n=== Protección de Página " << frameIndex << " ===" << std::endl;
+  std::cout << "Permisos: ";
+  
+  // Imprimir permisos de forma legible
+  if (prot.permissions & static_cast<uint8_t>(PagePermissions::READ)) {
+    std::cout << "R";
+  }
+  if (prot.permissions & static_cast<uint8_t>(PagePermissions::WRITE)) {
+    std::cout << "W";
+  }
+  if (prot.permissions & static_cast<uint8_t>(PagePermissions::EXEC)) {
+    std::cout << "X";
+  }
+  if (prot.permissions == static_cast<uint8_t>(PagePermissions::NONE)) {
+    std::cout << "NONE";
+  }
+  
+  std::cout << " (0b" << std::bitset<8>(prot.permissions) << ")" << std::endl;
+  std::cout << "Propietario (PID): " << prot.ownerProcessId << std::endl;
+  std::cout << "Bloqueada: " << (prot.isLocked ? "SÍ" : "NO") << std::endl;
+  std::cout << "Accesos: " << prot.accessCount << std::endl;
+  std::cout << "Límite: " << this->pageBoundaries[frameIndex] << " bytes" << std::endl;
+}
+
+void VirtualMemoryManager::printAllProtections() {
+  std::cout << "\n========== TABLA DE PROTECCIÓN COMPLETA ==========" << std::endl;
+  for (int64_t i = 0; i < FRAME_COUNT; i++) {
+    // Solo mostrar frames que tienen contenido (pageTable[i] != -1)
+    if (this->pageTable[i] != -1) {
+      this->printPageProtection(i);
+    } else {
+      std::cout << "Frame " << i << ": LIBRE" << std::endl;
+    }
+  }
+  std::cout << "=================================================" << std::endl;
 }

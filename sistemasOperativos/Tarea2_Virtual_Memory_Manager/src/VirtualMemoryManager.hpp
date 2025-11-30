@@ -15,10 +15,26 @@
 // cada página/frame tendrá un tamaño de 1024 bytes
 #define FRAME_SIZE 1024
 
-// estructura para representar el frame
+// Enumeración para los permisos de acceso
+enum class PagePermissions : uint8_t {
+  NONE  = 0b000,  // Sin permisos
+  READ  = 0b001,  // Lectura
+  WRITE = 0b010,  // Escritura
+  EXEC  = 0b100   // Ejecución
+};
+
+// Estructura para representar el frame con permisos
 typedef struct frame {
-  char data [1024];
+  char data[1024];
 } frame;
+
+// Estructura para metadatos de protección de página
+typedef struct PageProtection {
+  uint8_t permissions;        // Permisos de acceso (R, W, X)
+  uint32_t ownerProcessId;    // ID del proceso propietario
+  bool isLocked;              // Flag para bloquear la página (durante I/O)
+  uint32_t accessCount;       // Contador de accesos para auditoría
+} PageProtection;
 
 class VirtualMemoryManager {
  private:
@@ -44,6 +60,10 @@ class VirtualMemoryManager {
   uint64_t pageFaults;
   // número de pageHits registrados
   uint64_t tableHits;
+  // Tabla de protección: mapea índice de frame a metadatos de protección
+  PageProtection protectionTable[FRAME_COUNT];
+  // Tabla de límites: mapea página a su tamaño actual en bytes
+  uint32_t pageBoundaries[FRAME_COUNT];
 
  public:
    // constructor 
@@ -59,6 +79,36 @@ class VirtualMemoryManager {
      * @brief Imprime las estádisticas de pageFaults y pageHits al finalizar el programa
   */
    void printStatics();
+  /**
+     * @brief Asigna permisos de protección a una página
+     * @param frameIndex Índice del frame
+     * @param permissions Permisos a asignar (READ, WRITE, EXEC)
+     * @param ownerProcessId ID del proceso propietario
+  */
+   void setPagePermissions(int64_t frameIndex, uint8_t permissions, uint32_t ownerProcessId);
+  /**
+     * @brief Valida si un acceso a memoria es permitido
+     * @param frameIndex Índice del frame
+     * @param requestedPermission Permiso solicitado
+     * @param processId ID del proceso que accede
+     * @return true si el acceso es permitido
+  */
+   bool validateAccess(int64_t frameIndex, PagePermissions requestedPermission, uint32_t processId);
+  /**
+     * @brief Establece el límite de tamaño de una página
+     * @param frameIndex Índice del frame
+     * @param size Tamaño máximo en bytes
+  */
+   void setPageBoundary(int64_t frameIndex, uint32_t size);
+  /**
+     * @brief Imprime los metadatos de protección de una página
+     * @param frameIndex Índice del frame
+  */
+   void printPageProtection(int64_t frameIndex);
+  /**
+     * @brief Imprime un resumen de la protección de todas las páginas
+  */
+   void printAllProtections();
 
 
  private:
@@ -141,6 +191,18 @@ class VirtualMemoryManager {
    * @return int64_t índice del frame utilizado menos recientemente
    */
   int64_t getOldestFrame();
+  /**
+   * @brief Inicializa la tabla de protección estableciendo permisos por defecto
+   */
+  void initializeProtectionTable();
+  /**
+   * @brief Valida si un offset está dentro de los límites permitidos de una página
+   * 
+   * @param frameIndex Índice del frame
+   * @param offset Desplazamiento dentro de la página
+   * @return true Si el offset está dentro de límites
+   */
+  bool validateBoundary(int64_t frameIndex, uint32_t offset);
 
 
   
