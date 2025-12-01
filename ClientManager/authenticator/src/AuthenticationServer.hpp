@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 #include <mutex>
+#include <regex>
 
 #include "../../FileSystem/src/FileSystem.hpp"
 #include "../../Util/Semaphore.hpp"
@@ -39,6 +40,7 @@ private:
     Socket listeningSocket;
     std::string serverIP;
     int listeningPort;
+    std::regex passwordPattern;
 
     ServerDiscoveryPoint* discoveryPoint;
 

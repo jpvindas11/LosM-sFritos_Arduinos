@@ -8,10 +8,12 @@
 #include <cstring>
 #include <iomanip>
 #include <vector>
+#include <regex>
 
 AuthenticationServer::AuthenticationServer() : connectedUsersCount(0), counterMutex(1), discoveryPoint(nullptr) {
     this->fs = new FileSystem();
     this->fs->mount("diskAuth.bin");
+    this->passwordPattern = std::regex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{8,}$");
 }
 
 AuthenticationServer::~AuthenticationServer() {
@@ -513,8 +515,8 @@ bool AuthenticationServer::registerUser(const std::string& username,
         return false;
     }
     
-    if (password.length() < 4) {
-        std::cout << "Error: Contraseña muy corta (mínimo 4 caracteres)" << std::endl;
+    if (std::regex_match(password, this->passwordPattern) == false) {
+        std::cout << "Error: Contraseña no válida. Debe contener al menos 8 caracteres, incluyendo una letra minúscula, una letra mayúscula, un número y un carácter especial." << std::endl;
         return false;
     }
     
@@ -750,8 +752,8 @@ bool AuthenticationServer::changePassword(const std::string& username,
         return false;
     }
     
-    if (newPassword.length() < 4) {
-        std::cout << "Error: Nueva contraseña muy corta (mínimo 4 caracteres)" 
+    if (std::regex_match(newPassword, this->passwordPattern) == false) {
+        std::cout << "Error: Nueva contraseña no válida. Debe contener al menos 8 caracteres, incluyendo una letra minúscula, una letra mayúscula, un número y un carácter especial." 
                   << std::endl;
         return false;
     }
