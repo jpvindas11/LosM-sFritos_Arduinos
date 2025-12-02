@@ -7,109 +7,414 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>600</height>
+    <height>608</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Frituinos - Login</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMainWindow {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #0a0e27, stop:0.5 #16213e, stop:1 #0a0e27);
+}
+
+QWidget#centralwidget {
+    background: transparent;
+}
+
+QLineEdit {
+    background-color: rgba(26, 35, 62, 180);
+    border: 2px solid #00d4ff;
+    border-radius: 15px;
+    padding: 8px 15px;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    selection-background-color: #ff006e;
+    min-height: 35px;
+    max-width: 400px;
+}
+
+QLineEdit:hover {
+    border: 2px solid #00ffff;
+    background-color: rgba(26, 35, 62, 220);
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+}
+
+QLineEdit:focus {
+    border: 2px solid #ff006e;
+    background-color: rgba(26, 35, 62, 250);
+    box-shadow: 0 0 25px rgba(255, 0, 110, 0.6);
+}
+
+QPushButton {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff006e, stop:1 #00d4ff);
+    border: none;
+    border-radius: 20px;
+    padding: 12px 30px;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 40px;
+    min-width: 150px;
+}
+
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff1a7a, stop:1 #00e5ff);
+    box-shadow: 0 0 20px rgba(255, 0, 110, 0.7);
+}
+
+QPushButton:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #cc0058, stop:1 #00a8cc);
+}
+
+QPushButton#pushButton_ip {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #7b2ff7, stop:1 #00d4ff);
+    font-size: 13px;
+    padding: 10px 20px;
+    min-width: 120px;
+}
+
+QPushButton#pushButton_ip:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #9351ff, stop:1 #00e5ff);
+    box-shadow: 0 0 20px rgba(123, 47, 247, 0.7);
+}
+
+QLabel#label {
+    color: #00ffff;
+    font-size: 42px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: transparent;
+}
+
+QLabel#login_info {
+    color: #ff006e;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: transparent;
+}
+
+QLabel#subtitle {
+    color: #00d4ff;
+    font-size: 14px;
+    font-style: italic;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: transparent;
+}
+
+QLabel#glow_line {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 transparent, stop:0.3 #00ffff, 
+                                stop:0.7 #ff006e, stop:1 transparent);
+    border-radius: 2px;
+    min-height: 3px;
+    max-height: 3px;
+}
+
+QMenuBar {
+    background-color: #0a0e27;
+    color: #00d4ff;
+    border-bottom: 1px solid #00d4ff;
+}
+
+QMenuBar::item:selected {
+    background-color: #16213e;
+}
+
+QStatusBar {
+    background-color: #0a0e27;
+    color: #00d4ff;
+    border-top: 1px solid #00d4ff;
+}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLineEdit" name="lineEdit_pass">
-    <property name="geometry">
-     <rect>
-      <x>110</x>
-      <y>220</y>
-      <width>281</width>
-      <height>26</height>
-     </rect>
+   <layout class="QVBoxLayout" name="verticalLayout_main">
+    <property name="spacing">
+     <number>0</number>
     </property>
-    <property name="echoMode">
-     <enum>QLineEdit::Password</enum>
+    <property name="leftMargin">
+     <number>20</number>
     </property>
-    <property name="readOnly">
-     <bool>false</bool>
+    <property name="topMargin">
+     <number>20</number>
     </property>
-    <property name="placeholderText">
-     <string>Contraseña</string>
+    <property name="rightMargin">
+     <number>20</number>
     </property>
-   </widget>
-   <widget class="QLineEdit" name="lineEdit_user">
-    <property name="geometry">
-     <rect>
-      <x>110</x>
-      <y>160</y>
-      <width>281</width>
-      <height>26</height>
-     </rect>
+    <property name="bottomMargin">
+     <number>20</number>
     </property>
-    <property name="echoMode">
-     <enum>QLineEdit::Normal</enum>
-    </property>
-    <property name="placeholderText">
-     <string>Nombre de Usuario</string>
-    </property>
-    <property name="cursorMoveStyle">
-     <enum>Qt::LogicalMoveStyle</enum>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label">
-    <property name="geometry">
-     <rect>
-      <x>80</x>
-      <y>90</y>
-      <width>331</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Bienvenido a Frituinos</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignCenter</set>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton">
-    <property name="geometry">
-     <rect>
-      <x>210</x>
-      <y>290</y>
-      <width>87</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Ingresar</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="login_info">
-    <property name="geometry">
-     <rect>
-      <x>80</x>
-      <y>260</y>
-      <width>331</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignCenter</set>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_ip">
-    <property name="geometry">
-     <rect>
-      <x>570</x>
-      <y>190</y>
-      <width>87</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Verificar</string>
-    </property>
-   </widget>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_top">
+      <item>
+       <spacer name="horizontalSpacer_left_top">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="pushButton_ip">
+        <property name="text">
+         <string>🌐 Verificar IP</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <spacer name="verticalSpacer_top">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Expanding</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout_center">
+      <property name="spacing">
+       <number>20</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="glow_line_top">
+        <property name="styleSheet">
+         <string notr="true">background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 transparent, stop:0.3 #00ffff, 
+                                stop:0.7 #ff006e, stop:1 transparent);
+border-radius: 2px;
+min-height: 3px;
+max-height: 3px;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>FRITUINOS</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="subtitle">
+        <property name="text">
+         <string>Tu sede inteligente de confianza</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="verticalSpacer_title">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>30</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_user">
+        <item>
+         <spacer name="horizontalSpacer_left_user">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit_user">
+          <property name="echoMode">
+           <enum>QLineEdit::Normal</enum>
+          </property>
+          <property name="placeholderText">
+           <string>👤 Nombre de Usuario</string>
+          </property>
+          <property name="cursorMoveStyle">
+           <enum>Qt::LogicalMoveStyle</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_right_user">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_pass">
+        <item>
+         <spacer name="horizontalSpacer_left_pass">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineEdit_pass">
+          <property name="echoMode">
+           <enum>QLineEdit::Password</enum>
+          </property>
+          <property name="readOnly">
+           <bool>false</bool>
+          </property>
+          <property name="placeholderText">
+           <string>🔒 Contraseña</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_right_pass">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="login_info">
+        <property name="text">
+         <string/>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_button">
+        <item>
+         <spacer name="horizontalSpacer_left_button">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton">
+          <property name="text">
+           <string>INGRESAR</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_right_button">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="glow_line_bottom">
+        <property name="styleSheet">
+         <string notr="true">background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 transparent, stop:0.3 #ff006e, 
+                                stop:0.7 #00ffff, stop:1 transparent);
+border-radius: 2px;
+min-height: 3px;
+max-height: 3px;</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <spacer name="verticalSpacer_bottom">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Expanding</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

@@ -2,6 +2,7 @@
 #define DATAMENUMANAGER_H
 
 #include <vector>
+#include <map>
 #include <QListWidget>
 #include <QListWidgetItem>
 #include "Messages.hpp"
@@ -21,6 +22,15 @@ public:
 
 private:
     QListWidgetItem* selectedSensor;
+
+    // Estructura para agrupar sensores por IP
+    struct SensorGroup {
+        std::string ip;
+        std::vector<const sensorRecentData*> sensors;
+    };
+
+    // Mapa para tracking: item -> índice en sensorsData
+    std::map<QListWidgetItem*, size_t> itemToSensorIndex;
 };
 
 #endif // DATAMENUMANAGER_H

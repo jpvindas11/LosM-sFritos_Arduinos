@@ -67,7 +67,7 @@ private slots:
 private:
     Ui::MenuWindow *ui;
     userDataQt currentUser;
-    void setActiveMenu(QPushButton *activeBtn, const QString &labelText);
+    void setActiveMenu(QPushButton *activeBtn, const QString &labelText, int pageIndex);
 
     void hideFuctionsForRanks(int rank);
 

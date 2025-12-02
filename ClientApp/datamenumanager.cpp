@@ -1,5 +1,6 @@
 #include "datamenumanager.h"
 #include <iostream>
+#include <QFont>
 
 dataMenuManager::dataMenuManager() : selectedSensor(nullptr)
 {
@@ -16,57 +17,91 @@ void dataMenuManager::updateList(QListWidget* data_list,
     std::cout << "Total sensors to display: " << sensorsData->size() << std::endl;
 
     data_list->clear();
+    itemToSensorIndex.clear();
 
-    // Iterar sobre el vector de sensores
+    // Agrupar sensores por IP
+    std::map<std::string, std::vector<size_t>> sensorsByIP;
+
     for (size_t idx = 0; idx < sensorsData->size(); ++idx) {
         const auto& sensorData = (*sensorsData)[idx];
+        sensorsByIP[sensorData.ip].push_back(idx);
+    }
 
-        std::cout << "\n[" << idx << "] Processing sensor:" << std::endl;
-        std::cout << "  IP: '" << sensorData.ip << "'" << std::endl;
-        std::cout << "  Type: '" << sensorData.sensorType << "'" << std::endl;
-        std::cout << "  Data: '" << sensorData.data << "'" << std::endl;
+    std::cout << "Grouped into " << sensorsByIP.size() << " IPs" << std::endl;
 
-        // Extraer solo el valor numérico de los datos
-        // Los datos vienen en formato: "Distance:174cm,Timestamp:1762224331"
-        QString dataStr = QString::fromStdString(sensorData.data);
-        QString valueOnly;
+    // Crear items agrupados por IP
+    for (const auto& ipGroup : sensorsByIP) {
+        const std::string& ip = ipGroup.first;
+        const std::vector<size_t>& sensorIndices = ipGroup.second;
 
-        std::cout << "  Qt Data string: '" << dataStr.toStdString() << "'" << std::endl;
+        std::cout << "\n[IP: " << ip << "] Processing " << sensorIndices.size() << " sensors" << std::endl;
 
-        // Buscar el primer ':' y extraer hasta la coma
-        int colonPos = dataStr.indexOf(':');
-        int commaPos = dataStr.indexOf(',');
+        // Item principal (cabecera de IP)
+        QString headerText = QString("🌐 Arduino: %1 (%2 sensores)")
+                                 .arg(QString::fromStdString(ip))
+                                 .arg(sensorIndices.size());
 
-        std::cout << "  Colon position: " << colonPos << std::endl;
-        std::cout << "  Comma position: " << commaPos << std::endl;
+        QListWidgetItem* headerItem = new QListWidgetItem(headerText, data_list);
+        QFont headerFont = headerItem->font();
+        headerFont.setBold(true);
+        headerFont.setPointSize(11);
+        headerItem->setFont(headerFont);
+        headerItem->setBackground(QColor(50, 60, 90, 180));
+        headerItem->setForeground(QColor(0, 255, 255));
 
-        if (colonPos != -1 && commaPos != -1) {
-            valueOnly = dataStr.mid(colonPos + 1, commaPos - colonPos - 1);
-            std::cout << "  ✓ Extracted value: '" << valueOnly.toStdString() << "'" << std::endl;
-        } else {
-            // Si no se puede parsear, mostrar todo
-            valueOnly = dataStr;
-            std::cout << "  ✗ Could not extract value, using full data" << std::endl;
+        // No es seleccionable (solo decorativo)
+        headerItem->setFlags(headerItem->flags() & ~Qt::ItemIsSelectable);
+
+        data_list->addItem(headerItem);
+
+        // Agregar subsensores
+        for (size_t idx : sensorIndices) {
+            const auto& sensorData = (*sensorsData)[idx];
+
+            std::cout << "  [" << idx << "] Processing sensor:" << std::endl;
+            std::cout << "    Type: '" << sensorData.sensorType << "'" << std::endl;
+            std::cout << "    Data: '" << sensorData.data << "'" << std::endl;
+
+            // Extraer valor numérico
+            QString dataStr = QString::fromStdString(sensorData.data);
+            QString valueOnly;
+
+            int colonPos = dataStr.indexOf(':');
+            int commaPos = dataStr.indexOf(',');
+
+            if (colonPos != -1 && commaPos != -1) {
+                valueOnly = dataStr.mid(colonPos + 1, commaPos - colonPos - 1);
+            } else {
+                valueOnly = dataStr;
+            }
+
+            // Limpiar tipo de sensor
+            QString sensorType = QString::fromStdString(sensorData.sensorType);
+            sensorType = sensorType.replace(":", "");
+
+            // Formato: "   📊 [TIPO] valor"
+            QString itemText = QString("   📊 [%1] %2")
+                                   .arg(sensorType)
+                                   .arg(valueOnly);
+
+            std::cout << "    Display text: '" << itemText.toStdString() << "'" << std::endl;
+
+            QListWidgetItem* item = new QListWidgetItem(itemText, data_list);
+            item->setBackground(QColor(40, 50, 80, 120));
+
+            // Guardar referencia al índice del sensor
+            itemToSensorIndex[item] = idx;
+
+            data_list->addItem(item);
+
+            std::cout << "    ✓ Item added to list" << std::endl;
         }
 
-        // Limpiar el tipo de sensor (quitar ':' si lo tiene)
-        QString sensorType = QString::fromStdString(sensorData.sensorType);
-        std::cout << "  Original type: '" << sensorType.toStdString() << "'" << std::endl;
-
-        sensorType = sensorType.replace(":", "");
-        std::cout << "  Cleaned type: '" << sensorType.toStdString() << "'" << std::endl;
-
-        // Formato limpio: [TIPO] valor
-        QString itemText = QString("[%1] %2")
-                               .arg(sensorType)
-                               .arg(valueOnly);
-
-        std::cout << "  Final display text: '" << itemText.toStdString() << "'" << std::endl;
-
-        QListWidgetItem *item = new QListWidgetItem(itemText, data_list);
-        data_list->addItem(item);
-
-        std::cout << "  ✓ Item added to list" << std::endl;
+        // Separador visual
+        QListWidgetItem* separator = new QListWidgetItem("", data_list);
+        separator->setFlags(separator->flags() & ~Qt::ItemIsSelectable);
+        separator->setSizeHint(QSize(0, 5));
+        data_list->addItem(separator);
     }
 
     std::cout << "\n✓ List update complete (" << data_list->count() << " items)" << std::endl;
@@ -91,13 +126,27 @@ sensorRecentData* dataMenuManager::getSelectedSensorInfo(
 
     std::cout << "\n========== GET SELECTED SENSOR INFO ==========" << std::endl;
 
-    // Obtener el texto del item
+    // Buscar en el mapa de items
+    auto it = itemToSensorIndex.find(selectedSensor);
+    if (it != itemToSensorIndex.end()) {
+        size_t idx = it->second;
+        std::cout << "✓ Found sensor at index: " << idx << std::endl;
+        std::cout << "============================================\n" << std::endl;
+        return const_cast<sensorRecentData*>(&(*sensorsData)[idx]);
+    }
+
+    // Fallback: método antiguo de parsing
     QString itemText = selectedSensor->text();
     std::cout << "Selected item text: '" << itemText.toStdString() << "'" << std::endl;
 
-    // Formato: "[TIPO] valor"
+    // Verificar si es un item de sensor (empieza con espacios y emoji)
+    if (!itemText.startsWith("   ")) {
+        std::cerr << "✗ Selected item is not a sensor (header or separator)" << std::endl;
+        std::cout << "============================================\n" << std::endl;
+        return nullptr;
+    }
 
-    // Extraer tipo de sensor
+    // Formato: "   📊 [TIPO] valor"
     int typeStart = itemText.indexOf("[") + 1;
     int typeEnd = itemText.indexOf("]");
 
@@ -112,7 +161,7 @@ sensorRecentData* dataMenuManager::getSelectedSensorInfo(
     std::cout << "Extracted type: '" << displayType << "'" << std::endl;
     std::cout << "Searching in " << sensorsData->size() << " sensors..." << std::endl;
 
-    // Buscar en el vector comparando el tipo (con o sin ':')
+    // Buscar en el vector comparando el tipo
     for (auto& sensorData : *const_cast<std::vector<sensorRecentData>*>(sensorsData)) {
         QString storedType = QString::fromStdString(sensorData.sensorType);
         QString storedTypeCleaned = storedType.replace(":", "");

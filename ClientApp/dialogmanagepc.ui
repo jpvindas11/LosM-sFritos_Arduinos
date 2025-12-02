@@ -6,24 +6,215 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>443</width>
-    <height>324</height>
+    <width>500</width>
+    <height>400</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>🖥️ Gestión de PC</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* ============================================
+   DIÁLOGO GESTIÓN PC - TEMA NEÓN CYBERPUNK
+   ============================================ */
+
+QDialog {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #0a0e27, stop:0.5 #16213e, stop:1 #0a0e27);
+    border: 3px solid #ff006e;
+    border-radius: 15px;
+}
+
+/* ============================================
+   LABELS TÍTULO E INFO
+   ============================================ */
+
+QLabel#title {
+    color: #00ffff;
+    font-size: 22px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(255, 0, 110, 150),
+                                stop:0.5 rgba(0, 212, 255, 150),
+                                stop:1 rgba(255, 0, 110, 150));
+    border: 2px solid #ff006e;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+QLabel#current_info {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: rgba(26, 35, 62, 150);
+    border: 2px solid #00d4ff;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+/* ============================================
+   COMBOBOX - SELECTOR DE SERVIDOR
+   ============================================ */
+
+QComboBox {
+    background: rgba(26, 35, 62, 180);
+    border: 2px solid #7b2ff7;
+    border-radius: 12px;
+    padding: 10px 15px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 35px;
+}
+
+QComboBox:hover {
+    border: 2px solid #9351ff;
+    background: rgba(26, 35, 62, 220);
+    box-shadow: 0 0 20px rgba(123, 47, 247, 0.6);
+}
+
+QComboBox:focus {
+    border: 2px solid #00d4ff;
+    box-shadow: 0 0 25px rgba(0, 212, 255, 0.7);
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 30px;
+    background: rgba(123, 47, 247, 100);
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+QComboBox::down-arrow {
+    image: none;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid #00ffff;
+    margin-right: 8px;
+}
+
+QComboBox QAbstractItemView {
+    background: rgba(26, 35, 62, 240);
+    border: 2px solid #7b2ff7;
+    border-radius: 8px;
+    color: white;
+    selection-background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                                 stop:0 #7b2ff7, stop:1 #00d4ff);
+    selection-color: white;
+    padding: 5px;
+}
+
+QComboBox QAbstractItemView::item {
+    min-height: 30px;
+    padding: 5px;
+}
+
+QComboBox QAbstractItemView::item:hover {
+    background: rgba(123, 47, 247, 150);
+}
+
+/* ============================================
+   BOTONES DE CONTROL
+   ============================================ */
+
+/* Botón Encender - VERDE */
+QPushButton#on_button {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #00ff00, stop:1 #39ff14);
+    border: 2px solid #00ff00;
+    border-radius: 12px;
+    padding: 12px 25px;
+    color: #000000;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 40px;
+}
+
+QPushButton#on_button:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #00ff44, stop:1 #5fff44);
+    box-shadow: 0 0 30px rgba(0, 255, 0, 0.9);
+    border: 2px solid #5fff44;
+}
+
+QPushButton#on_button:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #00cc00, stop:1 #2ecc11);
+    padding-top: 14px;
+    padding-bottom: 10px;
+}
+
+/* Botón Apagar - ROJO */
+QPushButton#off_button {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff006e, stop:1 #ff4444);
+    border: 2px solid #ff006e;
+    border-radius: 12px;
+    padding: 12px 25px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 40px;
+}
+
+QPushButton#off_button:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff1a7a, stop:1 #ff6666);
+    box-shadow: 0 0 30px rgba(255, 0, 110, 0.9);
+    border: 2px solid #ff4499;
+}
+
+QPushButton#off_button:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #cc0058, stop:1 #cc3333);
+    padding-top: 14px;
+    padding-bottom: 10px;
+}
+
+/* Botón Salir - CYAN */
+QPushButton#exit_button {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #7b2ff7, stop:1 #00d4ff);
+    border: 2px solid #00d4ff;
+    border-radius: 12px;
+    padding: 12px 25px;
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 40px;
+}
+
+QPushButton#exit_button:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #9351ff, stop:1 #00e5ff);
+    box-shadow: 0 0 25px rgba(0, 212, 255, 0.8);
+}
+
+QPushButton#exit_button:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #6020dd, stop:1 #00a8cc);
+    padding-top: 14px;
+    padding-bottom: 10px;
+}</string>
   </property>
   <widget class="QLabel" name="title">
    <property name="geometry">
     <rect>
-     <x>0</x>
-     <y>40</y>
-     <width>441</width>
-     <height>20</height>
+     <x>30</x>
+     <y>30</y>
+     <width>440</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="text">
-    <string>TITLE</string>
+    <string>🖥️ GESTIÓN DE PC</string>
    </property>
    <property name="textFormat">
     <enum>Qt::MarkdownText</enum>
@@ -35,89 +226,89 @@
   <widget class="QPushButton" name="on_button">
    <property name="geometry">
     <rect>
-     <x>270</x>
-     <y>150</y>
-     <width>141</width>
-     <height>25</height>
+     <x>260</x>
+     <y>180</y>
+     <width>200</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="text">
-    <string>Encender</string>
+    <string>✅ Encender</string>
    </property>
   </widget>
   <widget class="QPushButton" name="off_button">
    <property name="geometry">
     <rect>
-     <x>270</x>
-     <y>190</y>
-     <width>141</width>
-     <height>25</height>
+     <x>260</x>
+     <y>250</y>
+     <width>200</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="text">
-    <string>Apagar</string>
+    <string>🔴 Apagar</string>
    </property>
   </widget>
   <widget class="QPushButton" name="exit_button">
    <property name="geometry">
     <rect>
-     <x>330</x>
-     <y>280</y>
-     <width>80</width>
-     <height>25</height>
+     <x>350</x>
+     <y>330</y>
+     <width>120</width>
+     <height>45</height>
     </rect>
    </property>
    <property name="text">
-    <string>Salir</string>
+    <string>🚪 Salir</string>
    </property>
   </widget>
   <widget class="QComboBox" name="server_options">
    <property name="geometry">
     <rect>
      <x>40</x>
-     <y>150</y>
-     <width>126</width>
-     <height>25</height>
+     <y>180</y>
+     <width>180</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="currentText">
-    <string>Autenticacion</string>
+    <string>🔐 Autenticación</string>
    </property>
    <property name="sizeAdjustPolicy">
     <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
    </property>
    <item>
     <property name="text">
-     <string>Autenticacion</string>
+     <string>🔐 Autenticación</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>Almacenamiento</string>
+     <string>💾 Almacenamiento</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>Logs Usuarios</string>
+     <string>📋 Logs Usuarios</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>Proxy</string>
+     <string>🌐 Proxy</string>
     </property>
    </item>
   </widget>
   <widget class="QLabel" name="current_info">
    <property name="geometry">
     <rect>
-     <x>0</x>
-     <y>80</y>
-     <width>441</width>
-     <height>20</height>
+     <x>30</x>
+     <y>100</y>
+     <width>440</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="text">
-    <string>PC INFO</string>
+    <string>📊 Estado: Cargando información...</string>
    </property>
    <property name="textFormat">
     <enum>Qt::MarkdownText</enum>
