@@ -40,6 +40,8 @@ void SensorServer::run(std::string serverIP, int listeningPort){
     }
   } catch(const std::runtime_error& error) {
     std::cerr<<error.what()<<std::endl;
+    std::cout << "Storage server error on start " << serverIP << ":" 
+            << listeningPort << std::endl;
   }
   this->stopServer();
 }

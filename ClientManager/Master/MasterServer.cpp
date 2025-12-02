@@ -224,6 +224,8 @@ void MasterServer::handleArduinoConnection(int client, Socket* socket) {
   
   Socket clientSocket;
   genMessage clientRequest;
+
+  ServerDiscover discoverer(DISC_STORAGE);
   
   if (clientSocket.bReceiveData(client, clientRequest) <= 0) {
     close(client);
@@ -236,7 +238,7 @@ void MasterServer::handleArduinoConnection(int client, Socket* socket) {
 
   switch (msgType) {
     case MessageType::SEN_ADD_LOG:
-    targetIP = this->storageServerIP;
+    targetIP = discoverer.lookForServer();
     targetPort = PORT_MASTER_STORAGE;
     break;
     default:

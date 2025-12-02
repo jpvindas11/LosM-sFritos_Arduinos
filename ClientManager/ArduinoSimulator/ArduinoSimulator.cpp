@@ -42,9 +42,8 @@ void ArduinoSimulator::stop() {
 bool ArduinoSimulator::isRunning() const {
     return running.load();
 }
-
 float ArduinoSimulator::generateDistance() {
-    std::uniform_real_distribution<float> dist(5.0f, 200.0f);
+    std::uniform_int_distribution<int> dist(5, 200);
     return dist(rng);
 }
 
@@ -87,9 +86,8 @@ bool ArduinoSimulator::sendDataToServer(const std::string& data) {
             return false;
         }
         
-        // CAMBIO CRÍTICO: Enviar SOLO texto plano como el Arduino real
-        // El Arduino envía: "Distancia: 123 cm\n"
-        std::string plainTextData = data + "\n";  // Agregar newline como el Arduino
+        // Enviar EXACTAMENTE como el Arduino: texto plano con newline
+        std::string plainTextData = data + "\n";
         
         ssize_t sent = socket.sendData(socket.getSocketFD(), plainTextData);
         
@@ -111,32 +109,29 @@ bool ArduinoSimulator::sendDataToServer(const std::string& data) {
 void ArduinoSimulator::simulationLoop() {
     std::cout << "[" << sensorType << "_" << sensorID << "] Loop de simulación iniciado" << std::endl;
     std::cout << "[" << sensorType << "_" << sensorID << "] Enviando datos cada " 
-              << sendInterval / 1000 << " segundos" << std::endl;
+              << sendInterval / 1000 << " segundos a " << serverIP << ":" << serverPort << std::endl;
     
     while (running.load()) {
         // Generar datos según el tipo de sensor
         std::string sensorData;
-        float value;
         
         if (sensorType == "DIS") {
-            value = generateDistance();
-            std::ostringstream oss;
-            oss << std::fixed << std::setprecision(1) << value;
-            // FORMATO EXACTO del Arduino: "Distancia: 123.4 cm"
-            sensorData = "Distancia: " + oss.str() + " cm";
+            // FORMATO EXACTO: "Distancia: 123 cm"
+            int value = generateDistance();
+            sensorData = "Distancia: " + std::to_string(value) + " cm";
         } 
         else if (sensorType == "HUM") {
-            value = generateHumidity();
+            // FORMATO EXACTO: "Humedad: 65.2 %"
+            float value = generateHumidity();
             std::ostringstream oss;
             oss << std::fixed << std::setprecision(1) << value;
-            // FORMATO EXACTO del Arduino: "Humedad: 65.2 %"
             sensorData = "Humedad: " + oss.str() + " %";
         } 
         else if (sensorType == "UV") {
-            value = generateUV();
+            // FORMATO EXACTO: "UV: 234.56 mW/m²"
+            float value = generateUV();
             std::ostringstream oss;
             oss << std::fixed << std::setprecision(2) << value;
-            // FORMATO EXACTO del Arduino: "UV: 234.56 mW/m²"
             sensorData = "UV: " + oss.str() + " mW/m²";
         }
         else {
@@ -145,11 +140,11 @@ void ArduinoSimulator::simulationLoop() {
         }
         
         // Mostrar datos generados
-        std::cout << "[" << sensorType << "_" << sensorID << "] " << sensorData << std::endl;
+        std::cout << "[" << sensorType << "_" << sensorID << "] Generado: " << sensorData << std::endl;
         
         // Enviar datos al servidor
         if (sendDataToServer(sensorData)) {
-            std::cout << "[" << sensorType << "_" << sensorID << "] ✓ Datos enviados al servidor" << std::endl;
+            std::cout << "[" << sensorType << "_" << sensorID << "] ✓ Datos enviados correctamente" << std::endl;
         } else {
             std::cout << "[" << sensorType << "_" << sensorID << "] ✗ Error al enviar datos" << std::endl;
         }
@@ -164,8 +159,8 @@ void ArduinoSimulator::simulationLoop() {
                 break;
             }
             
-            // Dormir por 100ms para no consumir CPU innecesariamente
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            // Dormir por 100ms para no consumir CPU
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
     

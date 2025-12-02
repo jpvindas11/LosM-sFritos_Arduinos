@@ -12,6 +12,7 @@
 #include <iomanip>
 #include "../Util/Socket.hpp"
 #include "../Util/Messages.hpp"
+#include "../Util/IPConstants.hpp"
 
 class ArduinoSimulator {
 private:
