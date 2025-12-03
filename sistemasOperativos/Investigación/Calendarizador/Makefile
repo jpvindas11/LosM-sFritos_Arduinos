@@ -6,15 +6,18 @@ CFLAGS = -m32 -ffreestanding -nostdlib -fno-pie -fno-stack-protector -O2
 ASFLAGS = --32
 LDFLAGS = -m elf_i386 -T linker.ld
 
-OBJS = boot.o kernel.o
+OBJS = boot.o kernel.o vm.o
 
 all: kernel.elf
 
 boot.o: boot.s
 	$(AS) $(ASFLAGS) boot.s -o boot.o
 
-kernel.o: kernel.c kernel.h
+kernel.o: kernel.c kernel.h vm.h
 	$(CC) $(CFLAGS) -c kernel.c -o kernel.o
+
+vm.o: vm.c vm.h
+	$(CC) $(CFLAGS) -c vm.c -o vm.o
 
 kernel.elf: $(OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) -o kernel.elf

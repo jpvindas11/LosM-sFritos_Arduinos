@@ -2,7 +2,12 @@
 #ifndef VM_H
 #define VM_H
 
-#include "kernel.h"
+#include <stddef.h>
+
+/* Basic type definitions to avoid circular dependency with kernel.h */
+typedef unsigned int  u32;
+typedef unsigned short u16;
+typedef unsigned char u8;
 
 #define ADDRESS_SIZE   20
 #define OFFSET_BITS    12

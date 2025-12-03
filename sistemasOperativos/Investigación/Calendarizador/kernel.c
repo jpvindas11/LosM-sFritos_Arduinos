@@ -134,6 +134,9 @@ static pcb_t* alloc_pcb(void) {
             PROC_USED[i] = 1;
             PROC_TABLE[i].shm_id = 0;
             PROC_TABLE[i].shm_addr = 0;
+
+            pt_init(&PROC_TABLE[i].pt);
+            tlb_init(&PROC_TABLE[i].tlb);
             return &PROC_TABLE[i];
         }
     }
@@ -411,6 +414,79 @@ void sys_shm_detach(u32 pid) {
     delay(500000000000);
 }
 
+static void test_vm(void) {
+    kputs("=== VM Test ===");
+    pcb_t *p = find_pcb(1);
+    if (!p) {
+        kputs("Error: PID 1 no encontrado");
+        return;
+    }
+    
+    // Mapea pagina virtual 0 a frame 0
+    pt_set(&p->pt, 0, 0, PTE_VALID | PTE_READ | PTE_WRITE | PTE_USER);
+    kputs("Test 1: Mapped VPN 0 -> Frame 0");
+    
+    // Escribir un valor
+    u32 vaddr1 = 0x100;
+    u8 value_write = 25;
+    u8 value_read = 0;
+    
+    int write_result = vm_write_byte(&p->pt, &p->tlb, vaddr1, value_write);
+    kputs("Test 2: Write 25 at 0x100:");
+    if (write_result == 0) {
+        kputs("  SUCCESS");
+        
+    } else {
+        kputs("  FAILED");
+    }
+    
+    // Leer un valor
+    int read_result = vm_read_byte(&p->pt, &p->tlb, vaddr1, &value_read);
+    kputs("Test 3: Read from 0x100:");
+    if (read_result == 0) {
+        kputs("  Read SUCCESS");
+    } else {
+        kputs("  Read FAILED");
+    }
+    kputs("  Value read: ");
+    kputu(value_read);
+    
+    // Verifica que el valor leído sea el correcto
+    if (value_read == value_write) {
+        kputs("Test 4: VERIFICATION OK - valores coinciden!");
+    } else {
+        kputs("Test 4: VERIFICATION FAILED - valores NO coinciden");
+        kputs("  Expected: ");
+        kputu(value_write);
+        kputs("  Got: ");
+        kputu(value_read);
+    }
+    
+    // Mapea pag 1 y prueba otro valor
+    pt_set(&p->pt, 1, 1, PTE_VALID | PTE_READ | PTE_WRITE | PTE_USER);
+    kputs("Test 5: Mapped VPN 1 -> Frame 1");
+    
+    u32 vaddr2 = (1 << OFFSET_BITS) + 50;
+    u8 value2_write = 100;
+    u8 value2_read = 0;
+    
+    vm_write_byte(&p->pt, &p->tlb, vaddr2, value2_write);
+    kputs("Test 6: Write 100 at different page (OFF=50)");
+    
+    vm_read_byte(&p->pt, &p->tlb, vaddr2, &value2_read);
+    kputs("Test 7: Read from page 1:");
+    kputs("  Value read: ");
+    kputu(value2_read);
+    
+    if (value2_read == value2_write) {
+        kputs("Test 8: VERIFICATION OK - second value matches!");
+    } else {
+        kputs("Test 8: VERIFICATION FAILED - second value mismatch");
+    }
+    
+    kputs("=== VM Test Complete ===");
+}
+
 void kmain(void) {
     // Inicializa colas y tabla
     q_init(&READY_Q);
@@ -442,6 +518,9 @@ void kmain(void) {
 
     // Simula que el PID 2 entra a I/O al inicio
     sys_wait_io(2);
+
+    // Prueba la memoria virtual
+    test_vm();
 
     kputs("Iniciando Scheduler");
     

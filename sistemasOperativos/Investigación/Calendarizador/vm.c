@@ -1,8 +1,6 @@
 
 #include "vm.h"
 
-#include <string.h>
-
 static page_stats_t frame_stats[NUM_FRAMES];
 static u32 fifo_counter[NUM_FRAMES];
 
@@ -172,26 +170,26 @@ u32 translate(page_table_t *pt, tlb_t *tlb, u32 vaddr, u8 req_mask) {
 }
 
 int vm_read_byte(page_table_t *pt, tlb_t *tlb, u32 vaddr, u8 *out_byte) {
-    if (!out_byte) return 0;
+    if (!out_byte) return 1;
     
     u32 phys_addr = translate(pt, tlb, vaddr, PTE_READ);
-    if (phys_addr == 0xFFFFFFFFu) return 0;
+    if (phys_addr == 0xFFFFFFFFu) return 1;
     
-    if (phys_addr >= (NUM_FRAMES * 4096)) return 0;
+    if (phys_addr >= (NUM_FRAMES * 4096)) return 1;
     
     *out_byte = phys_mem[phys_addr];
-    return 1;
+    return 0;
 }
 
 int vm_write_byte(page_table_t *pt, tlb_t *tlb, u32 vaddr, u8 byte) {
     u32 phys_addr = translate(pt, tlb, vaddr, PTE_WRITE);
-    if (phys_addr == 0xFFFFFFFFu) return 0;
+    if (phys_addr == 0xFFFFFFFFu) return 1;
     
-    if (phys_addr >= (NUM_FRAMES * 4096)) return 0;
+    if (phys_addr >= (NUM_FRAMES * 4096)) return 1;
     
     phys_mem[phys_addr] = byte;
     u8 pageNum = ADDRESS_PAGE_NUM(vaddr);
     if (pt) pt->entries[pageNum].flags |= PTE_DIRTY;
     
-    return 1;
+    return 0;
 }

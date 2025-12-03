@@ -2,6 +2,8 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
+#include "vm.h"
+
 typedef unsigned int  u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
@@ -32,6 +34,8 @@ typedef struct pcb {
     struct pcb *next;
     u32 shm_id;
     void *shm_addr;
+    page_table_t pt;
+    tlb_t tlb;
 } pcb_t;
 
 typedef struct {
