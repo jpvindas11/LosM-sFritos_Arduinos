@@ -2,19 +2,19 @@
 #include "vm.h"
 
 static page_stats_t frame_stats[NUM_FRAMES];
-static u32 fifo_counter[NUM_FRAMES];
+static unsigned int fifo_counter[NUM_FRAMES];
 
-static u8 phys_mem[NUM_FRAMES * 4096];
+static unsigned char phys_mem[NUM_FRAMES * 4096];
 
 void pt_init(page_table_t *pt) {
     if (!pt) return;
-    for (u32 i = 0; i < PAGE_NUMBER; i++) {
+    for (unsigned int i = 0; i < PAGE_NUMBER; i++) {
         pt->entries[i].frame = FRAME_INVALID;
         pt->entries[i].flags = 0;
     }
 }
 
-int pt_set(page_table_t *pt, u32 pageNum, u8 frame, u8 valid) {
+int pt_set(page_table_t *pt, unsigned int pageNum, unsigned char frame, unsigned char valid) {
     if (!pt) return -1;
     if (pageNum >= PAGE_NUMBER) return -1;
     if ((valid & PTE_VALID) && frame >= NUM_FRAMES) return -1;
@@ -23,7 +23,7 @@ int pt_set(page_table_t *pt, u32 pageNum, u8 frame, u8 valid) {
     return 0;
 }
 
-int pt_get(page_table_t *pt, u32 pageNum, u8 *out_frame, u8 *out_valid) {
+int pt_get(page_table_t *pt, unsigned int pageNum, unsigned char *out_frame, unsigned char *out_valid) {
     if (!pt) return -1;
     if (pageNum >= PAGE_NUMBER) return -1;
     if (out_frame) *out_frame = pt->entries[pageNum].frame;
@@ -31,28 +31,28 @@ int pt_get(page_table_t *pt, u32 pageNum, u8 *out_frame, u8 *out_valid) {
     return 0;
 }
 
-int pt_is_valid(page_table_t *pt, u32 pageNum) {
+int pt_is_valid(page_table_t *pt, unsigned int pageNum) {
     if (!pt) return 0;
     if (pageNum >= PAGE_NUMBER) return 0;
     return (pt->entries[pageNum].flags & PTE_VALID) ? 1 : 0;
 }
 
-u8 select_frame_to_replace(replacement_policy_t policy, const page_table_t *pt) {
+unsigned char select_frame_to_replace(replacement_policy_t policy, const page_table_t *pt) {
     if (!pt) return FRAME_INVALID;
 
     switch (policy) {
         case FIFO:
-            u8 fifo_frame = 0;
-            for (u8 i = 1; i < NUM_FRAMES; i++) {
+            unsigned char fifo_frame = 0;
+            for (unsigned char i = 1; i < NUM_FRAMES; i++) {
                 if (fifo_counter[i] < fifo_counter[fifo_frame])
                     fifo_frame = i;
             }
             return fifo_frame;
 
         case LRU:
-            u8 lru_frame = 0;
-            u32 min_time = frame_stats[0].access_time;
-            for (u8 i = 1; i < NUM_FRAMES; i++) {
+            unsigned char lru_frame = 0;
+            unsigned int min_time = frame_stats[0].access_time;
+            for (unsigned char i = 1; i < NUM_FRAMES; i++) {
                 if (frame_stats[i].access_time < min_time) {
                     min_time = frame_stats[i].access_time;
                     lru_frame = i;
@@ -61,8 +61,8 @@ u8 select_frame_to_replace(replacement_policy_t policy, const page_table_t *pt) 
             return lru_frame;
 
         case CLOCK:
-            u8 clock_frame = 0;
-            for (u8 i = 1; i < NUM_FRAMES; i++) {
+            unsigned char clock_frame = 0;
+            for (unsigned char i = 1; i < NUM_FRAMES; i++) {
                 if (frame_stats[i].access_time < frame_stats[clock_frame].access_time)
                     clock_frame = i;
             }
@@ -73,19 +73,19 @@ u8 select_frame_to_replace(replacement_policy_t policy, const page_table_t *pt) 
     }
 }
 
-void pt_record_access(page_table_t *pt, u32 pageNum) {
+void pt_record_access(page_table_t *pt, unsigned int pageNum) {
     if (!pt || pageNum >= PAGE_NUMBER) return;
-    u8 frame = pt->entries[pageNum].frame;
+    unsigned char frame = pt->entries[pageNum].frame;
     if (frame != FRAME_INVALID && frame < NUM_FRAMES) {
         frame_stats[frame].access_time = ++access_counter;
         pt->entries[pageNum].flags |= PTE_REF;
     }
 }
 
-int pt_check_permissions(page_table_t *pt, u32 pageNum, u8 req_mask) {
+int pt_check_permissions(page_table_t *pt, unsigned int pageNum, unsigned char req_mask) {
     if (!pt) return 0;
     if (pageNum >= PAGE_NUMBER) return 0;
-    u8 flags = pt->entries[pageNum].flags;
+    unsigned char flags = pt->entries[pageNum].flags;
     if (!(flags & PTE_VALID)) return 0;
 
     if ((req_mask & PTE_READ) && !(flags & PTE_READ)) return 0;
@@ -97,7 +97,7 @@ int pt_check_permissions(page_table_t *pt, u32 pageNum, u8 req_mask) {
 
 void tlb_init(tlb_t *tlb) {
     if (!tlb) return;
-    for (u8 i = 0; i < TLB_SIZE; i++) {
+    for (unsigned char i = 0; i < TLB_SIZE; i++) {
         tlb->entries[i].pageNum = 0xFFFFFFFFu;
         tlb->entries[i].frame = FRAME_INVALID;
         tlb->entries[i].flags = 0;
@@ -105,9 +105,9 @@ void tlb_init(tlb_t *tlb) {
     tlb->next_index = 0;
 }
 
-u8 tlb_lookup(const tlb_t *tlb, u32 pageNum, u8 *out_flags) {
+unsigned char tlb_lookup(const tlb_t *tlb, unsigned int pageNum, unsigned char *out_flags) {
     if (!tlb) return FRAME_INVALID;
-    for (u8 i = 0; i < TLB_SIZE; i++) {
+    for (unsigned char i = 0; i < TLB_SIZE; i++) {
         if (tlb->entries[i].pageNum == pageNum) {
             if (out_flags) *out_flags = tlb->entries[i].flags;
             return tlb->entries[i].frame;  //hit
@@ -116,9 +116,9 @@ u8 tlb_lookup(const tlb_t *tlb, u32 pageNum, u8 *out_flags) {
     return FRAME_INVALID;  //miss
 }
 
-void tlb_insert(tlb_t *tlb, u32 pageNum, u8 frame, u8 flags) {
+void tlb_insert(tlb_t *tlb, unsigned int pageNum, unsigned char frame, unsigned char flags) {
     if (!tlb) return;
-    u8 idx = tlb->next_index;
+    unsigned char idx = tlb->next_index;
     tlb->entries[idx].pageNum = pageNum;
     tlb->entries[idx].frame = frame;
     tlb->entries[idx].flags = flags;
@@ -127,7 +127,7 @@ void tlb_insert(tlb_t *tlb, u32 pageNum, u8 frame, u8 flags) {
 
 void tlb_flush(tlb_t *tlb) {
     if (!tlb) return;
-    for (u8 i = 0; i < TLB_SIZE; i++) {
+    for (unsigned char i = 0; i < TLB_SIZE; i++) {
         tlb->entries[i].pageNum = 0xFFFFFFFFu;
         tlb->entries[i].frame = FRAME_INVALID;
         tlb->entries[i].flags = 0;
@@ -135,14 +135,14 @@ void tlb_flush(tlb_t *tlb) {
     tlb->next_index = 0;
 }
 
-u32 translate(page_table_t *pt, tlb_t *tlb, u32 vaddr, u8 req_mask) {
+unsigned int translate(page_table_t *pt, tlb_t *tlb, unsigned int vaddr, unsigned char req_mask) {
     if (!pt) return 0xFFFFFFFFu;
     
-    u32 pageNum = ADDRESS_PAGE_NUM(vaddr);
-    u32 offset = ADDRESS_OFFSET(vaddr);
+    unsigned int pageNum = ADDRESS_PAGE_NUM(vaddr);
+    unsigned int offset = ADDRESS_OFFSET(vaddr);
 
-    u8 tlb_flags = 0;
-    u8 frame = (tlb != NULL) ? tlb_lookup(tlb, pageNum, &tlb_flags) : FRAME_INVALID;
+    unsigned char tlb_flags = 0;
+    unsigned char frame = (tlb != NULL) ? tlb_lookup(tlb, pageNum, &tlb_flags) : FRAME_INVALID;
     
     if (frame == FRAME_INVALID) {
         if (!pt_is_valid(pt, pageNum)) return 0xFFFFFFFFu;  // page fault
@@ -165,14 +165,14 @@ u32 translate(page_table_t *pt, tlb_t *tlb, u32 vaddr, u8 req_mask) {
         if ((req_mask & PTE_USER) && !(tlb_flags & PTE_USER)) return 0xFFFFFFFFu;
     }
     
-    u32 phys_addr = (frame * 4096) + offset;
+    unsigned int phys_addr = (frame * 4096) + offset;
     return phys_addr;
 }
 
-int vm_read_byte(page_table_t *pt, tlb_t *tlb, u32 vaddr, u8 *out_byte) {
+int vm_read_byte(page_table_t *pt, tlb_t *tlb, unsigned int vaddr, unsigned char *out_byte) {
     if (!out_byte) return 1;
     
-    u32 phys_addr = translate(pt, tlb, vaddr, PTE_READ);
+    unsigned int phys_addr = translate(pt, tlb, vaddr, PTE_READ);
     if (phys_addr == 0xFFFFFFFFu) return 1;
     
     if (phys_addr >= (NUM_FRAMES * 4096)) return 1;
@@ -181,14 +181,14 @@ int vm_read_byte(page_table_t *pt, tlb_t *tlb, u32 vaddr, u8 *out_byte) {
     return 0;
 }
 
-int vm_write_byte(page_table_t *pt, tlb_t *tlb, u32 vaddr, u8 byte) {
-    u32 phys_addr = translate(pt, tlb, vaddr, PTE_WRITE);
+int vm_write_byte(page_table_t *pt, tlb_t *tlb, unsigned int vaddr, unsigned char byte) {
+    unsigned int phys_addr = translate(pt, tlb, vaddr, PTE_WRITE);
     if (phys_addr == 0xFFFFFFFFu) return 1;
     
     if (phys_addr >= (NUM_FRAMES * 4096)) return 1;
     
     phys_mem[phys_addr] = byte;
-    u8 pageNum = ADDRESS_PAGE_NUM(vaddr);
+    unsigned char pageNum = ADDRESS_PAGE_NUM(vaddr);
     if (pt) pt->entries[pageNum].flags |= PTE_DIRTY;
     
     return 0;
