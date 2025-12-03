@@ -10,6 +10,7 @@
 #define NUM_PAGES      (1 << PAGE_NUMBER)
 #define NUM_FRAMES     8
 #define FRAME_INVALID  0xFF
+#define TLB_SIZE 16
 
 #define ADDRESS_PAGE_NUM(address) ( (u32)(((address) >> OFFSET_BITS) & ((1u << PAGE_NUMBER) - 1)) )
 #define ADDRESS_OFFSET(address) ( (u32)((address) & ((1u << OFFSET_BITS) - 1)) )
@@ -43,23 +44,49 @@ typedef enum {
 
 static u32 access_counter = 0;
 
-// Metadatos
+// Metadatos (se pueden agregar mas de requerirse)
 typedef struct {
     u32 access_time;
 } page_stats_t;
 
+// TLB
+typedef struct {
+    u32 pageNum;
+    u8 frame;
+    u8 flags;
+} tlb_entry_t;
+
+typedef struct {
+    tlb_entry_t entries[TLB_SIZE];
+    u8 next_index;  // indice para rr
+} tlb_t;
+
+void tlb_init(tlb_t *tlb);
+
+u8 tlb_lookup(const tlb_t *tlb, u32 pageNum, u8 *out_flags);
+
+void tlb_insert(tlb_t *tlb, u32 pageNum, u8 frame, u8 flags);
+
+void tlb_flush(tlb_t *tlb);
+
 void pt_init(page_table_t *pt);
 
-int pt_set(page_table_t *pt, u32 vpn, u8 frame, u8 flags);
+int pt_set(page_table_t *pt, u32 pageNum, u8 frame, u8 flags);
 
-int pt_get(page_table_t *pt, u32 vpn, u8 *out_frame, u8 *out_flags);
+int pt_get(page_table_t *pt, u32 pageNum, u8 *out_frame, u8 *out_flags);
 
-int pt_is_valid(page_table_t *pt, u32 vpn);
+int pt_is_valid(page_table_t *pt, u32 pageNum);
 
-int pt_check_permissions(page_table_t *pt, u32 vpn, u8 req_mask);
+int pt_check_permissions(page_table_t *pt, u32 pageNum, u8 req_mask);
 
 u8 select_frame_to_replace(replacement_policy_t policy, const page_table_t *pt);
 
-void pt_record_access(page_table_t *pt, u32 vpn);
+void pt_record_access(page_table_t *pt, u32 pageNum);
+
+u32 translate(page_table_t *pt, tlb_t *tlb, u32 address, u8 req_mask);
+
+int vm_read_byte(page_table_t *pt, tlb_t *tlb, u32 address, u8 *out_byte);
+
+int vm_write_byte(page_table_t *pt, tlb_t *tlb, u32 address, u8 byte);
 
 #endif /* VM_H */
