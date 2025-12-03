@@ -19,6 +19,12 @@ static u32 NEXT_SHM_ID = 1;
 #define VGA_HEIGHT 25
 #define VGA_ADDRESS 0xB8000
 
+
+/* Keyboard and input functions */
+#define PS2_DATA_PORT 0x60
+#define PS2_STATUS_PORT 0x64
+
+
 // VGA texto (80x25)
 static volatile u16 *VGA = (u16*)0xB8000; 
 static u32 vga_row = 0, vga_col = 0; 
@@ -134,6 +140,12 @@ static pcb_t* alloc_pcb(void) {
             PROC_USED[i] = 1;
             PROC_TABLE[i].shm_id = 0;
             PROC_TABLE[i].shm_addr = 0;
+            PROC_TABLE[i].time_counter = 0;
+            PROC_TABLE[i].pc = 0;
+            PROC_TABLE[i].burst_time = 0;
+            PROC_TABLE[i].remaining = 0;
+            PROC_TABLE[i].func_type = 0;
+            for (u32 j = 0; j < 4; j++) PROC_TABLE[i].saved_state[j] = 0;
             return &PROC_TABLE[i];
         }
     }
@@ -147,6 +159,9 @@ static pcb_t* find_pcb(u32 pid) {
     }
     return 0;
 }
+
+/* Forward declaration */
+static void wait_enter(void);
 
 void sys_create_process(u32 burst) {
     pcb_t *p = alloc_pcb();
@@ -166,7 +181,7 @@ void sys_create_process(u32 burst) {
 
     kputs("create PID:");
     kputu(p->pid);
-    delay(500000000000);
+    wait_enter();
 }
 
 void sys_terminate_process(u32 pid) {
@@ -179,7 +194,45 @@ void sys_terminate_process(u32 pid) {
 
     kputs("terminate PID:");
     kputu(pid);
-    delay(500000000000);
+    wait_enter();
+}
+
+void sys_kill_process(u32 pid) {
+    pcb_t *p = find_pcb(pid);
+    if (!p) {
+        kputs("ERROR: PID no encontrado:");
+        kputu(pid);
+        return;
+    }
+    
+    /* Mark as terminated */
+    p->state = PROC_TERMINATED;
+    
+    /* Remove from any queue it's in */
+    q_remove(&READY_Q, p);
+    q_remove(&WAIT_Q, p);
+    
+    /* If it's the current running process, clear it */
+    if (current == p) {
+        current = 0;
+    }
+    
+    /* Detach shared memory if attached */
+    if (p->shm_id != 0) {
+        sys_shm_detach(pid);
+    }
+    
+    /* Free the PCB slot */
+    for (u32 i = 0; i < MAX_PROCS; i++) {
+        if (&PROC_TABLE[i] == p) {
+            PROC_USED[i] = 0;
+            break;
+        }
+    }
+    
+    kputs("kill PID:");
+    kputu(pid);
+    wait_enter();
 }
 
 void sys_yield(void) {
@@ -215,13 +268,78 @@ static void dispatch(pcb_t *p) {
     p->state = PROC_RUNNING;
     kputs("dispatch PID:");
     kputu(p->pid);
-    delay(500000000000);
+    wait_enter();
 }
 
 static void run_for_quantum(pcb_t *p, u32 q) {
+    u32 target = p->burst_time;
     for (u32 i = 0; i < q && p->remaining > 0; i++) {
-        p->pc++;
-        p->remaining--;
+        /* Track time used */
+        p->time_counter++;
+
+        switch (p->func_type) {
+            case 1: /* Fibonacci */
+                if (p->pc == 0) {
+                    p->saved_state[0] = 0; /* a */
+                    p->saved_state[1] = 1; /* b */
+                    p->saved_state[2] = 0; /* result */
+                }
+                if (p->pc < target) {
+                    if (p->pc == 0) {
+                        /* first iteration returns b (fib(1)=1) */
+                        p->saved_state[2] = p->saved_state[1];
+                    } else {
+                        u32 next = p->saved_state[0] + p->saved_state[1];
+                        p->saved_state[0] = p->saved_state[1];
+                        p->saved_state[1] = next;
+                        p->saved_state[2] = p->saved_state[1];
+                    }
+                    kputs("Fibonacci result:");
+                    kputu(p->saved_state[2]);
+                    wait_enter();
+                    p->pc++;
+                    p->remaining--;
+                }
+                break;
+            case 2: /* Factorial */
+                if (p->pc == 0) {
+                    p->saved_state[0] = 1; /* acc */
+                    p->saved_state[1] = 1; /* multiplier */
+                    p->saved_state[2] = 1; /* result */
+                }
+                if (p->pc < target) {
+                    p->saved_state[0] = p->saved_state[0] * p->saved_state[1];
+                    p->saved_state[2] = p->saved_state[0];
+                    p->saved_state[1]++; /* next multiplier */
+                    p->pc++;
+                    p->remaining--;
+                }
+                kputs("Factorial result:");
+                kputu(p->saved_state[2]);
+                wait_enter();
+                break;
+            case 3: /* Square via sum of odd numbers (n*n) */
+                if (p->pc == 0) {
+                    p->saved_state[0] = 0; /* acc */
+                    p->saved_state[1] = 1; /* next odd */
+                    p->saved_state[2] = 0; /* result */
+                }
+                if (p->pc < target) {
+                    p->saved_state[0] += p->saved_state[1];
+                    p->saved_state[2] = p->saved_state[0];
+                    p->saved_state[1] += 2; /* next odd */
+                    p->pc++;
+                    p->remaining--;
+                }
+                kputs("Square result:");
+                kputu(p->saved_state[2]);
+                wait_enter();
+                break;
+            default: /* generic step */
+                p->pc++;
+                p->remaining--;
+                break;
+        }
     }
 }
 
@@ -234,7 +352,7 @@ void scheduler_rr(u32 quantum) {
                 q_enqueue(&READY_Q, w);
                 kputs("wake PID:");
                 kputu(w->pid);
-                delay(500000000000);
+                wait_enter();
             }
         }
 
@@ -248,7 +366,7 @@ void scheduler_rr(u32 quantum) {
             p->state = PROC_TERMINATED;
             kputs("done PID:");
             kputu(p->pid);
-            delay(500000000000);
+            wait_enter();
             
             // recomendación de Copilot de liberar el slot del proceso terminado
             current = 0;
@@ -271,7 +389,7 @@ void scheduler_rr(u32 quantum) {
             q_enqueue(&READY_Q, w);
             kputs("io complete PID:");
             kputu(w->pid);
-            delay(500000000000);
+            wait_enter();
         }
 
         int active = 0;
@@ -300,7 +418,7 @@ u32 sys_shm_create(void) {
             
             kputs("shm_create ID:");
             kputu(SHM_TABLE[i].id);
-            delay(500000000000);
+            wait_enter();
             
             return SHM_TABLE[i].id;
         }
@@ -337,7 +455,7 @@ void* sys_shm_attach(u32 pid, u32 shm_id) {
     kputu(pid);
     kputs("to SHM:");
     kputu(shm_id);
-    delay(500000000000);
+    wait_enter();
     
     return p->shm_addr;
 }
@@ -361,7 +479,7 @@ void sys_shm_write(u32 pid, const char *msg) {
     kputu(pid);
     kputs("msg:");
     kputs(msg);
-    delay(500000000000);
+    wait_enter();
 }
 
 void sys_shm_read(u32 pid, char *buf) {
@@ -383,7 +501,7 @@ void sys_shm_read(u32 pid, char *buf) {
     kputu(pid);
     kputs("msg:");
     kputs(buf);
-    delay(500000000000);
+    wait_enter();
 }
 
 void sys_shm_detach(u32 pid) {
@@ -408,26 +526,236 @@ void sys_shm_detach(u32 pid) {
     
     kputs("shm_detach PID:");
     kputu(pid);
-    delay(500000000000);
+    wait_enter();
+}
+
+static u8 kgetc(void) {
+    /* Wait for keyboard input */
+    while (1) {
+        u8 status;
+        __asm__ volatile("inb $0x64, %0" : "=a"(status));
+        if (status & 0x01) {  /* Data available */
+            u8 scancode;
+            __asm__ volatile("inb $0x60, %0" : "=a"(scancode));
+            
+            /* Convert scancode to ASCII (simplified) */
+            if (scancode >= 0x02 && scancode <= 0x0B) {
+                /* Numbers 1-9 */
+                return '0' + (scancode - 0x01);
+            } else if (scancode == 0x0B) {
+                /* 0 key */
+                return '0';
+            } else if (scancode == 0x1C) {
+                /* Enter key */
+                return '\n';
+            } else if (scancode == 0x0E) {
+                /* Backspace */
+                return '\b';
+            }
+        }
+        delay(10000);
+    }
+}
+
+static void kputc(char c) {
+    vga_putc(c);
+}
+
+static u32 read_number(void) {
+    u32 num = 0;
+    char c;
+    
+    kputs("Ingrese un numero: ");
+    
+    while (1) {
+        c = kgetc();
+        
+        if (c >= '0' && c <= '9') {
+            num = num * 10 + (c - '0');
+            kputc(c);  /* Echo */
+        } else if (c == '\n' || c == '\r') {
+            kputc('\n');
+            break;
+        } else if (c == '\b') {
+            if (num > 0) {
+                num = num / 10;
+                kputs("\b \b");  /* Backspace visual */
+            }
+        }
+    }
+    
+    return num;
+}
+
+static void wait_enter(void) {
+    kputs("Presione Enter para continuar...");
+    while (kgetc() != '\n') { }
+    kputc('\n');
+}
+
+/* Menu functions */
+static void list_processes(void) {
+    kputs("=== PROCESOS EXISTENTES ===");
+    
+    int found = 0;
+    for (u32 i = 0; i < MAX_PROCS; i++) {
+        if (PROC_USED[i]) {
+            found = 1;
+            kputs("PID: ");
+            kputu(PROC_TABLE[i].pid);
+            kputs(" | Tipo: ");
+            
+            u8 ft = PROC_TABLE[i].func_type;
+            if (ft == 1) {
+                kputs("Fibonacci");
+            } else if (ft == 2) {
+                kputs("Factorial");
+            } else if (ft == 3) {
+                kputs("Square");
+            } else {
+                kputs("None");
+            }
+            
+            kputs(" | Estado: ");
+            if (PROC_TABLE[i].state == PROC_READY) {
+                kputs("READY");
+            } else if (PROC_TABLE[i].state == PROC_RUNNING) {
+                kputs("RUNNING");
+            } else if (PROC_TABLE[i].state == PROC_WAITING) {
+                kputs("WAITING");
+            } else if (PROC_TABLE[i].state == PROC_TERMINATED) {
+                kputs("TERMINATED");
+            } else {
+                kputs("NEW");
+            }
+            
+            delay(100000000);
+        }
+    }
+    
+    if (!found) {
+        kputs("No hay procesos");
+    }
+}
+
+static void show_menu(void) {
+    kputs("");
+    kputs("====== MENU PRINCIPAL ======");
+    kputs("1. Ver procesos existentes");
+    kputs("2. Crear nuevo proceso");
+    kputs("3. Matar un proceso");
+    kputs("4. Ejecutar procesos (Scheduler)");
+    kputs("5. Salir");
+    kputs("");
+    kputs("Seleccione una opcion (1-5):");
+}
+
+static void menu_create_process(void) {
+    kputs("");
+    kputs("=== CREAR NUEVO PROCESO ===");
+    
+    u32 burst = read_number();
+    
+    if (burst == 0) {
+        kputs("Error: burst_time debe ser mayor a 0");
+        return;
+    }
+    
+    sys_create_process(burst);
+    
+    /* Asignar tipo de función basado en PID */
+    pcb_t *p = find_pcb(NEXT_PID - 1);
+    if (p) {
+        u32 pid = p->pid;
+        if (pid % 3 == 1) {
+            p->func_type = 1; /* Fibonacci */
+            kputs("Tipo asignado: Fibonacci");
+        } else if (pid % 3 == 2) {
+            p->func_type = 2; /* Factorial */
+            kputs("Tipo asignado: Factorial");
+        } else {
+            p->func_type = 3; /* Square */
+            kputs("Tipo asignado: Square");
+        }
+    }
+    wait_enter();
+}
+
+static void menu_kill_process(void) {
+    kputs("");
+    kputs("=== MATAR PROCESO ===");
+    kputs("Procesos disponibles para matar:");
+    list_processes();
+    
+    kputs("");
+    u32 pid = read_number();
+    
+    if (pid == 0) {
+        kputs("Operacion cancelada");
+        return;
+    }
+    
+    if (!find_pcb(pid)) {
+        kputs("ERROR: PID no existe");
+        return;
+    }
+    
+    kputs("Matando PID ");
+    kputu(pid);
+    kputs("...");
+    sys_kill_process(pid);
+    wait_enter();
 }
 
 void kmain(void) {
+    // Limpiar pantalla primero
+    vga_clear();
+    vga_attr = 0x0F;
+    
+    // Debug: mensaje de inicio - letras una por una
+    vga_putc('K');
+    vga_putc('E');
+    vga_putc('R');
+    vga_putc('N');
+    vga_putc('E');
+    vga_putc('L');
+    vga_putc('\n');
+    vga_putc('B');
+    vga_putc('O');
+    vga_putc('O');
+    vga_putc('T');
+    vga_putc('\n');
+    
     // Inicializa colas y tabla
     q_init(&READY_Q);
     q_init(&WAIT_Q);
     for (u32 i = 0; i < MAX_PROCS; i++) { PROC_USED[i] = 0; }
     for (u32 i = 0; i < MAX_SHM; i++) { SHM_TABLE[i].used = 0; }
 
-    vga_clear();
+    vga_putc('I');
+    vga_putc('N');
+    vga_putc('I');
+    vga_putc('T');
+    vga_putc('\n');
+    
     kputs("Kernel con RR e IPC");
 
     // Crear región de memoria compartida
     u32 shm_id = sys_shm_create();
 
-    // Crea procesos que usarán IPC
-    sys_create_process(7);   // Escritor
-    sys_create_process(20);  // Lector
-    sys_create_process(11);  // Proceso normal
+    // Crear procesos iniciales
+    sys_create_process(7);   // PID 1
+    sys_create_process(20);  // PID 2
+    sys_create_process(11);  // PID 3
+
+    /* Assign function types to the created processes:
+       PID 1 -> Fibonacci, PID 2 -> Factorial, PID 3 -> Square */
+    pcb_t *p1 = find_pcb(1);
+    if (p1) p1->func_type = 1; /* Fibonacci */
+    pcb_t *p2 = find_pcb(2);
+    if (p2) p2->func_type = 2; /* Factorial */
+    pcb_t *p3 = find_pcb(3);
+    if (p3) p3->func_type = 3; /* Square */
 
     // Adjuntar memoria compartida a procesos 1 y 2
     sys_shm_attach(1, shm_id);
@@ -443,12 +771,61 @@ void kmain(void) {
     // Simula que el PID 2 entra a I/O al inicio
     sys_wait_io(2);
 
-    kputs("Iniciando Scheduler");
-    
-    // Quantum fijo de 3 unidades de tiempo
-    scheduler_rr(3);
-
-    kputs("Kernel finalizado");
+    /* Menu principal */
+    u8 running = 1;
+    while (running) {
+        vga_clear();
+        show_menu();
+        
+        /* Leer opción del usuario */
+        kputs("");
+        u32 option = read_number();
+        
+        switch (option) {
+            case 1:
+                /* Ver procesos existentes */
+                vga_clear();
+                list_processes();
+                kputs("");
+                wait_enter();
+                break;
+                
+            case 2:
+                /* Crear nuevo proceso */
+                vga_clear();
+                menu_create_process();
+                break;
+                
+            case 3:
+                /* Matar un proceso */
+                vga_clear();
+                menu_kill_process();
+                break;
+                
+            case 4:
+                /* Ejecutar scheduler */
+                vga_clear();
+                kputs("Iniciando Scheduler con quantum=3");
+                kputs("");
+                wait_enter();
+                scheduler_rr(3);
+                kputs("");
+                kputs("Scheduler finalizado");
+                wait_enter();
+                break;
+                
+            case 5:
+                /* Salir */
+                kputs("Finalizando Kernel...");
+                running = 0;
+                break;
+                
+            default:
+                kputs("Opcion invalida. Intente de nuevo.");
+                wait_enter();
+                break;
+        }
+    }
     
     // Liberar recursos al finalizar
     sys_shm_detach(1);
