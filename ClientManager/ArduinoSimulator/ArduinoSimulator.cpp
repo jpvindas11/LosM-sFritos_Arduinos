@@ -2,11 +2,12 @@
 
 ArduinoSimulator::ArduinoSimulator(const std::string& serverIP, int serverPort,
                                    const std::string& sensorType, uint16_t sensorID,
-                                   unsigned long intervalMs)
+                                   unsigned long intervalMs, const std::string& fakeIP)
     : serverIP(serverIP),
       serverPort(serverPort),
       sensorType(sensorType),
       sensorID(sensorID),
+      fakeIP(fakeIP),
       sendInterval(intervalMs),
       running(false),
       rng(std::random_device{}()) {
@@ -24,7 +25,11 @@ void ArduinoSimulator::start() {
     
     running.store(true);
     simulationThread = std::thread(&ArduinoSimulator::simulationLoop, this);
-    std::cout << "[" << sensorType << "_" << sensorID << "] Simulador iniciado" << std::endl;
+    std::cout << "[" << sensorType << "_" << sensorID << "] Simulador iniciado";
+    if (!fakeIP.empty()) {
+        std::cout << " (IP falsa: " << fakeIP << ")";
+    }
+    std::cout << std::endl;
 }
 
 void ArduinoSimulator::stop() {
@@ -42,6 +47,7 @@ void ArduinoSimulator::stop() {
 bool ArduinoSimulator::isRunning() const {
     return running.load();
 }
+
 float ArduinoSimulator::generateDistance() {
     std::uniform_int_distribution<int> dist(5, 200);
     return dist(rng);
@@ -86,10 +92,15 @@ bool ArduinoSimulator::sendDataToServer(const std::string& data) {
             return false;
         }
         
-        // Enviar EXACTAMENTE como el Arduino: texto plano con newline
-        std::string plainTextData = data + "\n";
+        // Construir mensaje: si hay IP falsa, enviarla primero
+        std::string message;
+        if (!fakeIP.empty()) {
+            message = "IP:" + fakeIP + "|" + data + "\n";
+        } else {
+            message = data + "\n";
+        }
         
-        ssize_t sent = socket.sendData(socket.getSocketFD(), plainTextData);
+        ssize_t sent = socket.sendData(socket.getSocketFD(), message);
         
         socket.closeSocket();
         
@@ -140,7 +151,11 @@ void ArduinoSimulator::simulationLoop() {
         }
         
         // Mostrar datos generados
-        std::cout << "[" << sensorType << "_" << sensorID << "] Generado: " << sensorData << std::endl;
+        std::cout << "[" << sensorType << "_" << sensorID << "] Generado: " << sensorData;
+        if (!fakeIP.empty()) {
+            std::cout << " (desde " << fakeIP << ")";
+        }
+        std::cout << std::endl;
         
         // Enviar datos al servidor
         if (sendDataToServer(sensorData)) {

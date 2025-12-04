@@ -279,7 +279,6 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
   std::cout << "\n========== SEND FILE BLOCK ==========" << std::endl;
   std::cout << "Requested file: '" << fileName << "'" << std::endl;
   
-  // Obtener información del archivo
   this->storageMutex.lock();
   
   if (!this->storage.fileExists(fileName)) {
@@ -327,107 +326,111 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
     return;
   }
   
-  // Calcular bloques necesarios
+  // Calcular bloques totales en el archivo
   uint32_t addedBlock = 0;
   if ((fileSize % BLOCK_SIZE) != 0) {
     addedBlock++;
   }
+  uint32_t totalBlocksInFile = (fileSize / BLOCK_SIZE) + addedBlock;
   
-  uint32_t blockAmount = (fileSize / BLOCK_SIZE) + addedBlock;
+  // ============ CAMBIO PRINCIPAL ============
+  // Calcular cuántos bloques enviar (máximo 2, los últimos)
+  uint32_t blocksToSend = std::min(totalBlocksInFile, static_cast<uint32_t>(2));
   
-  // Calcular páginas (2 bloques por página)
-  uint32_t extraPage = 0;
-  if ((blockAmount % 2) != 0) {
-    extraPage++;
+  // Calcular desde qué bloque empezar (los últimos 2)
+  uint32_t startBlock = 0;
+  if (totalBlocksInFile > 2) {
+    startBlock = totalBlocksInFile - 2;
   }
-  uint32_t totalPages = (blockAmount / 2) + extraPage;
+  // ==========================================
   
-  std::cout << "Total blocks: " << blockAmount << std::endl;
-  std::cout << "Total pages: " << totalPages << std::endl;
+  std::cout << "Total blocks in file: " << totalBlocksInFile << std::endl;
+  std::cout << "Blocks to send: " << blocksToSend << std::endl;
+  std::cout << "Starting from block: " << startBlock << std::endl;
+  
+  // Solo habrá 1 página porque enviamos máximo 2 bloques
+  uint32_t totalPages = 1;
   
   // Preparar buffers
   char* buffer1 = (char*) calloc(1024, sizeof(char));
   char* buffer2 = (char*) calloc(1024, sizeof(char));
   
-  uint32_t sentBlocks = 0;
-  uint32_t proccessedPages = 0;
-  
   genMessage response;
   response.MID = static_cast<uint8_t>(MessageType::SEN_FILE_BLOCK_RESP);
   
-  // Enviar bloques en pares
-  while (sentBlocks < blockAmount) {
-    senFileBlockRes responseContent;
-    responseContent.id_token = messageContent.id_token;       // ← Del REQUEST
-    responseContent.fileName = messageContent.fileName;       // ← Del REQUEST
-    responseContent.page = proccessedPages;
-    responseContent.totalPages = totalPages;
-    responseContent.usedBlocks = 0;
+  senFileBlockRes responseContent;
+  responseContent.id_token = messageContent.id_token;
+  responseContent.fileName = messageContent.fileName;
+  responseContent.page = 0;
+  responseContent.totalPages = totalPages;
+  responseContent.usedBlocks = 0;
+  
+  // Limpiar bloques
+  responseContent.firstBlock.clear();
+  responseContent.secondBlock.clear();
+  memset(buffer1, '\0', 1024);
+  memset(buffer2, '\0', 1024);
+  
+  // ===== PRIMER BLOQUE (puede ser el único o el penúltimo) =====
+  uint32_t blockNum = this->storage.getBlockNumber(file, startBlock);
+  
+  if (blockNum != BLOCK_FREE_SLOT) {
+    this->storage.readBlock(blockNum, static_cast<void*>(buffer1));
     
-    // Limpiar bloques
-    responseContent.firstBlock.clear();
-    responseContent.secondBlock.clear();
-    memset(buffer1, '\0', 1024);
-    memset(buffer2, '\0', 1024);
+    std::string text(buffer1, 1024);
+    responseContent.firstBlock = text;
     
-    // ===== PRIMER BLOQUE =====
-    uint32_t blockNum = this->storage.getBlockNumber(file, sentBlocks);
+    std::cout << "  Block 1 read from physical block " << blockNum 
+              << " (logical block " << startBlock << ")" << std::endl;
+  } else {
+    std::cerr << "  ✗ Invalid block number for block " << startBlock << std::endl;
+    free(buffer1);
+    free(buffer2);
+    this->storageMutex.unlock();
     
-    if (blockNum != BLOCK_FREE_SLOT) {
-      // ACCESO DIRECTO como LogsServer
-      this->storage.readBlock(blockNum, static_cast<void*>(buffer1));
-      
-      std::string text(buffer1, 1024);
-      responseContent.firstBlock = text;
-      sentBlocks++;
-      proccessedPages++;
-      
-      std::cout << "  Page " << proccessedPages << "/" << totalPages 
-                << ": Block1 read from physical block " << blockNum << std::endl;
-    } else {
-      std::cerr << "  ✗ Invalid block number for block " << sentBlocks << std::endl;
-      break;
-    }
-    
-    // ===== SEGUNDO BLOQUE (si existe) =====
-    if (sentBlocks < blockAmount) {
-      blockNum = this->storage.getBlockNumber(file, sentBlocks);
-      
-      if (blockNum != BLOCK_FREE_SLOT) {
-        this->storage.readBlock(blockNum, static_cast<void*>(buffer2));
-        
-        std::string text(buffer2, 1024);
-        responseContent.secondBlock = text;
-        sentBlocks++;
-        
-        std::cout << "  Page " << proccessedPages << "/" << totalPages 
-                  << ": Block2 read from physical block " << blockNum << std::endl;
-      }
-    }
-    
-    // Enviar página
-    response.content = responseContent;
-    
-    this->storageMutex.unlock();  // Liberar mutex antes de enviar
-    
-    if (!this->listeningSocket.bSendData(clientSocket, response)) {
-      std::cerr << "✗ Failed to send page " << proccessedPages << std::endl;
-      free(buffer1);
-      free(buffer2);
-      return;
-    }
-    
-    std::cout << "  ✓ Page " << proccessedPages << " sent successfully" << std::endl;
-    
-    this->storageMutex.lock();  // Volver a bloquear para la siguiente iteración
+    genMessage reply;
+    errorCommonMsg err;
+    err.message = "Error al leer bloque";
+    reply.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+    reply.content = err;
+    this->listeningSocket.bSendData(clientSocket, reply);
+    return;
   }
   
+  // ===== SEGUNDO BLOQUE (si existe) =====
+  if (blocksToSend == 2) {
+    blockNum = this->storage.getBlockNumber(file, startBlock + 1);
+    
+    if (blockNum != BLOCK_FREE_SLOT) {
+      this->storage.readBlock(blockNum, static_cast<void*>(buffer2));
+      
+      std::string text(buffer2, 1024);
+      responseContent.secondBlock = text;
+      
+      std::cout << "  Block 2 read from physical block " << blockNum 
+                << " (logical block " << (startBlock + 1) << ")" << std::endl;
+    }
+  }
+  
+  // Enviar página
+  response.content = responseContent;
+  
   this->storageMutex.unlock();
+  
+  if (!this->listeningSocket.bSendData(clientSocket, response)) {
+    std::cerr << "✗ Failed to send page" << std::endl;
+    free(buffer1);
+    free(buffer2);
+    return;
+  }
+  
+  std::cout << "✓ Page sent successfully" << std::endl;
   
   free(buffer1);
   free(buffer2);
   
-  std::cout << "✓ Sent " << proccessedPages << " pages for file: " << fileName << std::endl;
+  std::cout << "✓ Sent last " << blocksToSend << " blocks for file: " 
+            << fileName << std::endl;
   std::cout << "====================================\n" << std::endl;
 }
 

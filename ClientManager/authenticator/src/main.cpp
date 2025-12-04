@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    server.addUser("Admin", "password", USER_OWNER, USER_OWNER);
+    server.addUser("Admin", "passwordH0#", USER_OWNER, USER_OWNER);
 
     std::cout << "\n& Iniciando servidor de Usuarios" << std::endl;
 

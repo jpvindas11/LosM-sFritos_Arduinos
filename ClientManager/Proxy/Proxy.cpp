@@ -91,9 +91,10 @@ void Proxy::handleArduinoConnection(int arduinoSocket) {
   std::cout << "Thread started for Arduino socket: " << arduinoSocket << std::endl;
   
   Socket::ClientInfo clientInfo = Socket::getClientInfo(arduinoSocket);
-  std::string originIP = clientInfo.ip;
+  std::string realIP = clientInfo.ip;
   
-  std::cout << "Arduino connection from IP: " << originIP << ", Port: " << clientInfo.port << std::endl;
+  std::cout << "Arduino connection from real IP: " << realIP << ", Port: " << clientInfo.port << std::endl;
+  
   // Leer datos en texto plano del Arduino con buffer más seguro
   const size_t BUFFER_SIZE = 512;
   char buffer[BUFFER_SIZE];
@@ -116,8 +117,30 @@ void Proxy::handleArduinoConnection(int arduinoSocket) {
     }
     std::cout << std::endl;
     
+    // Extraer IP falsa si existe en el formato "IP:x.x.x.x|datos"
+    std::string fakeIP;
+    std::string actualData = rawData;
+    
+    size_t ipPos = rawData.find("IP:");
+    if (ipPos != std::string::npos) {
+      size_t pipePos = rawData.find('|', ipPos);
+      if (pipePos != std::string::npos) {
+        // Extraer la IP falsa
+        fakeIP = rawData.substr(ipPos + 3, pipePos - ipPos - 3);
+        // Extraer los datos reales del sensor (después del pipe)
+        actualData = rawData.substr(pipePos + 1);
+        
+        std::cout << "Detected fake IP: " << fakeIP << std::endl;
+        std::cout << "Actual sensor data: '" << actualData << "'" << std::endl;
+      }
+    }
+    
+    // Usar la IP falsa si existe, sino usar la real
+    std::string originIP = fakeIP.empty() ? realIP : fakeIP;
+    std::cout << "Using origin IP: " << originIP << std::endl;
+    
     // Parsear los datos del sensor y crear mensaje serializado
-    genMessage sensorData = parseArduinoData(rawData, originIP);
+    genMessage sensorData = parseArduinoData(actualData, originIP);
     
     if (sensorData.MID != 0) {  // Verificar que el parsing fue exitoso
       std::cout << "Parsed sensor data (MID: " << static_cast<int>(sensorData.MID) << ")\n";
@@ -126,7 +149,7 @@ void Proxy::handleArduinoConnection(int arduinoSocket) {
       QueuedMessage queuedMsg = {arduinoSocket, sensorData};
       messageQueue.enqueue(queuedMsg);
     } else {
-      std::cout << "Could not parse Arduino data: '" << rawData << "'" << std::endl;
+      std::cout << "Could not parse Arduino data: '" << actualData << "'" << std::endl;
     }
   } else {
     std::cout << "Could not receive data from Arduino (socket: " << arduinoSocket 
@@ -273,80 +296,105 @@ genMessage Proxy::parseArduinoData(const std::string& rawData, const std::string
       cleanData = cleanData.substr(start, end - start + 1);
     }
 
-    std::vector<std::string> tokens = Util::split(cleanData); // Solo para debug
+    std::vector<std::string> tokens = Util::split(cleanData);
     
     std::cout << "Original data length: " << rawData.length() << std::endl;
     std::cout << "Cleaned data: '" << cleanData << "' (length: " << cleanData.length() << ")" << std::endl;
       
-      // Crear estructura senAddLog
-      senAddLog logData;
-      
-      // CORREGIDO: Remover ':' del tipo de sensor
-      std::string sensorTypeRaw = tokens[0];
-      // Quitar el ':' al final si existe
-      if (!sensorTypeRaw.empty() && sensorTypeRaw.back() == ':') {
-        sensorTypeRaw.pop_back();
-      }
-      
-      logData.fileName.sensorType = sensorTypeRaw;  // Ahora guarda "Distancia" en lugar de "Distancia:"
-      logData.fileName.id = this->arduinoType(tokens[0]);  // ID del sensor (usa tokens[0] con ':')
-      logData.originIP = originIP;
-      
-      // Obtener fecha actual correctamente
-      std::time_t now = std::time(nullptr);
-      std::tm* localTime = std::localtime(&now);
-      
-      logData.fileName.year = localTime->tm_year + 1900;
-      logData.fileName.month = localTime->tm_mon + 1;
-      logData.fileName.day = localTime->tm_mday;
-      
-      // Formatear datos del sensor según su tipo
-      char formattedBuffer[200];
-      int written;
-      
-      // Determinar el formato según el tipo de sensor
-      if (this->arduinoType(tokens[0]) == 1) { // Ultrasonic/Distancia
-        written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
-                          "Distance:%dcm,Timestamp:%ld", std::stoi(tokens[1]), (long)now);
-      } else if (this->arduinoType(tokens[0]) == 2) { // Humidity/Humedad
-        written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
-                          "Humidity:%s%%,Timestamp:%ld", tokens[1].c_str(), (long)now);
-      } else if (this->arduinoType(tokens[0]) == 3) { // UV
-        written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
-                          "UV:%s,Timestamp:%ld", tokens[1].c_str(), (long)now);
-      } else {
-        // Formato genérico para sensores desconocidos
-        written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
-                          "%s:%s,Timestamp:%ld", sensorTypeRaw.c_str(), tokens[1].c_str(), (long)now);
-      }
-      
-      // Verificar que la escritura fue exitosa
-      if (written < 0 || written >= (int)sizeof(formattedBuffer)) {
-        std::cerr << "Error formatting sensor data" << std::endl;
-        message.MID = 0;
-        return message;
-      }
-      
-      std::string formattedData(formattedBuffer);
-      
-      // Verificar longitud final (bitsery usa límite de 256 chars)
-      if (formattedData.length() >= 255) {
-        std::cerr << "Formatted data too long: " << formattedData.length() << " chars" << std::endl;
-        formattedData = formattedData.substr(0, 254);
-      }
-      
-      // Asignar datos
-      logData.data = formattedData;
-      
-      // Asignar al mensaje
-      message.content = logData;
-      
-      std::cout << "Parsed sensor type: " << sensorTypeRaw << " (ID: " << this->arduinoType(tokens[0]) << ")" << std::endl;
-      std::cout << "Parsed value: " << tokens[1] << std::endl;
-      std::cout << "Generated log data: '" << logData.data << "'" << std::endl;
-      std::cout << "Final data length: " << logData.data.length() << std::endl;
-      
-    } catch (const std::out_of_range& e) {
+    // Crear estructura senAddLog
+    senAddLog logData;
+    
+    // CORREGIDO: Remover ':' del tipo de sensor
+    std::string sensorTypeRaw = tokens[0];
+    // Quitar el ':' al final si existe
+    if (!sensorTypeRaw.empty() && sensorTypeRaw.back() == ':') {
+      sensorTypeRaw.pop_back();
+    }
+    
+    logData.fileName.sensorType = sensorTypeRaw;  // Ahora guarda "Distancia" en lugar de "Distancia:"
+    logData.fileName.id = this->arduinoType(tokens[0]);  // ID del sensor (usa tokens[0] con ':')
+    logData.originIP = originIP;  // Usar la IP que se pasó como parámetro (falsa o real)
+    
+    // Obtener fecha actual correctamente
+    std::time_t now = std::time(nullptr);
+    std::tm* localTime = std::localtime(&now);
+    
+    logData.fileName.year = localTime->tm_year + 1900;
+    logData.fileName.month = localTime->tm_mon + 1;
+    logData.fileName.day = localTime->tm_mday;
+    
+    // ============ NUEVO: Formatear timestamp como string legible ============
+    char timestampBuffer[30];
+    snprintf(timestampBuffer, sizeof(timestampBuffer), 
+             "%02d/%02d/%04d %02d:%02d:%02d",
+             localTime->tm_mday,           // Día (01-31)
+             localTime->tm_mon + 1,        // Mes (01-12)
+             localTime->tm_year + 1900,    // Año completo
+             localTime->tm_hour,           // Hora (00-23)
+             localTime->tm_min,            // Minutos (00-59)
+             localTime->tm_sec);           // Segundos (00-59)
+    
+    std::string formattedTimestamp(timestampBuffer);
+    std::cout << "Formatted timestamp: " << formattedTimestamp << std::endl;
+    // =========================================================================
+    
+    // Formatear datos del sensor según su tipo
+    char formattedBuffer[200];
+    int written;
+    
+    // Determinar el formato según el tipo de sensor
+    if (this->arduinoType(tokens[0]) == 1) { // Ultrasonic/Distancia
+      written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                        "Distance:%dcm,Timestamp:%s", 
+                        std::stoi(tokens[1]), 
+                        formattedTimestamp.c_str());
+    } else if (this->arduinoType(tokens[0]) == 2) { // Humidity/Humedad
+      written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                        "Humidity:%s%%,Timestamp:%s", 
+                        tokens[1].c_str(), 
+                        formattedTimestamp.c_str());
+    } else if (this->arduinoType(tokens[0]) == 3) { // UV
+      written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                        "UV:%s,Timestamp:%s", 
+                        tokens[1].c_str(), 
+                        formattedTimestamp.c_str());
+    } else {
+      // Formato genérico para sensores desconocidos
+      written = snprintf(formattedBuffer, sizeof(formattedBuffer), 
+                        "%s:%s,Timestamp:%s", 
+                        sensorTypeRaw.c_str(), 
+                        tokens[1].c_str(), 
+                        formattedTimestamp.c_str());
+    }
+    
+    // Verificar que la escritura fue exitosa
+    if (written < 0 || written >= (int)sizeof(formattedBuffer)) {
+      std::cerr << "Error formatting sensor data" << std::endl;
+      message.MID = 0;
+      return message;
+    }
+    
+    std::string formattedData(formattedBuffer);
+    
+    // Verificar longitud final (bitsery usa límite de 256 chars)
+    if (formattedData.length() >= 255) {
+      std::cerr << "Formatted data too long: " << formattedData.length() << " chars" << std::endl;
+      formattedData = formattedData.substr(0, 254);
+    }
+    
+    // Asignar datos
+    logData.data = formattedData;
+    
+    // Asignar al mensaje
+    message.content = logData;
+    
+    std::cout << "Parsed sensor type: " << sensorTypeRaw << " (ID: " << this->arduinoType(tokens[0]) << ")" << std::endl;
+    std::cout << "Parsed value: " << tokens[1] << std::endl;
+    std::cout << "Origin IP used: " << originIP << std::endl;
+    std::cout << "Generated log data: '" << logData.data << "'" << std::endl;
+    std::cout << "Final data length: " << logData.data.length() << std::endl;
+    
+  } catch (const std::out_of_range& e) {
     std::cerr << "Error parsing Arduino data: " << e.what() << std::endl;
     message.MID = 0; // Indica error en el parsing
   }

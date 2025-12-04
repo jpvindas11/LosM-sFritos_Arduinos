@@ -1,6 +1,5 @@
 #ifndef ARDUINOSIMULATOR_HPP
 #define ARDUINOSIMULATOR_HPP
-
 #include <iostream>
 #include <string>
 #include <thread>
@@ -20,7 +19,7 @@ private:
     int serverPort;
     std::string sensorType;  // "DIS", "HUM", "UV"
     uint16_t sensorID;
-    
+    std::string fakeIP;      // IP falsa para simular
     std::atomic<bool> running;
     std::thread simulationThread;
     
@@ -47,7 +46,7 @@ private:
 public:
     ArduinoSimulator(const std::string& serverIP, int serverPort, 
                      const std::string& sensorType, uint16_t sensorID,
-                     unsigned long intervalMs);
+                     unsigned long intervalMs, const std::string& fakeIP = "");
     ~ArduinoSimulator();
     
     void start();
