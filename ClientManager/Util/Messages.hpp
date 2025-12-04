@@ -60,6 +60,13 @@ enum class MessageType : uint8_t {
     SERVER_STATUS_RES,
     SERVER_DISCOVER_REQ,
     SERVER_DISCOVER_RES,
+    RAID_PAIR_REQUEST,
+    RAID_PAIR_RESPONSE,
+    RAID_SYNC_START,
+    RAID_SYNC_FILE,
+    RAID_SYNC_COMPLETE,
+    RAID_HEARTBEAT,
+    RAID_PROMOTE,
 };
 
 struct token {
@@ -280,6 +287,37 @@ struct serverDiscoverRes {
     std::string serverName;
     std::string serverIP;
     uint8_t serverType;
+    uint8_t raidMode;
+};
+
+struct raidPairRequest {
+    std::string serverName;
+    std::string serverIP;
+    uint8_t serverType;
+};
+
+struct raidPairResponse {
+    std::string serverName;
+    std::string serverIP;
+    uint8_t hasPair;
+};
+
+struct raidSyncFile {
+    std::string fileName;
+    uint32_t fileSize;
+    std::string fileData;
+    uint32_t chunkNumber;
+    uint32_t totalChunks;
+};
+
+struct raidSyncComplete {
+    uint32_t totalFiles;
+    uint32_t totalBytes;
+};
+
+struct raidHeartbeat {
+    uint64_t timestamp;
+    uint8_t isPrimary;
 };
 
 struct genMessage {
@@ -313,7 +351,12 @@ struct genMessage {
         serverStatusReq,
         serverStatusRes,
         serverDiscoverReq,
-        serverDiscoverRes
+        serverDiscoverRes,
+        raidPairRequest,
+        raidPairResponse,
+        raidSyncFile,
+        raidSyncComplete,
+        raidHeartbeat
     > content;
 };
 
@@ -577,6 +620,42 @@ namespace bitsery {
         s.text1b(m.serverName, 20);
         s.text1b(m.serverIP, 16);
         s.value1b(m.serverType);
+        s.value1b(m.raidMode); 
+    }
+
+    template <typename S>
+    void serialize(S& s, raidPairRequest& m) {
+        s.text1b(m.serverName, 20);
+        s.text1b(m.serverIP, 16);
+        s.value1b(m.serverType);
+    }
+
+    template <typename S>
+    void serialize(S& s, raidPairResponse& m) {
+        s.text1b(m.serverName, 20);
+        s.text1b(m.serverIP, 16);
+        s.value1b(m.hasPair);
+    }
+
+    template <typename S>
+    void serialize(S& s, raidSyncFile& m) {
+        s.text1b(m.fileName, 50);
+        s.value4b(m.fileSize);
+        s.text1b(m.fileData, 1024);
+        s.value4b(m.chunkNumber);
+        s.value4b(m.totalChunks);
+    }
+
+    template <typename S>
+    void serialize(S& s, raidSyncComplete& m) {
+        s.value4b(m.totalFiles);
+        s.value4b(m.totalBytes);
+    }
+
+    template <typename S>
+    void serialize(S& s, raidHeartbeat& m) {
+        s.value8b(m.timestamp);
+        s.value1b(m.isPrimary);
     }
 
 }

@@ -19,6 +19,7 @@ public:
         std::string ip;
         uint16_t port;
         uint8_t serverType;
+        uint8_t raidMode;
     };
     
     ServerDiscover(int udp_port) 
@@ -133,11 +134,15 @@ public:
                         server.ip = serverIP;
                         server.serverType = resData.serverType;
                         
+                        server.raidMode = resData.raidMode;
+                        
                         servers.push_back(server);
                         
                         std::cout << "Servidor encontrado: " << server.name 
-                                  << " en " << server.ip << ":" << server.port 
-                                  << " (respuesta desde " << senderIP << ")" << std::endl;
+                                << " en " << server.ip << ":" << server.port 
+                                << " RAID: " << (server.raidMode == 1 ? "PRIMARY" : 
+                                                server.raidMode == 2 ? "BACKUP" : "STANDALONE")
+                                << std::endl;
                     } catch (const std::exception& e) {
                         std::cerr << "ERROR al procesar respuesta: " << e.what() << std::endl;
                     }

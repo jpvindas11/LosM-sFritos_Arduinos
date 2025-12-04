@@ -170,11 +170,46 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     case MessageType::SEN_RECENT_DATA_REQ:
     case MessageType::ADD_SENSOR:
     case MessageType::DELETE_SENSOR:
-    case MessageType::MODIFY_SENSOR: {
-      ServerDiscover discoverer(DISC_STORAGE);
-      targetIP = discoverer.lookForServer();
-      targetPort = PORT_MASTER_STORAGE;
-      break;
+    case MessageType::MODIFY_SENSOR: 
+    {
+        ServerDiscover discoverer(DISC_STORAGE);
+        auto storages = discoverer.discoverServers(2);
+        
+        std::string primaryIP;
+        std::string backupIP;
+        
+        // Clasificar servidores por rol
+        for (const auto& storage : storages) {
+            std::cout << "[ROUTING] Found storage: " << storage.name 
+                      << " at " << storage.ip 
+                      << " (RAID: " << (storage.raidMode == 1 ? "PRIMARY" : 
+                                        storage.raidMode == 2 ? "BACKUP" : "STANDALONE") 
+                      << ")" << std::endl;
+            
+            if (storage.raidMode == 1) {  // PRIMARY
+                primaryIP = storage.ip;
+            } else if (storage.raidMode == 2) {  // BACKUP
+                backupIP = storage.ip;
+            } else if (storage.raidMode == 0 && primaryIP.empty()) {  // STANDALONE
+                primaryIP = storage.ip;
+            }
+        }
+        
+        // PRIORIDAD: PRIMARY > BACKUP > ERROR
+        if (!primaryIP.empty() && checkServerConnection(primaryIP, PORT_MASTER_STORAGE)) {
+            targetIP = primaryIP;
+            targetPort = PORT_MASTER_STORAGE;
+            std::cout << "[ROUTING] Using PRIMARY: " << targetIP << std::endl;
+        } else if (!backupIP.empty() && checkServerConnection(backupIP, PORT_MASTER_STORAGE)) {
+            targetIP = backupIP;
+            targetPort = PORT_MASTER_STORAGE;
+            std::cout << "[ROUTING] PRIMARY down, using BACKUP: " << targetIP << std::endl;
+        } else {
+            targetIP = "NOSERVER";
+            std::cout << "[ROUTING] No storage available!" << std::endl;
+        }
+        
+        break;
     }
     
     case MessageType::LOG_USER_REQUEST: {

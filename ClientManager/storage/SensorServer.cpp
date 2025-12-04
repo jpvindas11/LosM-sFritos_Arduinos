@@ -1,7 +1,7 @@
 #include "SensorServer.hpp"
 #include <algorithm>
 
-SensorServer::SensorServer() : running(false) {
+SensorServer::SensorServer() : running(false), raidManager(nullptr) {
 }
 
 SensorServer& SensorServer::getInstance() {
@@ -15,15 +15,36 @@ int SensorServer::startServer(std::string serverIP, int listeningPort) {
   if (!this->storage.mount("sensorStorage.bin")) {
     return EXIT_FAILURE;
   }
+
+  // Iniciar raid manager
+  raidManager = new RaidManager(
+      "STORAGE_SERVER",
+      serverIP,
+      ServerType::SV_STORAGE,
+      &this->storage
+  );
+  
+  if (!raidManager->start()) {
+      std::cerr << "ERROR: No se pudo iniciar RaidManager" << std::endl;
+      // Continuar de todos modos si no se pudo iniciar
+  }
+  
   this->listenForever(this->serverIP, this->listeningPort,
     "STORAGE_SERVER", DISC_STORAGE, ServerType::SV_STORAGE);
   return EXIT_SUCCESS;
 }
 
 void SensorServer::stopServer() {  
-  running.store(false);
+    running.store(false);
+    
+    if (raidManager) {
+        std::cout << "Deteniendo RaidManager desde stopServer..." << std::endl;
+        raidManager->stop();
+        delete raidManager;
+        raidManager = nullptr;
+    }
 
-  this->storage.unmount();
+    this->storage.unmount();
 }
 
 void SensorServer::closeListeningSocket() {
@@ -795,4 +816,9 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   std::cout << buffer << std::endl;
   std::cout << "--- END ---" << std::endl;
   std::cout << "======================================\n" << std::endl;
+
+  // Notificar escritura del raid
+  if (raidManager) {
+      raidManager->notifyFileWritten(fileName);
+  }
 }

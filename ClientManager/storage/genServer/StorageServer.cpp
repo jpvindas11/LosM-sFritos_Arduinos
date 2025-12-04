@@ -31,19 +31,33 @@ int StorageServer::openConnectionRequestSocket(std::string ip, int port, std::st
 
 int StorageServer::listenForConnections(std::string ip, int port,
   std::string name, int disc_port, ServerType type) {
+  
   if (this->openConnectionRequestSocket(ip, port, name, disc_port, type) == EXIT_FAILURE) {
     return EXIT_FAILURE;
   }
+  
   if (!this->listeningSocket.listenSocket()) {
       std::cerr<<"ERROR: Could not listen for connections"<<std::endl;
       return EXIT_FAILURE;
   }
+  
+  discoveryPoint = new ServerDiscoveryPoint(
+      name,
+      ip,
+      disc_port,
+      type,
+      [this]() -> uint8_t {
+          return this->getRaidMode();
+      }
+  );
+  
   if (discoveryPoint->startThread() != EXIT_SUCCESS) {
     std::cerr << "! Could not start discovery thread" << std::endl;
     delete discoveryPoint;
     discoveryPoint = nullptr;
     return EXIT_FAILURE;
   }
+  
   return EXIT_SUCCESS;
 }
 
