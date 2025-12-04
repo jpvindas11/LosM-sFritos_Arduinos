@@ -27,6 +27,23 @@ struct AuthUser {
     bool isConnected;
 };
 
+enum class RegisterResult {
+    SUCCESS = 0,
+    USER_EXISTS = 1,
+    INVALID_PASSWORD = 2,
+    HASH_ERROR = 3,
+    FILE_ERROR = 4
+};
+
+enum class ChangePasswordResult {
+    SUCCESS = 0,
+    USER_NOT_FOUND = 1,
+    INVALID_PASSWORD = 2,
+    HASH_ERROR = 3,
+    FILE_READ_ERROR = 4,
+    FILE_WRITE_ERROR = 5
+};
+
 class AuthenticationServer {
     DISABLE_COPY(AuthenticationServer);
 
@@ -56,7 +73,8 @@ private:
     genMessage processModRankRequest(const authModifyUserRank& req);
     genMessage processUsersInfoRequest(const authRequestUsers& req);
 
-    bool registerUser(const std::string& username, const std::string& password, char type, char permission);
+    RegisterResult registerUser(const std::string& username, const std::string& password, 
+                           char type, char permission);
     bool updateUserInFile(const std::string& username, std::function<void(user_t*)> updateFn);
 
     bool storeUsersInVector(std::vector<UserInfo>* usersVec);
@@ -84,7 +102,7 @@ public:
     void listenForever(std::string ip, int port);
 
     bool addUser(const std::string& username, const std::string& password, char type, char permission);
-    bool changePassword(const std::string& username, const std::string& newPassword);
+    ChangePasswordResult changePassword(const std::string& username, const std::string& newPassword);
     bool deleteUser(const std::string& username);
     void changePermissions(const std::string& username, char newType, char newPermission);
 

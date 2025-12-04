@@ -8,6 +8,7 @@
 #include "setrankdialog.h"
 #include "dialogmanagepc.h"
 #include "Socket.hpp"
+#include "userdataqt.h"
 #include "User.hpp"
 #include <QMainWindow>
 #include <QPushButton>
@@ -34,6 +35,7 @@ private slots:
     void on_b_cerrarSesion_clicked();
 
     void on_user_list_itemClicked(QListWidgetItem *item);
+    void on_user_list_itemDoubleClicked(QListWidgetItem *item);
 
     void on_user_add_clicked();
 
@@ -50,7 +52,6 @@ private slots:
     void on_data_list_itemClicked(QListWidgetItem *item);
 
     void updateSensorDataAutomatically();
-
 
     void on_b_compus_clicked();
 

@@ -302,7 +302,7 @@ public:
         lineEdit_password->setEchoMode(QLineEdit::Password);
         label_error = new QLabel(newUserDialog);
         label_error->setObjectName(QString::fromUtf8("label_error"));
-        label_error->setGeometry(QRect(40, 340, 400, 30));
+        label_error->setGeometry(QRect(40, 350, 400, 30));
         label_error->setAlignment(Qt::AlignCenter);
         label_3 = new QLabel(newUserDialog);
         label_3->setObjectName(QString::fromUtf8("label_3"));
@@ -310,7 +310,7 @@ public:
         label_3->setAlignment(Qt::AlignCenter);
         groupBox_usertype = new QGroupBox(newUserDialog);
         groupBox_usertype->setObjectName(QString::fromUtf8("groupBox_usertype"));
-        groupBox_usertype->setGeometry(QRect(125, 220, 230, 110));
+        groupBox_usertype->setGeometry(QRect(125, 220, 230, 121));
         groupBox_usertype->setFlat(false);
         groupBox_usertype->setCheckable(false);
         radioButton_c = new QRadioButton(groupBox_usertype);
@@ -343,7 +343,7 @@ public:
         label_3->setText(QCoreApplication::translate("newUserDialog", "\342\236\225 Crear Usuario Nuevo", nullptr));
         groupBox_usertype->setTitle(QCoreApplication::translate("newUserDialog", "\360\237\221\245 Tipo de Usuario", nullptr));
         radioButton_c->setText(QCoreApplication::translate("newUserDialog", "\360\237\223\212 Consultante", nullptr));
-        radioButton_h->setText(QCoreApplication::translate("newUserDialog", "\360\237\214\220 Admin. Nodos", nullptr));
+        radioButton_h->setText(QCoreApplication::translate("newUserDialog", "\360\237\214\220 Admin. Equipo", nullptr));
         radioButton_u->setText(QCoreApplication::translate("newUserDialog", "\360\237\221\245 Admin. Usuarios", nullptr));
         radioButton_o->setText(QCoreApplication::translate("newUserDialog", "\360\237\221\221 Due\303\261o", nullptr));
     } // retranslateUi

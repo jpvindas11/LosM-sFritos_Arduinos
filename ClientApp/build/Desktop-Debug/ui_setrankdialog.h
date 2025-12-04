@@ -258,7 +258,7 @@ public:
         label_info->setText(QCoreApplication::translate("setRankDialog", "\342\255\220 Cambiar Permisos de Usuario", nullptr));
         groupBox_usertype->setTitle(QCoreApplication::translate("setRankDialog", "\360\237\221\245 Nuevo Tipo", nullptr));
         radioButton_c->setText(QCoreApplication::translate("setRankDialog", "\360\237\223\212 Consultante", nullptr));
-        radioButton_h->setText(QCoreApplication::translate("setRankDialog", "\360\237\222\273 Admin. Hardware", nullptr));
+        radioButton_h->setText(QCoreApplication::translate("setRankDialog", "\360\237\222\273 Admin. Equipo", nullptr));
         radioButton_u->setText(QCoreApplication::translate("setRankDialog", "\360\237\221\245 Admin. Usuarios", nullptr));
         radioButton_o->setText(QCoreApplication::translate("setRankDialog", "\360\237\221\221 Due\303\261o", nullptr));
     } // retranslateUi

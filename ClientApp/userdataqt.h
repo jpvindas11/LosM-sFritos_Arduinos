@@ -4,6 +4,7 @@
 #include <string>
 #include "inttypes.h"
 #include "User.hpp"
+#include "QString"
 
 enum USER_RANK {
     UR_CONSULTANT,
@@ -12,6 +13,21 @@ enum USER_RANK {
     UR_SOFTWAREMANAGER,
     UR_OWNER,
 };
+
+inline QString getRankName(char rank) {
+    switch(rank) {
+    case USER_CONSULTANT:
+        return "Consultante";
+    case USER_USERMANAGER:
+        return "Gestor de Usuarios";
+    case USER_HARDWAREMANAGER:
+        return "Gestor de Equipo";
+    case USER_OWNER:
+        return "Dueño";
+    default:
+        return "Desconocido";
+    }
+}
 
 class userDataQt
 {

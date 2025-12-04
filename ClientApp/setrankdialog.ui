@@ -133,8 +133,8 @@ QDialogButtonBox {
     background: transparent;
 }
 
-QDialogButtonBox QPushButton[text="OK"],
-QDialogButtonBox QPushButton[text="Aceptar"] {
+QDialogButtonBox QPushButton[text=&quot;OK&quot;],
+QDialogButtonBox QPushButton[text=&quot;Aceptar&quot;] {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                 stop:0 #00d4ff, stop:1 #7b2ff7);
     border: 2px solid #00d4ff;
@@ -148,23 +148,23 @@ QDialogButtonBox QPushButton[text="Aceptar"] {
     min-height: 40px;
 }
 
-QDialogButtonBox QPushButton[text="OK"]:hover,
-QDialogButtonBox QPushButton[text="Aceptar"]:hover {
+QDialogButtonBox QPushButton[text=&quot;OK&quot;]:hover,
+QDialogButtonBox QPushButton[text=&quot;Aceptar&quot;]:hover {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                 stop:0 #00e5ff, stop:1 #9351ff);
     box-shadow: 0 0 25px rgba(0, 212, 255, 0.8);
 }
 
-QDialogButtonBox QPushButton[text="OK"]:pressed,
-QDialogButtonBox QPushButton[text="Aceptar"]:pressed {
+QDialogButtonBox QPushButton[text=&quot;OK&quot;]:pressed,
+QDialogButtonBox QPushButton[text=&quot;Aceptar&quot;]:pressed {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                 stop:0 #00a8cc, stop:1 #6020dd);
     padding-top: 14px;
     padding-bottom: 10px;
 }
 
-QDialogButtonBox QPushButton[text="Cancel"],
-QDialogButtonBox QPushButton[text="Cancelar"] {
+QDialogButtonBox QPushButton[text=&quot;Cancel&quot;],
+QDialogButtonBox QPushButton[text=&quot;Cancelar&quot;] {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                 stop:0 #ff006e, stop:1 #ff4444);
     border: 2px solid #ff006e;
@@ -178,15 +178,15 @@ QDialogButtonBox QPushButton[text="Cancelar"] {
     min-height: 40px;
 }
 
-QDialogButtonBox QPushButton[text="Cancel"]:hover,
-QDialogButtonBox QPushButton[text="Cancelar"]:hover {
+QDialogButtonBox QPushButton[text=&quot;Cancel&quot;]:hover,
+QDialogButtonBox QPushButton[text=&quot;Cancelar&quot;]:hover {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                 stop:0 #ff1a7a, stop:1 #ff6666);
     box-shadow: 0 0 25px rgba(255, 0, 110, 0.8);
 }
 
-QDialogButtonBox QPushButton[text="Cancel"]:pressed,
-QDialogButtonBox QPushButton[text="Cancelar"]:pressed {
+QDialogButtonBox QPushButton[text=&quot;Cancel&quot;]:pressed,
+QDialogButtonBox QPushButton[text=&quot;Cancelar&quot;]:pressed {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
                                 stop:0 #cc0058, stop:1 #cc3333);
     padding-top: 14px;
@@ -266,7 +266,7 @@ QDialogButtonBox QPushButton[text="Cancelar"]:pressed {
      </rect>
     </property>
     <property name="text">
-     <string>💻 Admin. Hardware</string>
+     <string>💻 Admin. Equipo</string>
     </property>
    </widget>
    <widget class="QRadioButton" name="radioButton_u">

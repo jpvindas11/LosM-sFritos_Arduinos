@@ -127,9 +127,8 @@ void MenuWindow::hideFuctionsForRanks(int rank) {
         this->ui->b_usuarios->setVisible(true);
         break;
     case UR_HARDWAREMANAGER:
-        this->ui->b_compus->setVisible(true);
-        break;
     case UR_SOFTWAREMANAGER:
+        this->ui->b_compus->setVisible(true);
         this->ui->b_nodos->setVisible(true);
         break;
     case UR_CONSULTANT:
@@ -543,6 +542,11 @@ void MenuWindow::on_user_list_itemClicked(QListWidgetItem *item)
 {
     this->userMenu.setSelectedUser(item);
     this->userMenu.hideDeleteButton(ui->user_delete, &this->currentUser);
+}
+
+void MenuWindow::on_user_list_itemDoubleClicked(QListWidgetItem *item)
+{
+    this->userMenu.setSelectedUser(item);
 
     // Obtener información del usuario seleccionado
     UserInfo* selectedUser = this->userMenu.getSelectedUserInfo(&this->users);
@@ -553,15 +557,15 @@ void MenuWindow::on_user_list_itemClicked(QListWidgetItem *item)
         msgBox.setWindowTitle("Usuario: " + QString::fromStdString(selectedUser->user));
 
         QString info = QString(
-                           "═══════════════════════════════════════\n"
+                           "╔═══════════════════════════════════════╗\n"
                            "INFORMACIÓN DEL USUARIO\n"
-                           "═══════════════════════════════════════\n\n"
+                           "╚═══════════════════════════════════════╝\n\n"
                            "Usuario:        %1\n"
                            "Rango:          %2\n"
                            "Estado:         %3\n\n"
                            "¿Qué deseas hacer?"
                            ).arg(QString::fromStdString(selectedUser->user))
-                           .arg(selectedUser->rank)
+                           .arg(getRankName(selectedUser->rank))
                            .arg(selectedUser->isConnected ? "Conectado" : "Desconectado");
 
         msgBox.setText(info);

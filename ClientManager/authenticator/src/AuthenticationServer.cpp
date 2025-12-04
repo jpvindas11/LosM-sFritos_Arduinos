@@ -394,18 +394,39 @@ genMessage AuthenticationServer::processCreateUserRequest(const authCreateUser& 
         return response;
     }
 
-    if (this->registerUser(req.newUser, req.pass, req.rank, req.rank)) {
-        response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
-        response.content = okCommonMsg{"Usuario registrado"};
-        
-        std::cout << "Usuario registrado correctamente: " << req.newUser << std::endl;
-        
-        // Log con más contexto
-        std::string logMsg = "fue registrado con rango " + std::to_string(req.rank);
-        sendUserLog(req.newUser, logMsg);
-    } else {
-        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
-        response.content = errorCommonMsg{"No se pudo registrar al user"};
+    RegisterResult result = this->registerUser(req.newUser, req.pass, req.rank, req.rank);
+    
+    switch(result) {
+        case RegisterResult::SUCCESS:
+            response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+            response.content = okCommonMsg{"Usuario registrado"};
+            std::cout << "Usuario registrado correctamente: " << req.newUser << std::endl;
+            {
+                std::string logMsg = "fue registrado con rango " + std::to_string(req.rank);
+                sendUserLog(req.newUser, logMsg);
+            }
+            break;
+            
+        case RegisterResult::INVALID_PASSWORD:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{
+                "La contraseña es inválida"};
+            break;
+            
+        case RegisterResult::USER_EXISTS:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{"Usuario ya existe"};
+            break;
+            
+        case RegisterResult::HASH_ERROR:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{"Error al procesar contraseña"};
+            break;
+            
+        case RegisterResult::FILE_ERROR:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{"Error al guardar en el sistema"};
+            break;
     }
 
     return response;
@@ -441,23 +462,42 @@ genMessage AuthenticationServer::processModPassRequest(const authModifyUserPass&
     std::lock_guard<std::mutex> lock(requestMutex);
     genMessage response;
     
-    auto it = users.find(req.user);
-    if (it == users.end()) {
-        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
-        response.content = errorCommonMsg{"Usuario no existe"};
-        return response;
-    }
-
-    if (this->changePassword(req.user, req.newPassword)) {
-        response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
-        response.content = okCommonMsg{"Usuario modificado"};
-
-        std::cout << "Usuario modificado (password) correctamente: " << req.user << std::endl;
-        
-        sendUserLog(req.user, "cambió su contraseña");
-    } else {
-        response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
-        response.content = errorCommonMsg{"No se pudo cambiar el password"};
+    ChangePasswordResult result = this->changePassword(req.user, req.newPassword);
+    
+    switch(result) {
+        case ChangePasswordResult::SUCCESS:
+            response.MID = static_cast<uint8_t>(MessageType::OK_COMMON_MSG);
+            response.content = okCommonMsg{"Contraseña modificada"};
+            std::cout << "Usuario modificado (password) correctamente: " << req.user << std::endl;
+            sendUserLog(req.user, "cambió su contraseña");
+            break;
+            
+        case ChangePasswordResult::USER_NOT_FOUND:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{"Usuario no existe"};
+            break;
+            
+        case ChangePasswordResult::INVALID_PASSWORD:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{
+                "La contraseña es inválida"
+            };
+            break;
+            
+        case ChangePasswordResult::HASH_ERROR:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{"Error al procesar contraseña"};
+            break;
+            
+        case ChangePasswordResult::FILE_READ_ERROR:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{"Error al leer datos internos"};
+            break;
+            
+        case ChangePasswordResult::FILE_WRITE_ERROR:
+            response.MID = static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG);
+            response.content = errorCommonMsg{"Error al guardar en sistema"};
+            break;
     }
 
     return response;
@@ -506,18 +546,18 @@ genMessage AuthenticationServer::processUsersInfoRequest(const authRequestUsers&
     return response;
 }
 
-bool AuthenticationServer::registerUser(const std::string& username,
+RegisterResult AuthenticationServer::registerUser(const std::string& username,
     const std::string& password, char type, char permission) {
     std::lock_guard<std::mutex> lock(usersMutex);
     
     if (users.find(username) != users.end()) {
         std::cout << "Error: Usuario '" << username << "' ya existe" << std::endl;
-        return false;
+        return RegisterResult::USER_EXISTS;
     }
     
-    if (std::regex_match(password, this->passwordPattern) == false) {
-        std::cout << "Error: Contraseña no válida. Debe contener al menos 8 caracteres, incluyendo una letra minúscula, una letra mayúscula, un número y un carácter especial." << std::endl;
-        return false;
+    if (!std::regex_match(password, this->passwordPattern)) {
+        std::cout << "Error: Contraseña no válida." << std::endl;
+        return RegisterResult::INVALID_PASSWORD;
     }
     
     unsigned char salt[crypto_pwhash_SALTBYTES];
@@ -526,7 +566,7 @@ bool AuthenticationServer::registerUser(const std::string& username,
     unsigned char hash[32];
     if (!hashPassword(password, salt, hash)) {
         std::cout << "Error: No se pudo hashear la contraseña" << std::endl;
-        return false;
+        return RegisterResult::HASH_ERROR;
     }
     
     // Crear estructura user_t
@@ -563,7 +603,7 @@ bool AuthenticationServer::registerUser(const std::string& username,
     if (!fs->appendFile("user_data.csv", reinterpret_cast<const char*>(&user), 
                        sizeof(user_t))) {
         std::cout << "Error: No se pudo escribir usuario en el filesystem" << std::endl;
-        return false;
+        return RegisterResult::FILE_ERROR;
     }
     
     // Agregar a memoria
@@ -578,7 +618,7 @@ bool AuthenticationServer::registerUser(const std::string& username,
     
     std::cout << "Usuario '" << username << "' registrado exitosamente" << std::endl;
 
-    return true;
+    return RegisterResult::SUCCESS;
 }
 
 bool AuthenticationServer::updateUserInFile(const std::string& username,
@@ -643,7 +683,11 @@ bool AuthenticationServer::storeUsersInVector(std::vector<UserInfo>* usersVec) {
 
 bool AuthenticationServer::addUser(const std::string& username, const std::string& password,
     char type, char permission) {
-    return registerUser(username, password, type, permission);
+    RegisterResult result = registerUser(username, password, type, permission);
+
+    if (result == RegisterResult::SUCCESS) {
+        return true;
+    } else return false;
 }
 
 std::unordered_map<std::string, AuthUser>* AuthenticationServer::getUserMap() {
@@ -742,20 +786,19 @@ void AuthenticationServer::loadUsers() {
     std::cout << "Total de usuarios cargados: " << users.size() << std::endl;
 }
 
-bool AuthenticationServer::changePassword(const std::string& username,
-                                         const std::string& newPassword) {
+ChangePasswordResult AuthenticationServer::changePassword(const std::string& username,
+                                                         const std::string& newPassword) {
     std::lock_guard<std::mutex> lock(usersMutex);
     
     auto it = users.find(username);
     if (it == users.end()) {
         std::cout << "Error: Usuario '" << username << "' no existe" << std::endl;
-        return false;
+        return ChangePasswordResult::USER_NOT_FOUND;
     }
     
-    if (std::regex_match(newPassword, this->passwordPattern) == false) {
-        std::cout << "Error: Nueva contraseña no válida. Debe contener al menos 8 caracteres, incluyendo una letra minúscula, una letra mayúscula, un número y un carácter especial." 
-                  << std::endl;
-        return false;
+    if (!std::regex_match(newPassword, this->passwordPattern)) {
+        std::cout << "Error: Nueva contraseña no válida." << std::endl;
+        return ChangePasswordResult::INVALID_PASSWORD;
     }
     
     // Generar nuevo salt
@@ -766,13 +809,12 @@ bool AuthenticationServer::changePassword(const std::string& username,
     unsigned char newHash[32];
     if (!hashPassword(newPassword, newSalt, newHash)) {
         std::cout << "Error: No se pudo hashear la nueva contraseña" << std::endl;
-        return false;
+        return ChangePasswordResult::HASH_ERROR;
     }
     
     // Actualizar en memoria
     it->second.passwordHash.assign(reinterpret_cast<char*>(newHash), 32);
-    it->second.salt.assign(reinterpret_cast<char*>(newSalt), 
-                          crypto_pwhash_SALTBYTES);
+    it->second.salt.assign(reinterpret_cast<char*>(newSalt), crypto_pwhash_SALTBYTES);
     
     // Actualizar en el archivo
     uint32_t fileSize = fs->getFileSize("user_data.csv");
@@ -784,7 +826,7 @@ bool AuthenticationServer::changePassword(const std::string& username,
     if (!fs->readFile("user_data.csv", buffer, bytesRead)) {
         std::cerr << "Error al leer archivo de usuarios" << std::endl;
         delete[] buffer;
-        return false;
+        return ChangePasswordResult::FILE_READ_ERROR;
     }
     
     bool found = false;
@@ -807,18 +849,20 @@ bool AuthenticationServer::changePassword(const std::string& username,
         }
     }
     
+    bool success = false;
     if (found) {
         // Escribir todo el archivo de vuelta
         if (fs->writeFile("user_data.csv", buffer, fileSize)) {
-            std::cout << "Contraseña actualizada para '" << username << "'" 
-                      << std::endl;
+            std::cout << "Contraseña actualizada para '" << username << "'" << std::endl;
+            success = true;
         } else {
             std::cerr << "Error al guardar cambios en el filesystem" << std::endl;
         }
     }
     
     delete[] buffer;
-    return true;
+    
+    return success ? ChangePasswordResult::SUCCESS : ChangePasswordResult::FILE_WRITE_ERROR;
 }
 
 bool AuthenticationServer::deleteUser(const std::string& username) {
