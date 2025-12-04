@@ -2,6 +2,8 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
+#include "vm.h"
+
 typedef unsigned int  u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
