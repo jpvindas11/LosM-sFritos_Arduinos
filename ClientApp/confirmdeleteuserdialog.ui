@@ -6,20 +6,121 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>380</width>
-    <height>105</height>
+    <width>450</width>
+    <height>180</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>⚠️ Confirmar Eliminación</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* ============================================
+   DIÁLOGO DE CONFIRMACIÓN - TEMA PELIGRO NEÓN
+   ============================================ */
+
+QDialog {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #0a0e27, stop:0.5 #16213e, stop:1 #0a0e27);
+    border: 3px solid #ff006e;
+    border-radius: 15px;
+}
+
+/* ============================================
+   LABEL DE ADVERTENCIA
+   ============================================ */
+
+QLabel#label_warning {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(255, 0, 110, 180),
+                                stop:0.5 rgba(255, 68, 68, 180),
+                                stop:1 rgba(255, 0, 110, 180));
+    border: 2px solid #ff006e;
+    border-radius: 12px;
+    padding: 15px;
+}
+
+/* ============================================
+   DIALOG BUTTON BOX
+   ============================================ */
+
+QDialogButtonBox {
+    background: transparent;
+}
+
+/* Botón OK/Confirmar - ROJO PELIGRO */
+QDialogButtonBox QPushButton[text="OK"],
+QDialogButtonBox QPushButton[text="Aceptar"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff006e, stop:1 #ff4444);
+    border: 2px solid #ff006e;
+    border-radius: 12px;
+    padding: 12px 30px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-width: 120px;
+    min-height: 40px;
+}
+
+QDialogButtonBox QPushButton[text="OK"]:hover,
+QDialogButtonBox QPushButton[text="Aceptar"]:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff1a7a, stop:1 #ff6666);
+    box-shadow: 0 0 30px rgba(255, 0, 110, 1.0);
+    border: 2px solid #ff4499;
+}
+
+QDialogButtonBox QPushButton[text="OK"]:pressed,
+QDialogButtonBox QPushButton[text="Aceptar"]:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #cc0058, stop:1 #cc3333);
+    padding-top: 14px;
+    padding-bottom: 10px;
+}
+
+/* Botón Cancel/Cancelar - SEGURO */
+QDialogButtonBox QPushButton[text="Cancel"],
+QDialogButtonBox QPushButton[text="Cancelar"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #7b2ff7, stop:1 #00d4ff);
+    border: 2px solid #00d4ff;
+    border-radius: 12px;
+    padding: 12px 30px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-width: 120px;
+    min-height: 40px;
+}
+
+QDialogButtonBox QPushButton[text="Cancel"]:hover,
+QDialogButtonBox QPushButton[text="Cancelar"]:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #9351ff, stop:1 #00e5ff);
+    box-shadow: 0 0 25px rgba(0, 212, 255, 0.8);
+}
+
+QDialogButtonBox QPushButton[text="Cancel"]:pressed,
+QDialogButtonBox QPushButton[text="Cancelar"]:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #6020dd, stop:1 #00a8cc);
+    padding-top: 14px;
+    padding-bottom: 10px;
+}</string>
   </property>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>-70</x>
-     <y>60</y>
-     <width>341</width>
-     <height>32</height>
+     <x>60</x>
+     <y>120</y>
+     <width>330</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="orientation">
@@ -32,14 +133,14 @@
   <widget class="QLabel" name="label_warning">
    <property name="geometry">
     <rect>
-     <x>0</x>
-     <y>10</y>
-     <width>371</width>
-     <height>41</height>
+     <x>30</x>
+     <y>30</y>
+     <width>390</width>
+     <height>70</height>
     </rect>
    </property>
    <property name="text">
-    <string>TEXT DELETE USER</string>
+    <string>⚠️ ¿Estás seguro de eliminar este usuario?</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
@@ -55,12 +156,12 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>225</x>
+     <y>145</y>
     </hint>
     <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
+     <x>225</x>
+     <y>89</y>
     </hint>
    </hints>
   </connection>
@@ -71,12 +172,12 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>225</x>
+     <y>145</y>
     </hint>
     <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
+     <x>225</x>
+     <y>89</y>
     </hint>
    </hints>
   </connection>

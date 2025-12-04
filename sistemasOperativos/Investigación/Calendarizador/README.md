@@ -35,17 +35,9 @@ make clean
 # Compilar el kernel
 make
 
-# Crear ISO booteable
-make iso
-
-# Ejecutar en QEMU
-make run
-```
 
 ## Comandos Makefile
 
-- `make` o `make all` - Compila el kernel (kernel.elf)
-- `make iso` - Crea la imagen ISO booteable (myos.iso)
 - `make run` - Compila, crea ISO y ejecuta en QEMU
 - `make clean` - Elimina archivos objeto, kernel.elf, ISO y directorios temporales
 
@@ -96,6 +88,34 @@ qemu-system-i386 -kernel kernel.elf
 - `sys_yield()` - Ceder CPU voluntariamente
 - `sys_wait_io(pid)` - Poner proceso en espera de I/O
 - `sys_signal_io(pid)` - Despertar proceso de I/O
+
+### Ejemplo de uso del menú
+
+====== MENU PRINCIPAL ======
+
+1. Ver procesos existentes
+
+2. Crear nuevo proceso
+
+3. Matar un proceso
+
+4. Ejecutar procesos (Scheduler)
+
+5. Salir
+
+Seleccione una opcion (1-5): 2
+
+=== CREAR NUEVO PROCESO ===
+
+Ingrese burst time (recomendado 5-20):
+
+Nota: Se asignara automaticamente el siguiente PID
+
+create PID:
+
+4
+
+Tipo asignado: Fibonacci
 
 
 ## Autor

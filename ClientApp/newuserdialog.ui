@@ -6,20 +6,264 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>480</width>
+    <height>450</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>➕ Crear Usuario</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* ============================================
+   DIÁLOGO CREAR USUARIO - TEMA NEÓN CYBERPUNK
+   ============================================ */
+
+QDialog {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #0a0e27, stop:0.5 #16213e, stop:1 #0a0e27);
+    border: 3px solid #7b2ff7;
+    border-radius: 15px;
+}
+
+/* ============================================
+   LABELS
+   ============================================ */
+
+QLabel#label_3 {
+    color: #00ffff;
+    font-size: 20px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(123, 47, 247, 150),
+                                stop:0.5 rgba(0, 212, 255, 150),
+                                stop:1 rgba(123, 47, 247, 150));
+    border: 2px solid #00d4ff;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+QLabel#label_error {
+    color: #ff006e;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: rgba(255, 0, 110, 50);
+    border: 2px solid #ff006e;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+/* ============================================
+   LINE EDITS
+   ============================================ */
+
+QLineEdit {
+    background: rgba(26, 35, 62, 180);
+    border: 2px solid #7b2ff7;
+    border-radius: 12px;
+    padding: 12px 15px;
+    color: #ffffff;
+    font-size: 14px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    selection-background-color: #00d4ff;
+    selection-color: #000000;
+}
+
+QLineEdit:focus {
+    border: 2px solid #00d4ff;
+    background: rgba(26, 35, 62, 220);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+}
+
+QLineEdit:hover {
+    border: 2px solid #9351ff;
+    background: rgba(26, 35, 62, 200);
+}
+
+QLineEdit::placeholder {
+    color: rgba(255, 255, 255, 100);
+    font-style: italic;
+}
+
+QLineEdit#lineEdit_username {
+    border-left: 4px solid #00d4ff;
+}
+
+QLineEdit#lineEdit_password {
+    border-left: 4px solid #ff006e;
+}
+
+/* ============================================
+   GROUPBOX - TIPO DE USUARIO
+   ============================================ */
+
+QGroupBox {
+    background: rgba(26, 35, 62, 150);
+    border: 2px solid #7b2ff7;
+    border-radius: 12px;
+    color: #00ffff;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    padding-top: 25px;
+    margin-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 5px 15px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #7b2ff7, stop:1 #00d4ff);
+    border-radius: 8px;
+    color: white;
+}
+
+/* ============================================
+   RADIO BUTTONS
+   ============================================ */
+
+QRadioButton {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    spacing: 8px;
+    padding: 5px;
+}
+
+QRadioButton::indicator {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #7b2ff7;
+    border-radius: 10px;
+    background: rgba(26, 35, 62, 180);
+}
+
+QRadioButton::indicator:hover {
+    border: 2px solid #00d4ff;
+    background: rgba(26, 35, 62, 220);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+QRadioButton::indicator:checked {
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5,
+                                fx:0.5, fy:0.5,
+                                stop:0 #00ffff, stop:0.5 #00d4ff, stop:1 #7b2ff7);
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+}
+
+QRadioButton:hover {
+    color: #00ffff;
+}
+
+QRadioButton:checked {
+    color: #00ffff;
+}
+
+/* Emojis para cada tipo */
+QRadioButton#radioButton_c::indicator {
+    /* Consultante */
+}
+
+QRadioButton#radioButton_h::indicator {
+    /* Admin. Nodos */
+}
+
+QRadioButton#radioButton_u::indicator {
+    /* Admin. Usuarios */
+}
+
+QRadioButton#radioButton_o::indicator {
+    /* Dueño */
+    border: 2px solid #ff006e;
+}
+
+QRadioButton#radioButton_o::indicator:checked {
+    background: qradialgradient(cx:0.5, cy:0.5, radius:0.5,
+                                fx:0.5, fy:0.5,
+                                stop:0 #ff006e, stop:0.5 #ff4499, stop:1 #7b2ff7);
+    border: 2px solid #ff006e;
+    box-shadow: 0 0 15px rgba(255, 0, 110, 0.8);
+}
+
+/* ============================================
+   DIALOG BUTTON BOX
+   ============================================ */
+
+QDialogButtonBox {
+    background: transparent;
+}
+
+QDialogButtonBox QPushButton[text="OK"],
+QDialogButtonBox QPushButton[text="Aceptar"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #00d4ff, stop:1 #7b2ff7);
+    border: 2px solid #00d4ff;
+    border-radius: 12px;
+    padding: 12px 30px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-width: 120px;
+    min-height: 40px;
+}
+
+QDialogButtonBox QPushButton[text="OK"]:hover,
+QDialogButtonBox QPushButton[text="Aceptar"]:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #00e5ff, stop:1 #9351ff);
+    box-shadow: 0 0 25px rgba(0, 212, 255, 0.8);
+}
+
+QDialogButtonBox QPushButton[text="OK"]:pressed,
+QDialogButtonBox QPushButton[text="Aceptar"]:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #00a8cc, stop:1 #6020dd);
+    padding-top: 14px;
+    padding-bottom: 10px;
+}
+
+QDialogButtonBox QPushButton[text="Cancel"],
+QDialogButtonBox QPushButton[text="Cancelar"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff006e, stop:1 #ff4444);
+    border: 2px solid #ff006e;
+    border-radius: 12px;
+    padding: 12px 30px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-width: 120px;
+    min-height: 40px;
+}
+
+QDialogButtonBox QPushButton[text="Cancel"]:hover,
+QDialogButtonBox QPushButton[text="Cancelar"]:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff1a7a, stop:1 #ff6666);
+    box-shadow: 0 0 25px rgba(255, 0, 110, 0.8);
+}
+
+QDialogButtonBox QPushButton[text="Cancel"]:pressed,
+QDialogButtonBox QPushButton[text="Cancelar"]:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #cc0058, stop:1 #cc3333);
+    padding-top: 14px;
+    padding-bottom: 10px;
+}</string>
   </property>
   <widget class="QDialogButtonBox" name="buttonBox">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>240</y>
-     <width>341</width>
-     <height>32</height>
+     <x>75</x>
+     <y>380</y>
+     <width>330</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="orientation">
@@ -32,42 +276,42 @@
   <widget class="QLineEdit" name="lineEdit_username">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>70</y>
-     <width>341</width>
-     <height>26</height>
+     <x>40</x>
+     <y>90</y>
+     <width>400</width>
+     <height>45</height>
     </rect>
    </property>
    <property name="text">
     <string/>
    </property>
    <property name="placeholderText">
-    <string>Usuario</string>
+    <string>👤 Nombre de usuario</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="lineEdit_password">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>120</y>
-     <width>341</width>
-     <height>26</height>
+     <x>40</x>
+     <y>155</y>
+     <width>400</width>
+     <height>45</height>
     </rect>
    </property>
    <property name="echoMode">
     <enum>QLineEdit::Password</enum>
    </property>
    <property name="placeholderText">
-    <string>Contraseña</string>
+    <string>🔒 Contraseña</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_error">
    <property name="geometry">
     <rect>
-     <x>35</x>
-     <y>200</y>
-     <width>331</width>
-     <height>20</height>
+     <x>40</x>
+     <y>340</y>
+     <width>400</width>
+     <height>30</height>
     </rect>
    </property>
    <property name="text">
@@ -80,14 +324,14 @@
   <widget class="QLabel" name="label_3">
    <property name="geometry">
     <rect>
-     <x>30</x>
+     <x>40</x>
      <y>20</y>
-     <width>341</width>
-     <height>20</height>
+     <width>400</width>
+     <height>50</height>
     </rect>
    </property>
    <property name="text">
-    <string>Crear un usuario nuevo</string>
+    <string>➕ Crear Usuario Nuevo</string>
    </property>
    <property name="alignment">
     <set>Qt::AlignCenter</set>
@@ -96,14 +340,14 @@
   <widget class="QGroupBox" name="groupBox_usertype">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>170</y>
-     <width>151</width>
-     <height>111</height>
+     <x>125</x>
+     <y>220</y>
+     <width>230</width>
+     <height>110</height>
     </rect>
    </property>
    <property name="title">
-    <string>Tipo de Usuario</string>
+    <string>👥 Tipo de Usuario</string>
    </property>
    <property name="flat">
     <bool>false</bool>
@@ -114,53 +358,53 @@
    <widget class="QRadioButton" name="radioButton_c">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>20</y>
-      <width>121</width>
+      <x>15</x>
+      <y>30</y>
+      <width>200</width>
       <height>24</height>
      </rect>
     </property>
     <property name="text">
-     <string>Consultante</string>
+     <string>📊 Consultante</string>
     </property>
    </widget>
    <widget class="QRadioButton" name="radioButton_h">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>40</y>
-      <width>141</width>
+      <x>15</x>
+      <y>50</y>
+      <width>200</width>
       <height>24</height>
      </rect>
     </property>
     <property name="text">
-     <string>Admin. Nodos</string>
+     <string>🌐 Admin. Nodos</string>
     </property>
    </widget>
    <widget class="QRadioButton" name="radioButton_u">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>60</y>
-      <width>141</width>
+      <x>15</x>
+      <y>70</y>
+      <width>200</width>
       <height>24</height>
      </rect>
     </property>
     <property name="text">
-     <string>Admin. Usuarios</string>
+     <string>👥 Admin. Usuarios</string>
     </property>
    </widget>
    <widget class="QRadioButton" name="radioButton_o">
     <property name="geometry">
      <rect>
-      <x>0</x>
-      <y>80</y>
-      <width>141</width>
+      <x>15</x>
+      <y>90</y>
+      <width>200</width>
       <height>24</height>
      </rect>
     </property>
     <property name="text">
-     <string>Dueño</string>
+     <string>👑 Dueño</string>
     </property>
    </widget>
   </widget>
@@ -174,12 +418,12 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>240</x>
+     <y>405</y>
     </hint>
     <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
+     <x>240</x>
+     <y>224</y>
     </hint>
    </hints>
   </connection>
@@ -190,12 +434,12 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>240</x>
+     <y>405</y>
     </hint>
     <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
+     <x>240</x>
+     <y>224</y>
     </hint>
    </hints>
   </connection>

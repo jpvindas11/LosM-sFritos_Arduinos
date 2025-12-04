@@ -34,8 +34,10 @@ typedef struct pcb {
     struct pcb *next;
     u32 shm_id;
     void *shm_addr;
-    page_table_t pt;
-    tlb_t tlb;
+    /* Per-process simulation context */
+    u32 time_counter;     /* increments each iteration to track time used */
+    u32 saved_state[4];   /* generic storage for last operands/results */
+    u8  func_type;        /* 0=none,1=fib,2=fact,3=square */
 } pcb_t;
 
 typedef struct {
@@ -47,6 +49,7 @@ typedef struct {
 // sysalls
 void sys_create_process(u32 burst);
 void sys_terminate_process(u32 pid);
+void sys_kill_process(u32 pid);
 void sys_yield(void);
 void sys_wait_io(u32 pid);
 void sys_signal_io(u32 pid);

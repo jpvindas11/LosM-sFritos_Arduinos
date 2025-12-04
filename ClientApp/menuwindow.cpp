@@ -15,6 +15,8 @@ MenuWindow::MenuWindow(QWidget *parent) :
 
     sensorUpdateTimer = new QTimer(this);
     connect(sensorUpdateTimer, &QTimer::timeout, this, &MenuWindow::updateSensorDataAutomatically);
+
+    hideMenuWidgets();
 }
 
 MenuWindow::~MenuWindow()
@@ -114,50 +116,93 @@ void MenuWindow::setCurrentUser(userDataQt user) {
 
 void MenuWindow::hideFuctionsForRanks(int rank) {
     // Primero ocultar todos los botones sensibles
-    this->ui->b_usuarios->move(-100, -100);
-    this->ui->b_nodos->move(-100, -100);
-    this->ui->b_consulta->move(-100, -100);
-    this->ui->b_compus->move(-100,-100);
+    this->ui->b_usuarios->setVisible(false);
+    this->ui->b_nodos->setVisible(false);
+    this->ui->b_consulta->setVisible(false);
+    this->ui->b_compus->setVisible(false);
 
     // Luego mostrar solo los permitidos según el rango
     switch(rank) {
-        case UR_USERMANAGER:
-            this->ui->b_usuarios->move(0, 30);
-            break;
-        case UR_HARDWAREMANAGER:
-            this->ui->b_compus->move(0, 30);
-            break;
-        case UR_SOFTWAREMANAGER:
-            this->ui->b_nodos->move(0, 30);
-            break;
-        case UR_CONSULTANT:
-            this->ui->b_consulta->move(0, 30);
-            break;
-        case UR_OWNER:
-            // OWNER tiene acceso a todo
-            this->ui->b_consulta->move(0, 30);
-            this->ui->b_usuarios->move(0, 60);
-            this->ui->b_nodos->move(0, 90);
-            this->ui->b_compus->move(0, 120);
-            break;
-        default:
-            this->ui->b_consulta->move(0, 30);
-            break;
+    case UR_USERMANAGER:
+        this->ui->b_usuarios->setVisible(true);
+        break;
+    case UR_HARDWAREMANAGER:
+        this->ui->b_compus->setVisible(true);
+        break;
+    case UR_SOFTWAREMANAGER:
+        this->ui->b_nodos->setVisible(true);
+        break;
+    case UR_CONSULTANT:
+        this->ui->b_consulta->setVisible(true);
+        break;
+    case UR_OWNER:
+        // OWNER tiene acceso a todo
+        this->ui->b_consulta->setVisible(true);
+        this->ui->b_usuarios->setVisible(true);
+        this->ui->b_nodos->setVisible(true);
+        this->ui->b_compus->setVisible(true);
+        break;
+    default:
+        this->ui->b_consulta->setVisible(true);
+        break;
     }
 }
 
-void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText)
+void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText, int pageIndex)
 {
-    this->hideMenuWidgets();
+    // Detener timer si está activo
+    if (sensorUpdateTimer && sensorUpdateTimer->isActive()) {
+        sensorUpdateTimer->stop();
+    }
 
+    // ⭐ PRIMERO: Ocultar TODOS los widgets
+    hideMenuWidgets();
+
+    // Cambiar título
     ui->main_label->setText(labelText);
 
+    // Habilitar todos los botones del menú
     ui->b_usuarios->setEnabled(true);
     ui->b_consulta->setEnabled(true);
     ui->b_nodos->setEnabled(true);
     ui->b_compus->setEnabled(true);
 
+    // Deshabilitar el botón activo (muestra el glow)
     activeBtn->setEnabled(false);
+
+    // Cambiar a la página correcta del StackedWidget
+    ui->stackedWidget->setCurrentIndex(pageIndex);
+
+    // ⭐ MOSTRAR widgets específicos según la página
+    switch(pageIndex) {
+    case 0: // Usuarios
+        ui->user_list->setVisible(true);
+        ui->user_add->setVisible(true);
+        ui->user_delete->setVisible(true);
+        ui->label_cambios->setVisible(true);
+        ui->user_change_pass->setVisible(true);
+        ui->user_change_rank->setVisible(true);
+        std::cout << "✓ Usuarios widgets shown" << std::endl;
+        break;
+
+    case 1: // Nodos
+        ui->arduino_list->setVisible(true);
+        std::cout << "✓ Nodos widgets shown" << std::endl;
+        break;
+
+    case 2: // Consulta
+        ui->data_list->setVisible(true);
+        std::cout << "✓ Consulta widgets shown" << std::endl;
+        break;
+
+    case 3: // Computadoras
+        ui->pc1_button->setVisible(true);
+        ui->pc2_button->setVisible(true);
+        ui->pc3_button->setVisible(true);
+        ui->pc4_button->setVisible(true);
+        std::cout << "✓ Computadoras widgets shown" << std::endl;
+        break;
+    }
 }
 
 void MenuWindow::askForUsers() {
@@ -349,33 +394,73 @@ void MenuWindow::askForSensorData() {
                               QString("No se pudo conectar al servidor: %1").arg(e.what()));
     }
 }
+
 void MenuWindow::on_b_usuarios_clicked()
 {
-    setActiveMenu(ui->b_usuarios, "Usuarios");
+    setActiveMenu(ui->b_usuarios, "👥 Usuarios", 0);
 
-    this->userMenu.setSelectedUser(nullptr);
-
-    // Scroll list
-    this->ui->user_list->move(280,30);
-
-    // Add button
-    this->ui->user_add->move(170, 30);
-
-    // Delete button
-    this->ui->user_delete->move(170, 70);
-
-    // Change label
-    this->ui->label_cambios->move(170, 110);
-
-    // Password button
-    this->ui->user_change_pass->move(170, 130);
-
-    // Rank button
-    this->ui->user_change_rank->move(170, 170);
+    // Cambiar tema a morado
+    ui->user_list->setStyleSheet(
+        "QListWidget { border: 2px solid #7b2ff7; }"
+        "QListWidget::item:selected { "
+        "  background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
+        "                              stop:0 #7b2ff7, stop:1 #9351ff); "
+        "}"
+        );
 
     askForUsers();
 }
 
+void MenuWindow::on_b_consulta_clicked()
+{
+    setActiveMenu(ui->b_consulta, "📊 Información de Sensores", 2);
+
+    // Cambiar tema a naranja/amarillo
+    ui->data_list->setStyleSheet(
+        "QListWidget { border: 2px solid #ff9500; }"
+        "QListWidget::item:selected { "
+        "  background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
+        "                              stop:0 #ff6600, stop:1 #ffbb00); "
+        "}"
+        );
+
+    askForSensorData();
+    sensorUpdateTimer->start(3000);
+}
+
+void MenuWindow::on_b_nodos_clicked()
+{
+    setActiveMenu(ui->b_nodos, "🌐 Nodos Conectados", 1);
+
+    // Cambiar tema a verde
+    ui->arduino_list->setStyleSheet(
+        "QListWidget { border: 2px solid #39ff14; }"
+        "QListWidget::item:selected { "
+        "  background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
+        "                              stop:0 #00ff00, stop:1 #39ff14); "
+        "}"
+        );
+
+    askForServerStatus();
+}
+
+void MenuWindow::on_b_compus_clicked()
+{
+    setActiveMenu(ui->b_compus, "💻 Computadoras", 3);
+
+    // Cambiar tema de botones PC a rojo/rosa
+    QString pcStyle =
+        "QPushButton { border: 3px solid #ff006e; }"
+        "QPushButton:hover { "
+        "  border: 3px solid #ff1a7a; "
+        "  box-shadow: 0 0 30px rgba(255, 0, 110, 0.8); "
+        "}";
+
+    ui->pc1_button->setStyleSheet(pcStyle);
+    ui->pc2_button->setStyleSheet(pcStyle);
+    ui->pc3_button->setStyleSheet(pcStyle);
+    ui->pc4_button->setStyleSheet(pcStyle);
+}
 
 void MenuWindow::on_b_cerrarSesion_clicked()
 {
@@ -671,25 +756,32 @@ void MenuWindow::on_user_delete_clicked()
 }
 
 void MenuWindow::hideMenuWidgets() {
-    // Reset widgets
-    this->ui->user_list->move(-500,-100);
-    this->ui->user_add->move(-500,-100);
-    this->ui->user_delete->move(-500,-100);
-    this->ui->label_cambios->move(-500,-100);
-    this->ui->user_change_pass->move(-500,-100);
-    this->ui->user_change_rank->move(-500,-100);
-    this->ui->arduino_list->move(-500, -100);
-    this->ui->arduino_turn->move(-500, -100);
-    this->ui->b_consultar->move(-500, -100);
-    this->ui->data_list->move(-1000, -100);
-    this->ui->pc1_button->move(-1000,-100);
-    this->ui->pc2_button->move(-1000,-100);
-    this->ui->pc3_button->move(-1000,-100);
-    this->ui->pc4_button->move(-1000,-100);
+    // Ocultar widgets del menú de usuarios
+    this->ui->user_list->setVisible(false);
+    this->ui->user_add->setVisible(false);
+    this->ui->user_delete->setVisible(false);
+    this->ui->label_cambios->setVisible(false);
+    this->ui->user_change_pass->setVisible(false);
+    this->ui->user_change_rank->setVisible(false);
 
+    // Ocultar widgets del menú de nodos
+    this->ui->arduino_list->setVisible(false);
+
+    // Ocultar widgets del menú de consulta
+    this->ui->data_list->setVisible(false);
+
+    // Ocultar widgets del menú de computadoras
+    this->ui->pc1_button->setVisible(false);
+    this->ui->pc2_button->setVisible(false);
+    this->ui->pc3_button->setVisible(false);
+    this->ui->pc4_button->setVisible(false);
+
+    // Detener timer si está activo
     if (sensorUpdateTimer && sensorUpdateTimer->isActive()) {
         sensorUpdateTimer->stop();
     }
+
+    std::cout << "✓ All menu widgets hidden" << std::endl;
 }
 
 void MenuWindow::on_user_change_pass_clicked()
@@ -836,36 +928,14 @@ void MenuWindow::on_user_change_rank_clicked()
     }
 }
 
-
-void MenuWindow::on_b_nodos_clicked()
-{
-    setActiveMenu(ui->b_nodos, "Nodos Conectados");
-
-    // Mostrar la lista de arduinos/servidores
-    this->ui->arduino_list->move(280, 30);
-
-    // Solicitar estado de servidores
-    askForServerStatus();
-}
-
-
-void MenuWindow::on_b_consulta_clicked()
-{
-    setActiveMenu(ui->b_consulta, "Información de Sensores");
-
-    // Limpiar selección previa
-    this->dataMenu.setSelectedSensor(nullptr);
-
-    // Scroll list
-    this->ui->data_list->move(280, 30);
-
-    // Solicitar datos de sensores
-    askForSensorData();
-
-    sensorUpdateTimer->start(3000);
-}
 void MenuWindow::on_data_list_itemClicked(QListWidgetItem *item)
 {
+    // Verificar si es un header o separador (no seleccionable)
+    if (!(item->flags() & Qt::ItemIsSelectable)) {
+        std::cout << "✗ Clicked on non-selectable item (header/separator)" << std::endl;
+        return;
+    }
+
     this->dataMenu.setSelectedSensor(item);
 
     sensorRecentData* sensor = this->dataMenu.getSelectedSensorInfo(&this->sensorsData);
@@ -898,9 +968,9 @@ void MenuWindow::on_data_list_itemClicked(QListWidgetItem *item)
         sensorType = sensorType.replace(":", "");
 
         QString info = QString(
-                           "═══════════════════════════════════════\n"
-                           "INFORMACIÓN DEL SENSOR\n"
-                           "═══════════════════════════════════════\n\n"
+                           "╔═══════════════════════════════════════╗\n"
+                           "    INFORMACIÓN DEL SENSOR\n"
+                           "╚═══════════════════════════════════════╝\n\n"
                            "Tipo:                %1\n"
                            "IP:                  %2\n"
                            "Valor actual:        %3\n"
@@ -1508,16 +1578,6 @@ void MenuWindow::askForServerStatus() {
         QMessageBox::critical(this, "Error de conexión",
                               QString("No se pudo conectar al servidor: %1").arg(e.what()));
     }
-}
-
-void MenuWindow::on_b_compus_clicked()
-{
-    setActiveMenu(ui->b_compus, "Computadoras");
-
-    this->ui->pc1_button->move(380, 60);
-    this->ui->pc2_button->move(530, 60);
-    this->ui->pc3_button->move(380, 210);
-    this->ui->pc4_button->move(530, 210);
 }
 
 void MenuWindow::on_pc1_button_clicked()

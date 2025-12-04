@@ -6,308 +6,760 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>580</height>
+    <width>1000</width>
+    <height>650</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Frituinos - Sistema de Control</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* ============================================
+   ESTILOS GLOBALES - TEMA NEÓN CYBERPUNK
+   ============================================ */
+
+QMainWindow {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                stop:0 #0a0e27, stop:0.5 #16213e, stop:1 #0a0e27);
+}
+
+QWidget#centralwidget {
+    background: transparent;
+}
+
+/* ============================================
+   SIDEBAR - MENÚ LATERAL
+   ============================================ */
+
+QGroupBox {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 rgba(20, 30, 60, 220), 
+                                stop:1 rgba(26, 35, 62, 200));
+    border: 2px solid #00d4ff;
+    border-radius: 10px;
+    color: #00ffff;
+    font-size: 16px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    padding-top: 20px;
+    margin-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 5px 15px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff006e, stop:1 #00d4ff);
+    border-radius: 8px;
+    color: white;
+}
+
+/* ============================================
+   BOTONES DEL SIDEBAR
+   ============================================ */
+
+QGroupBox QPushButton {
+    background: rgba(26, 35, 62, 150);
+    border: 2px solid #7b2ff7;
+    border-radius: 12px;
+    padding: 10px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    text-align: left;
+    padding-left: 15px;
+}
+
+QGroupBox QPushButton:hover {
+    background: rgba(123, 47, 247, 100);
+    border: 2px solid #9351ff;
+    box-shadow: 0 0 15px rgba(123, 47, 247, 0.6);
+}
+
+QGroupBox QPushButton:pressed {
+    background: rgba(123, 47, 247, 150);
+    padding-top: 12px;
+    padding-bottom: 8px;
+}
+
+QGroupBox QPushButton:disabled {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff006e, stop:1 #00d4ff);
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+    color: white;
+}
+
+/* ============================================
+   BOTÓN CERRAR SESIÓN
+   ============================================ */
+
+QPushButton#b_cerrarSesion {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff006e, stop:1 #ff4444);
+    border: 2px solid #ff006e;
+    border-radius: 15px;
+    padding: 12px;
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+QPushButton#b_cerrarSesion:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #ff1a7a, stop:1 #ff6666);
+    box-shadow: 0 0 20px rgba(255, 0, 110, 0.8);
+}
+
+/* ============================================
+   TÍTULO PRINCIPAL
+   ============================================ */
+
+QLabel#main_label {
+    color: #00ffff;
+    font-size: 28px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: transparent;
+    padding: 10px;
+}
+
+/* ============================================
+   BOTONES DE ACCIÓN (Agregar, Eliminar, etc)
+   ============================================ */
+
+QPushButton#user_add,
+QPushButton#user_delete,
+QPushButton#user_change_pass,
+QPushButton#user_change_rank,
+QPushButton#arduino_turn {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #7b2ff7, stop:1 #00d4ff);
+    border: none;
+    border-radius: 15px;
+    padding: 10px 20px;
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 35px;
+    min-width: 120px;
+}
+
+QPushButton#user_add:hover,
+QPushButton#user_delete:hover,
+QPushButton#user_change_pass:hover,
+QPushButton#user_change_rank:hover,
+QPushButton#arduino_turn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #9351ff, stop:1 #00e5ff);
+    box-shadow: 0 0 20px rgba(123, 47, 247, 0.7);
+}
+
+/* ============================================
+   BOTONES DE COMPUTADORAS (PC 1-4)
+   ============================================ */
+
+QPushButton#pc1_button,
+QPushButton#pc2_button,
+QPushButton#pc3_button,
+QPushButton#pc4_button {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 rgba(26, 35, 62, 200),
+                                stop:1 rgba(15, 20, 40, 200));
+    border: 3px solid #00d4ff;
+    border-radius: 20px;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-width: 140px;
+    min-height: 140px;
+}
+
+QPushButton#pc1_button:hover,
+QPushButton#pc2_button:hover,
+QPushButton#pc3_button:hover,
+QPushButton#pc4_button:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 rgba(123, 47, 247, 150),
+                                stop:1 rgba(0, 212, 255, 150));
+    border: 3px solid #00ffff;
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.8);
+}
+
+QPushButton#pc1_button:pressed,
+QPushButton#pc2_button:pressed,
+QPushButton#pc3_button:pressed,
+QPushButton#pc4_button:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 rgba(123, 47, 247, 200),
+                                stop:1 rgba(0, 212, 255, 200));
+}
+
+/* ============================================
+   LISTAS (QListWidget)
+   ============================================ */
+
+QListWidget {
+    background-color: rgba(26, 35, 62, 180);
+    border: 2px solid #00d4ff;
+    border-radius: 15px;
+    color: white;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    padding: 10px;
+}
+
+QListWidget::item {
+    padding: 8px;
+    border-radius: 8px;
+    margin: 2px;
+}
+
+QListWidget::item:hover {
+    background: rgba(123, 47, 247, 100);
+    border: 1px solid #9351ff;
+}
+
+QListWidget::item:selected {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #7b2ff7, stop:1 #00d4ff);
+    border: 1px solid #00ffff;
+    color: white;
+}
+
+/* ============================================
+   ETIQUETAS
+   ============================================ */
+
+QLabel#label_cambios {
+    color: #ff006e;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: transparent;
+}
+
+/* ============================================
+   MENU BAR Y STATUS BAR
+   ============================================ */
+
+QMenuBar {
+    background-color: #0a0e27;
+    color: #00d4ff;
+    border-bottom: 2px solid #00d4ff;
+    padding: 3px;
+}
+
+QMenuBar::item:selected {
+    background-color: #16213e;
+    border-radius: 5px;
+}
+
+QStatusBar {
+    background-color: #0a0e27;
+    color: #00d4ff;
+    border-top: 2px solid #00d4ff;
+}
+
+/* ============================================
+   SCROLLBARS
+   ============================================ */
+
+QScrollBar:vertical {
+    background: rgba(26, 35, 62, 100);
+    width: 12px;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #7b2ff7, stop:1 #00d4ff);
+    border-radius: 6px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                                stop:0 #9351ff, stop:1 #00e5ff);
+}
+
+QScrollBar:horizontal {
+    background: rgba(26, 35, 62, 100);
+    height: 12px;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #7b2ff7, stop:1 #00d4ff);
+    border-radius: 6px;
+    min-width: 20px;
+}
+
+QScrollBar::add-line, QScrollBar::sub-line {
+    background: none;
+    border: none;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLabel" name="main_label">
-    <property name="geometry">
-     <rect>
-      <x>140</x>
-      <y>0</y>
-      <width>661</width>
-      <height>20</height>
-     </rect>
+   <layout class="QHBoxLayout" name="mainHorizontalLayout">
+    <property name="spacing">
+     <number>15</number>
     </property>
-    <property name="text">
-     <string>Menú Principal</string>
+    <property name="leftMargin">
+     <number>15</number>
     </property>
-    <property name="alignment">
-     <set>Qt::AlignCenter</set>
+    <property name="topMargin">
+     <number>15</number>
     </property>
-   </widget>
-   <widget class="QGroupBox" name="groupBox">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>0</y>
-      <width>141</width>
-      <height>551</height>
-     </rect>
+    <property name="rightMargin">
+     <number>15</number>
     </property>
-    <property name="title">
-     <string>Opciones</string>
+    <property name="bottomMargin">
+     <number>15</number>
     </property>
-    <widget class="QPushButton" name="b_usuarios">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>60</y>
-       <width>141</width>
-       <height>26</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Usuarios</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="b_nodos">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>90</y>
-       <width>141</width>
-       <height>26</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Nodos</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="b_consulta">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>150</y>
-       <width>141</width>
-       <height>26</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Consulta</string>
-     </property>
-    </widget>
-    <widget class="QPushButton" name="b_compus">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>180</y>
-       <width>141</width>
-       <height>26</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>Computadoras</string>
-     </property>
-    </widget>
-   </widget>
-   <widget class="QPushButton" name="b_cerrarSesion">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>520</y>
-      <width>141</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Cerrar Sesión</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="user_add">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>30</y>
-      <width>87</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Agregar</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="user_delete">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>70</y>
-      <width>87</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Eliminar</string>
-    </property>
-   </widget>
-   <widget class="QListWidget" name="user_list">
-    <property name="geometry">
-     <rect>
-      <x>510</x>
-      <y>70</y>
-      <width>501</width>
-      <height>481</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="user_change_pass">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>140</y>
-      <width>87</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Contraseña</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="user_change_rank">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>180</y>
-      <width>87</width>
-      <height>26</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Permisos</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_cambios">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>110</y>
-      <width>81</width>
-      <height>18</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Cambios</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignCenter</set>
-    </property>
-   </widget>
-   <widget class="QListWidget" name="arduino_list">
-    <property name="geometry">
-     <rect>
-      <x>510</x>
-      <y>70</y>
-      <width>501</width>
-      <height>481</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="arduino_turn">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>230</y>
-      <width>87</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Encender</string>
-    </property>
-   </widget>
-   <widget class="QListWidget" name="data_list">
-    <property name="geometry">
-     <rect>
-      <x>510</x>
-      <y>70</y>
-      <width>601</width>
-      <height>481</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="b_consultar">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>270</y>
-      <width>87</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Consultar</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pc1_button">
-    <property name="geometry">
-     <rect>
-      <x>380</x>
-      <y>60</y>
-      <width>101</width>
-      <height>101</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>PC 1</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pc2_button">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>60</y>
-      <width>101</width>
-      <height>101</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>PC 2</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pc3_button">
-    <property name="geometry">
-     <rect>
-      <x>380</x>
-      <y>210</y>
-      <width>101</width>
-      <height>101</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>PC 3</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pc4_button">
-    <property name="geometry">
-     <rect>
-      <x>530</x>
-      <y>210</y>
-      <width>101</width>
-      <height>101</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>PC 4</string>
-    </property>
-   </widget>
-   <zorder>b_consultar</zorder>
-   <zorder>main_label</zorder>
-   <zorder>groupBox</zorder>
-   <zorder>b_cerrarSesion</zorder>
-   <zorder>user_add</zorder>
-   <zorder>user_delete</zorder>
-   <zorder>user_list</zorder>
-   <zorder>user_change_pass</zorder>
-   <zorder>user_change_rank</zorder>
-   <zorder>label_cambios</zorder>
-   <zorder>arduino_list</zorder>
-   <zorder>arduino_turn</zorder>
-   <zorder>data_list</zorder>
-   <zorder>pc1_button</zorder>
-   <zorder>pc2_button</zorder>
-   <zorder>pc3_button</zorder>
-   <zorder>pc4_button</zorder>
+    <item>
+     <layout class="QVBoxLayout" name="sidebarLayout">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="minimumSize">
+         <size>
+          <width>180</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>220</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="title">
+         <string>⚡ OPCIONES</string>
+        </property>
+        <layout class="QVBoxLayout" name="menuButtonsLayout">
+         <property name="spacing">
+          <number>8</number>
+         </property>
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>15</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="b_usuarios">
+           <property name="text">
+            <string>👥 Usuarios</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="b_nodos">
+           <property name="text">
+            <string>🌐 Nodos</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="b_consulta">
+           <property name="text">
+            <string>📊 Consulta</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="b_compus">
+           <property name="text">
+            <string>💻 Computadoras</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="menuSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="b_cerrarSesion">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>45</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>🚪 Cerrar Sesión</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="contentLayout">
+      <property name="spacing">
+       <number>15</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="main_label">
+        <property name="text">
+         <string>Menú Principal</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QStackedWidget" name="stackedWidget">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="page_usuarios">
+         <layout class="QHBoxLayout" name="usuariosLayout">
+          <property name="spacing">
+           <number>15</number>
+          </property>
+          <item>
+           <layout class="QVBoxLayout" name="usuariosActionsLayout">
+            <property name="spacing">
+             <number>10</number>
+            </property>
+            <item>
+             <widget class="QPushButton" name="user_add">
+              <property name="text">
+               <string>➕ Agregar</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="user_delete">
+              <property name="text">
+               <string>🗑️ Eliminar</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_cambios">
+              <property name="text">
+               <string>✏️ Cambios</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="user_change_pass">
+              <property name="text">
+               <string>🔐 Contraseña</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="user_change_rank">
+              <property name="text">
+               <string>⭐ Permisos</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacer_usuarios">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>40</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QListWidget" name="user_list"/>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="page_nodos">
+         <layout class="QVBoxLayout" name="nodosLayout">
+          <item>
+           <widget class="QListWidget" name="arduino_list"/>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="nodosButtonsLayout">
+            <item>
+             <spacer name="horizontalSpacer_nodos">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_nodos2">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="page_consulta">
+         <layout class="QVBoxLayout" name="consultaLayout">
+          <item>
+           <widget class="QListWidget" name="data_list"/>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="page_compus">
+         <layout class="QVBoxLayout" name="compusMainLayout">
+          <item>
+           <spacer name="verticalSpacer_compus_top">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="compusGridLayout">
+            <property name="horizontalSpacing">
+             <number>40</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>40</number>
+            </property>
+            <item row="0" column="0">
+             <layout class="QHBoxLayout" name="pc1_layout">
+              <item>
+               <spacer name="horizontalSpacer_pc1">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pc1_button">
+                <property name="text">
+                 <string>🖥️
+PC 1</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_pc1_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item row="0" column="1">
+             <layout class="QHBoxLayout" name="pc2_layout">
+              <item>
+               <spacer name="horizontalSpacer_pc2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pc2_button">
+                <property name="text">
+                 <string>🖥️
+PC 2</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_pc2_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item row="1" column="0">
+             <layout class="QHBoxLayout" name="pc3_layout">
+              <item>
+               <spacer name="horizontalSpacer_pc3">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pc3_button">
+                <property name="text">
+                 <string>🖥️
+PC 3</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_pc3_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item row="1" column="1">
+             <layout class="QHBoxLayout" name="pc4_layout">
+              <item>
+               <spacer name="horizontalSpacer_pc4">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pc4_button">
+                <property name="text">
+                 <string>🖥️
+PC 4</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_pc4_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_compus_bottom">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>1000</width>
      <height>22</height>
     </rect>
    </property>

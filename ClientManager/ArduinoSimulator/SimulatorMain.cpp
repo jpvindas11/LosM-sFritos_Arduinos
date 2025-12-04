@@ -1,81 +1,71 @@
 #include "ArduinoSimulator.hpp"
 #include <iostream>
 #include <vector>
-#include <csignal>
+#include <signal.h>
 
-// Vector global para manejar los simuladores
+// Variable global para manejar señales
 std::vector<ArduinoSimulator*> simulators;
+bool keepRunning = true;
 
-// Manejador de señales para detener los simuladores limpiamente
 void signalHandler(int signum) {
-    std::cout << "\n\n=== Deteniendo simuladores... ===" << std::endl;
+    std::cout << "\n[MAIN] Señal de interrupción recibida. Deteniendo simuladores..." << std::endl;
+    keepRunning = false;
+    
     for (auto* sim : simulators) {
         sim->stop();
     }
-    exit(signum);
 }
 
 int main() {
     // Configurar manejador de señales
     signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
     
-    std::cout << "=== Simulador de Sensores Arduino ESP32 ===" << std::endl;
-    std::cout << "===========================================\n" << std::endl;
+    // Configuración del servidor (usa 0.0.0.0 o la IP del proxy)
+    std::string serverIP = "0.0.0.0";  // Cambia esto si necesitas una IP específica
+    int serverPort = PORT_PROXY_LISTENER;  // Puerto donde escucha el proxy (PORT_PROXY_LISTENER)
     
-    // Configuración del servidor (cambiar según tu configuración)
-    std::string serverIP = "127.0.0.1";  // Cambia esto a la IP de tu MasterServer
-    int serverPort = 13000;  // Puerto del Arduino en MasterServer (PORT_MASTER_ARDUINO)
+    std::cout << "=== Simulador de Arduinos ===" << std::endl;
+    std::cout << "Conectando a: " << serverIP << ":" << serverPort << std::endl;
+    std::cout << std::endl;
     
-    std::cout << "Servidor: " << serverIP << ":" << serverPort << "\n" << std::endl;
+    // Crear simuladores para cada tipo de sensor
+    // Los intervalos coinciden con los del Arduino real:
+    // - Distancia: 30000ms (30 segundos)
+    // - Humedad: 32000ms (32 segundos)
+    // - UV: 35000ms (35 segundos)
     
-    // Crear simuladores para los 3 tipos de sensores
-    // Simulador de distancia - cada 30 segundos
-    auto* distSim = new ArduinoSimulator(serverIP, serverPort, "DIS", 1, 15000);
-    simulators.push_back(distSim);
+    ArduinoSimulator distanceSim(serverIP, serverPort, "DIS", 1, 30000);
+    ArduinoSimulator humiditySim(serverIP, serverPort, "HUM", 2, 32000);
+    ArduinoSimulator uvSim(serverIP, serverPort, "UV", 3, 35000);
     
-    // Simulador de humedad - cada 32 segundos
-    auto* humSim = new ArduinoSimulator(serverIP, serverPort, "HUM", 1, 15500);
-    simulators.push_back(humSim);
-    
-    // Simulador de UV - cada 35 segundos
-    auto* uvSim = new ArduinoSimulator(serverIP, serverPort, "UV", 1, 17000);
-    simulators.push_back(uvSim);
-    
-    std::cout << "=== Iniciando simuladores ===" << std::endl;
-    std::cout << "Presiona Ctrl+C para detener\n" << std::endl;
+    // Guardar referencias para el signal handler
+    simulators.push_back(&distanceSim);
+    simulators.push_back(&humiditySim);
+    simulators.push_back(&uvSim);
     
     // Iniciar todos los simuladores
-    for (auto* sim : simulators) {
-        sim->start();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Delay entre inicios
-    }
+    std::cout << "Iniciando simuladores..." << std::endl;
+    distanceSim.start();
+    humiditySim.start();
+    uvSim.start();
     
-    std::cout << "\n=== Todos los simuladores están activos ===" << std::endl;
-    std::cout << "Envío de datos en progreso...\n" << std::endl;
+    std::cout << "\nSimuladores activos. Presiona Ctrl+C para detener." << std::endl;
+    std::cout << "================================================" << std::endl;
+    std::cout << std::endl;
     
     // Mantener el programa corriendo
-    while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        
-        // Verificar si todos los simuladores siguen corriendo
-        bool allRunning = true;
-        for (auto* sim : simulators) {
-            if (!sim->isRunning()) {
-                allRunning = false;
-                break;
-            }
-        }
-        
-        if (!allRunning) {
-            std::cout << "Algún simulador se detuvo inesperadamente" << std::endl;
-            break;
-        }
+    while (keepRunning) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     
-    // Limpiar memoria
-    for (auto* sim : simulators) {
-        delete sim;
-    }
+    // Detener simuladores (el signal handler ya los detuvo, pero por si acaso)
+    std::cout << "\n[MAIN] Limpiando recursos..." << std::endl;
+    distanceSim.stop();
+    humiditySim.stop();
+    uvSim.stop();
+    
+    std::cout << "[MAIN] Programa finalizado correctamente." << std::endl;
     
     return 0;
 }
