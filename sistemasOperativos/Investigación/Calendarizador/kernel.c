@@ -67,7 +67,6 @@ static void vga_putc(char c) {
 
 static void delay(volatile unsigned long count) {
     while (count--) {
-        u32 m = 2300000/23400000;
         __asm__ volatile("nop");
     }
 }
@@ -146,6 +145,11 @@ static pcb_t* alloc_pcb(void) {
             PROC_TABLE[i].remaining = 0;
             PROC_TABLE[i].func_type = 0;
             for (u32 j = 0; j < 4; j++) PROC_TABLE[i].saved_state[j] = 0;
+            
+            // Inicializar memoria virtual del proceso
+            pt_init(&PROC_TABLE[i].pt);
+            tlb_init(&PROC_TABLE[i].tlb);
+            
             return &PROC_TABLE[i];
         }
     }
@@ -645,9 +649,136 @@ static void show_menu(void) {
     kputs("2. Crear nuevo proceso");
     kputs("3. Matar un proceso");
     kputs("4. Ejecutar procesos (Scheduler)");
-    kputs("5. Salir");
+    kputs("5. Probar memoria virtual");
+    kputs("6. Salir");
     kputs("");
-    kputs("Seleccione una opcion (1-5):");
+    kputs("Seleccione una opcion (1-6):");
+}
+
+static void test_vm_processes(void) {
+    kputs("=== PRUEBAS DE MEMORIA VIRTUAL POR PROCESO ===");
+    
+    // Buscar procesos disponibles dinámicamente
+    pcb_t *first_process = NULL;
+    pcb_t *second_process = NULL;
+    u32 first_pid = 0;
+    u32 second_pid = 0;
+    
+    // Buscar el primer proceso disponible
+    for (u32 i = 0; i < MAX_PROCS; i++) {
+        if (PROC_USED[i]) {
+            if (!first_process) {
+                first_process = &PROC_TABLE[i];
+                first_pid = first_process->pid;
+            } else if (!second_process) {
+                second_process = &PROC_TABLE[i];
+                second_pid = second_process->pid;
+                break;
+            }
+        }
+    }
+    
+    if (!first_process) {
+        kputs("Error: Se necesita al menos un proceso");
+        kputs("Cree procesos primero y luego ejecute esta prueba");
+        wait_enter();
+        return;
+    }
+    
+    kputs("Usando proceso PID:");
+    kputu(first_pid);
+    if (second_process) {
+        kputs("Y proceso PID:");
+        kputu(second_pid);
+    }
+    kputs("");
+    
+    kputs("=== Test 1: Asignación básica de memoria ===");
+    // Asignar páginas al primer proceso
+    sys_map_page(first_pid, 0, 0, PTE_READ | PTE_WRITE | PTE_USER);
+    sys_map_page(first_pid, 1, 1, PTE_READ | PTE_WRITE);
+    sys_map_page(first_pid, 5, 2, PTE_READ | PTE_EXEC);
+    wait_enter();
+    
+    kputs("=== Test 2: Mostrar mapa de memoria ===");
+    sys_show_process_memory_map(first_pid);
+    wait_enter();
+    
+    kputs("=== Test 3: Operaciones de lectura/escritura ===");
+    // Escribir en memoria del primer proceso
+    sys_write_process_memory(first_pid, 0x100, 42);  // Página 0, offset 0x100
+    sys_write_process_memory(first_pid, 0x1200, 87); // Página 1, offset 0x200
+    
+    // Leer de memoria del primer proceso
+    u8 val1, val2;
+    sys_read_process_memory(first_pid, 0x100, &val1);
+    sys_read_process_memory(first_pid, 0x1200, &val2);
+    wait_enter();
+    
+    kputs("=== Test 4: Asignación múltiple de páginas ===");
+    // Asignar múltiples páginas consecutivas
+    sys_allocate_process_pages(first_pid, 10, 3, PTE_READ | PTE_WRITE | PTE_USER);
+    wait_enter();
+    
+    if (second_process) {
+        kputs("=== Test 5: Memoria virtual separada entre procesos ===");
+        // Asignar páginas al segundo proceso (espacio separado)
+        sys_map_page(second_pid, 0, 3, PTE_READ | PTE_WRITE | PTE_USER);
+        sys_map_page(second_pid, 1, 4, PTE_READ | PTE_WRITE);
+        
+        // Escribir diferentes valores en la misma dirección virtual
+        sys_write_process_memory(first_pid, 0x100, 111);   // Primer proceso
+        sys_write_process_memory(second_pid, 0x100, 222);  // Segundo proceso
+        
+        // Leer valores para verificar aislamiento
+        u8 proc1_val, proc2_val;
+        sys_read_process_memory(first_pid, 0x100, &proc1_val);
+        sys_read_process_memory(second_pid, 0x100, &proc2_val);
+        
+        kputs("Verificación de aislamiento:");
+        kputs("  Proceso ");
+        kputu(first_pid);
+        kputs(" en 0x100:");
+        kputu(proc1_val);
+        kputs("  Proceso ");
+        kputu(second_pid);
+        kputs(" en 0x100:");
+        kputu(proc2_val);
+        
+        if (proc1_val != proc2_val) {
+            kputs("✓ Aislamiento de memoria entre procesos CORRECTO");
+        } else {
+            kputs("✗ Error en aislamiento de memoria");
+        }
+        wait_enter();
+        
+        kputs("=== Mapas de memoria de ambos procesos ===");
+        sys_show_process_memory_map(first_pid);
+        kputs("");
+        sys_show_process_memory_map(second_pid);
+        wait_enter();
+    } else {
+        kputs("=== Solo hay un proceso disponible ===");
+        kputs("Para pruebas completas, cree un segundo proceso");
+        wait_enter();
+    }
+    
+    kputs("=== Test 6: Gestión de TLB por proceso ===");
+    sys_flush_process_tlb(first_pid);
+    if (second_process) sys_flush_process_tlb(second_pid);
+    wait_enter();
+    
+    kputs("=== Test 7: Desmapeo de páginas ===");
+    sys_unmap_page(first_pid, 5);  // Desmapear página 5 del primer proceso
+    
+    // Intentar acceder a página desmapeada (debería fallar)
+    u8 invalid_val;
+    kputs("Intentando leer página desmapeada:");
+    sys_read_process_memory(first_pid, 0x5100, &invalid_val);  // Página 5
+    wait_enter();
+    
+    kputs("=== Pruebas de Memoria Virtual Completadas ===");
+    wait_enter();
 }
 
 static void menu_create_process(void) {
@@ -705,79 +836,6 @@ static void menu_kill_process(void) {
     kputs("...");
     sys_kill_process(pid);
     wait_enter();
-}
-
-static void test_vm(void) {
-    kputs("=== VM Test ===");
-    pcb_t *p = find_pcb(1);
-    if (!p) {
-        kputs("Error: PID 1 no encontrado");
-        return;
-    }
-    
-    // Mapea pagina virtual 0 a frame 0
-    pt_set(&p->pt, 0, 0, PTE_VALID | PTE_READ | PTE_WRITE | PTE_USER);
-    kputs("Test 1: Mapped VPN 0 -> Frame 0");
-    
-    // Escribir un valor
-    u32 vaddr1 = 0x100;
-    u8 value_write = 25;
-    u8 value_read = 0;
-    
-    int write_result = vm_write_byte(&p->pt, &p->tlb, vaddr1, value_write);
-    kputs("Test 2: Write 25 at 0x100:");
-    if (write_result == 0) {
-        kputs("  SUCCESS");
-        
-    } else {
-        kputs("  FAILED");
-    }
-    
-    // Leer un valor
-    int read_result = vm_read_byte(&p->pt, &p->tlb, vaddr1, &value_read);
-    kputs("Test 3: Read from 0x100:");
-    if (read_result == 0) {
-        kputs("  Read SUCCESS");
-    } else {
-        kputs("  Read FAILED");
-    }
-    kputs("  Value read: ");
-    kputu(value_read);
-    
-    // Verifica que el valor leído sea el correcto
-    if (value_read == value_write) {
-        kputs("Test 4: VERIFICATION OK - valores coinciden!");
-    } else {
-        kputs("Test 4: VERIFICATION FAILED - valores NO coinciden");
-        kputs("  Expected: ");
-        kputu(value_write);
-        kputs("  Got: ");
-        kputu(value_read);
-    }
-    
-    // Mapea pag 1 y prueba otro valor
-    pt_set(&p->pt, 1, 1, PTE_VALID | PTE_READ | PTE_WRITE | PTE_USER);
-    kputs("Test 5: Mapped VPN 1 -> Frame 1");
-    
-    u32 vaddr2 = (1 << OFFSET_BITS) + 50;
-    u8 value2_write = 100;
-    u8 value2_read = 0;
-    
-    vm_write_byte(&p->pt, &p->tlb, vaddr2, value2_write);
-    kputs("Test 6: Write 100 at different page (OFF=50)");
-    
-    vm_read_byte(&p->pt, &p->tlb, vaddr2, &value2_read);
-    kputs("Test 7: Read from page 1:");
-    kputs("  Value read: ");
-    kputu(value2_read);
-    
-    if (value2_read == value2_write) {
-        kputs("Test 8: VERIFICATION OK - second value matches!");
-    } else {
-        kputs("Test 8: VERIFICATION FAILED - second value mismatch");
-    }
-    
-    kputs("=== VM Test Complete ===");
 }
 
 void kmain(void) {
@@ -888,6 +946,12 @@ void kmain(void) {
                 break;
                 
             case 5:
+                /* Probar memoria virtual */
+                vga_clear();
+                test_vm_processes();
+                break;
+                
+            case 6:
                 /* Salir */
                 kputs("Finalizando Kernel...");
                 running = 0;
@@ -903,4 +967,216 @@ void kmain(void) {
     // Liberar recursos al finalizar
     sys_shm_detach(1);
     sys_shm_detach(2);
+}
+
+// FUNCIONES DE MEMORIA VIRTUAL POR PROCESO
+
+// Mapear una página virtual a un marco físico para un proceso específico
+int sys_map_page(u32 pid, u32 virtual_page, u32 physical_frame, u8 permissions) {
+    pcb_t *process = find_pcb(pid);
+    if (!process) {
+        kputs("Error: Proceso no encontrado");
+        return -1;
+    }
+    
+    if (virtual_page >= NUM_PAGES || physical_frame >= NUM_FRAMES) {
+        kputs("Error: Página o marco fuera de límites");
+        return -2;
+    }
+    
+    int result = pt_set(&process->pt, virtual_page, physical_frame, permissions | PTE_VALID);
+    if (result == 0) {
+        kputs("Mapeo exitoso - PID:");
+        kputu(pid);
+        kputs(" página:");
+        kputu(virtual_page);
+        kputs(" -> marco:");
+        kputu(physical_frame);
+    }
+    return result;
+}
+
+// Desmapear una página virtual de un proceso
+int sys_unmap_page(u32 pid, u32 virtual_page) {
+    pcb_t *process = find_pcb(pid);
+    if (!process) {
+        kputs("Error: Proceso no encontrado");
+        return -1;
+    }
+    
+    if (virtual_page >= NUM_PAGES) {
+        kputs("Error: Página fuera de límites");
+        return -2;
+    }
+    
+    int result = pt_set(&process->pt, virtual_page, FRAME_INVALID, 0);
+    if (result == 0) {
+        kputs("Desmapeo exitoso - PID:");
+        kputu(pid);
+        kputs(" página:");
+        kputu(virtual_page);
+    }
+    return result;
+}
+
+// Leer de la memoria virtual de un proceso específico
+int sys_read_process_memory(u32 pid, u32 virtual_addr, u8 *value) {
+    pcb_t *process = find_pcb(pid);
+    if (!process || !value) {
+        kputs("Error: Proceso no encontrado o parámetro inválido");
+        return -1;
+    }
+    
+    int result = vm_read_byte(&process->pt, &process->tlb, virtual_addr, value);
+    if (result == 0) {
+        kputs("Lectura exitosa - PID:");
+        kputu(pid);
+        kputs(" addr:");
+        kputu(virtual_addr);
+        kputs(" valor:");
+        kputu(*value);
+    } else {
+        kputs("Error de lectura - PID:");
+        kputu(pid);
+        kputs(" addr:");
+        kputu(virtual_addr);
+    }
+    return result;
+}
+
+// Escribir en la memoria virtual de un proceso específico
+int sys_write_process_memory(u32 pid, u32 virtual_addr, u8 value) {
+    pcb_t *process = find_pcb(pid);
+    if (!process) {
+        kputs("Error: Proceso no encontrado");
+        return -1;
+    }
+    
+    int result = vm_write_byte(&process->pt, &process->tlb, virtual_addr, value);
+    if (result == 0) {
+        kputs("Escritura exitosa - PID:");
+        kputu(pid);
+        kputs(" addr:");
+        kputu(virtual_addr);
+        kputs(" valor:");
+        kputu(value);
+    } else {
+        kputs("Error de escritura - PID:");
+        kputu(pid);
+        kputs(" addr:");
+        kputu(virtual_addr);
+    }
+    return result;
+}
+
+// Mostrar el mapa de memoria de un proceso
+void sys_show_process_memory_map(u32 pid) {
+    pcb_t *process = find_pcb(pid);
+    if (!process) {
+        kputs("Error: Proceso no encontrado");
+        return;
+    }
+    
+    kputs("=== Mapa de Memoria - PID:");
+    kputu(pid);
+    kputs(" ===");
+    
+    int mapped_pages = 0;
+    for (u32 page = 0; page < NUM_PAGES && mapped_pages < 10; page++) {
+        if (pt_is_valid(&process->pt, page)) {
+            u8 frame, flags;
+            pt_get(&process->pt, page, &frame, &flags);
+            
+            kputs("Página ");
+            kputu(page);
+            kputs(" -> Marco ");
+            kputu(frame);
+            kputs(" Permisos:");
+            if (flags & PTE_READ) kputs(" R");
+            if (flags & PTE_WRITE) kputs(" W");
+            if (flags & PTE_EXEC) kputs(" X");
+            if (flags & PTE_USER) kputs(" U");
+            if (flags & PTE_SHARED) kputs(" S");
+            kputs("");
+            
+            mapped_pages++;
+        }
+    }
+    
+    if (mapped_pages == 0) {
+        kputs("No hay páginas mapeadas");
+    } else if (mapped_pages >= 10) {
+        kputs("... (mostrando solo las primeras 10 páginas)");
+    }
+    
+    kputs("=== Fin Mapa de Memoria ===");
+}
+
+// Asignar múltiples páginas consecutivas a un proceso
+int sys_allocate_process_pages(u32 pid, u32 start_page, u32 num_pages, u8 permissions) {
+    pcb_t *process = find_pcb(pid);
+    if (!process) {
+        kputs("Error: Proceso no encontrado");
+        return -1;
+    }
+    
+    if (start_page + num_pages > NUM_PAGES) {
+        kputs("Error: Rango de páginas fuera de límites");
+        return -2;
+    }
+    
+    // Buscar marcos físicos disponibles de manera más inteligente
+    static u8 frame_allocation_counter = 0;
+    int allocated = 0;
+    
+    kputs("Asignando páginas para PID:");
+    kputu(pid);
+    
+    for (u32 i = 0; i < num_pages; i++) {
+        u32 page = start_page + i;
+        
+        // Verificar que la página no esté ya mapeada
+        if (pt_is_valid(&process->pt, page)) {
+            kputs("  Página ");
+            kputu(page);
+            kputs(" ya está mapeada, omitiendo");
+            continue;
+        }
+        
+        // Buscar un marco disponible
+        u8 frame = frame_allocation_counter % NUM_FRAMES;
+        frame_allocation_counter++;
+        
+        int result = pt_set(&process->pt, page, frame, permissions | PTE_VALID);
+        if (result == 0) {
+            kputs("  Página ");
+            kputu(page);
+            kputs(" -> Marco ");
+            kputu(frame);
+            allocated++;
+        } else {
+            kputs("  Error asignando página ");
+            kputu(page);
+        }
+    }
+    
+    kputs("Páginas asignadas: ");
+    kputu(allocated);
+    kputs(" de ");
+    kputu(num_pages);
+    
+    return allocated > 0 ? 0 : -3;
+}
+
+// Limpiar el TLB de un proceso específico
+void sys_flush_process_tlb(u32 pid) {
+    pcb_t *process = find_pcb(pid);
+    if (!process) {
+        kputs("Error: Proceso no encontrado");
+        return;
+    }
+    
+    tlb_flush(&process->tlb);
+    kputs("TLB limpiado para PID: ");
+    kputu(pid);
 }

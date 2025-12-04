@@ -6,7 +6,7 @@ CFLAGS = -m32 -fno-builtin -fno-stack-protector -Wall -Wextra
 ASFLAGS = --32
 LDFLAGS = -m elf_i386 -T linker.ld
 
-OBJS = boot.o kernel.o
+OBJS = boot.o kernel.o vm.o
 KERNEL_ELF = kernel.elf
 KERNEL_ISO = kernel.iso
 ISO_DIR = iso
@@ -22,6 +22,11 @@ kernel.o: kernel.c kernel.h
 	@echo "▶ Compilando kernel: kernel.c"
 	@$(CC) $(CFLAGS) -c kernel.c -o kernel.o
 	@echo "✓ Kernel compilado"
+
+vm.o: vm.c vm.h
+	@echo "▶ Compilando memoria virtual: vm.c"
+	@$(CC) $(CFLAGS) -c vm.c -o vm.o
+	@echo "✓ Memoria virtual compilada"
 
 $(KERNEL_ELF): $(OBJS)
 	@echo "▶ Enlazando objetos..."
@@ -58,7 +63,7 @@ compile: $(KERNEL_ISO)
 	@echo "╚════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "Archivos generados:"
-	@ls -lh boot.o kernel.o $(KERNEL_ELF) $(KERNEL_ISO) 2>/dev/null | awk '{printf "  %-30s %8s\n", $$9, $$5}'
+	@ls -lh boot.o kernel.o vm.o $(KERNEL_ELF) $(KERNEL_ISO) 2>/dev/null | awk '{printf "  %-30s %8s\n", $$9, $$5}'
 	@echo ""
 	@echo "Para ejecutar: make run"
 	@echo ""
@@ -82,7 +87,7 @@ debug:
 	@echo "LD:     $(LD) $(LDFLAGS)"
 	@echo "QEMU:   qemu-system-i386"
 	@echo "═══════════════════════════════════════════════════════════"
-	@file boot.o kernel.o $(KERNEL_ELF) 2>/dev/null | sed 's/^/  /'
+	@file boot.o kernel.o vm.o $(KERNEL_ELF) 2>/dev/null | sed 's/^/  /'
 	@echo "═══════════════════════════════════════════════════════════"
 
 help:

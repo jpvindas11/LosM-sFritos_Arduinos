@@ -38,6 +38,9 @@ typedef struct pcb {
     u32 time_counter;     /* increments each iteration to track time used */
     u32 saved_state[4];   /* generic storage for last operands/results */
     u8  func_type;        /* 0=none,1=fib,2=fact,3=square */
+    /* Memoria Virtual por proceso */
+    page_table_t pt;      /* Tabla de páginas del proceso */
+    tlb_t tlb;            /* TLB del proceso */
 } pcb_t;
 
 typedef struct {
@@ -73,5 +76,14 @@ void kmain(void);
 
 void kputs(const char *s);
 void kputu(u32 v);
+
+// Funciones de memoria virtual por proceso
+int sys_map_page(u32 pid, u32 virtual_page, u32 physical_frame, u8 permissions);
+int sys_unmap_page(u32 pid, u32 virtual_page);
+int sys_read_process_memory(u32 pid, u32 virtual_addr, u8 *value);
+int sys_write_process_memory(u32 pid, u32 virtual_addr, u8 value);
+void sys_show_process_memory_map(u32 pid);
+int sys_allocate_process_pages(u32 pid, u32 start_page, u32 num_pages, u8 permissions);
+void sys_flush_process_tlb(u32 pid);
 
 #endif // KERNEL_H
