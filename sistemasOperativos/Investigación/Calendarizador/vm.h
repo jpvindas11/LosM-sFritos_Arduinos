@@ -44,8 +44,6 @@ typedef enum {
     CLOCK = 2
 } replacement_policy_t;
 
-static unsigned int access_counter = 0;
-
 // Metadatos (se pueden agregar mas de requerirse)
 typedef struct {
     unsigned int access_time;

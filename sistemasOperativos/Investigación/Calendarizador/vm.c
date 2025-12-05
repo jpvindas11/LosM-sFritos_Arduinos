@@ -3,12 +3,13 @@
 
 static page_stats_t frame_stats[NUM_FRAMES];
 static unsigned int fifo_counter[NUM_FRAMES];
+static unsigned int access_counter = 0;
 
 static unsigned char phys_mem[NUM_FRAMES * 4096];
 
 void pt_init(page_table_t *pt) {
     if (!pt) return;
-    for (unsigned int i = 0; i < PAGE_NUMBER; i++) {
+    for (unsigned int i = 0; i < NUM_PAGES; i++) {
         pt->entries[i].frame = FRAME_INVALID;
         pt->entries[i].flags = 0;
     }
@@ -16,7 +17,7 @@ void pt_init(page_table_t *pt) {
 
 int pt_set(page_table_t *pt, unsigned int pageNum, unsigned char frame, unsigned char valid) {
     if (!pt) return -1;
-    if (pageNum >= PAGE_NUMBER) return -1;
+    if (pageNum >= NUM_PAGES) return -1;
     if ((valid & PTE_VALID) && frame >= NUM_FRAMES) return -1;
     pt->entries[pageNum].frame = frame;
     pt->entries[pageNum].flags = valid;
@@ -25,7 +26,7 @@ int pt_set(page_table_t *pt, unsigned int pageNum, unsigned char frame, unsigned
 
 int pt_get(page_table_t *pt, unsigned int pageNum, unsigned char *out_frame, unsigned char *out_valid) {
     if (!pt) return -1;
-    if (pageNum >= PAGE_NUMBER) return -1;
+    if (pageNum >= NUM_PAGES) return -1;
     if (out_frame) *out_frame = pt->entries[pageNum].frame;
     if (out_valid) *out_valid = pt->entries[pageNum].flags;
     return 0;
@@ -33,7 +34,7 @@ int pt_get(page_table_t *pt, unsigned int pageNum, unsigned char *out_frame, uns
 
 int pt_is_valid(page_table_t *pt, unsigned int pageNum) {
     if (!pt) return 0;
-    if (pageNum >= PAGE_NUMBER) return 0;
+    if (pageNum >= NUM_PAGES) return 0;
     return (pt->entries[pageNum].flags & PTE_VALID) ? 1 : 0;
 }
 
@@ -74,7 +75,7 @@ unsigned char select_frame_to_replace(replacement_policy_t policy, const page_ta
 }
 
 void pt_record_access(page_table_t *pt, unsigned int pageNum) {
-    if (!pt || pageNum >= PAGE_NUMBER) return;
+    if (!pt || pageNum >= NUM_PAGES) return;
     unsigned char frame = pt->entries[pageNum].frame;
     if (frame != FRAME_INVALID && frame < NUM_FRAMES) {
         frame_stats[frame].access_time = ++access_counter;
@@ -84,7 +85,7 @@ void pt_record_access(page_table_t *pt, unsigned int pageNum) {
 
 int pt_check_permissions(page_table_t *pt, unsigned int pageNum, unsigned char req_mask) {
     if (!pt) return 0;
-    if (pageNum >= PAGE_NUMBER) return 0;
+    if (pageNum >= NUM_PAGES) return 0;
     unsigned char flags = pt->entries[pageNum].flags;
     if (!(flags & PTE_VALID)) return 0;
 
