@@ -8,7 +8,6 @@
 #include <atomic>
 
 #include "genServer/StorageServer.hpp"
-#include "../Util/RaidManager.hpp"
 
 #define SENSOR_FORGET_TIME 120 // 2 minutos
 
@@ -17,8 +16,6 @@ class SensorServer : public StorageServer {
   std::atomic<bool> running;
   std::mutex storageMutex; // Para acceso thread-safe al filesystem
   std::vector<sensorRecentData> recentData;
-
-  RaidManager* raidManager;
 
   void processClientInThread(int clientSocket);
 
@@ -33,27 +30,10 @@ class SensorServer : public StorageServer {
   void closeListeningSocket();
   std::string getFromBuffer(char* buffer, uint32_t size);
 
-
-    uint8_t getRaidMode() const {
-        if (raidManager) {
-            return raidManager->getRaidModeForDiscovery();
-        }
-        return 0;  // STANDALONE
-    }
-
-    void stopRaidManager() {
-        if (raidManager) {
-            std::cout << "[RAID] Deteniendo RaidManager..." << std::endl;
-            raidManager->stop();
-        }
-    }
  private:
   int startServer(std::string serverIP, int listeningPort);
   SensorServer();
   ~SensorServer() {
-    if (raidManager) {
-        delete raidManager;
-    }
   }
   /// Envía la cantidad de archivos en el sistema
   void sendFileNumber(int clientSocket, GenNumReq& messageContent);

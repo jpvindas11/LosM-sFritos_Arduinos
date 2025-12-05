@@ -45,10 +45,7 @@ int StorageServer::listenForConnections(std::string ip, int port,
       name,
       ip,
       disc_port,
-      type,
-      [this]() -> uint8_t {
-          return this->getRaidMode();
-      }
+      type
   );
   
   if (discoveryPoint->startThread() != EXIT_SUCCESS) {

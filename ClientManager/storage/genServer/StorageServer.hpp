@@ -39,10 +39,6 @@ class StorageServer {
     (void)client;
   }
 
-  virtual uint8_t getRaidMode() const {
-      return 0;  // Por defecto STANDALONE
-  }
-
   void listenForever(std::string ip, int port, std::string name, int disc_port, ServerType type);
 };
 

@@ -16,7 +16,6 @@ private:
     int udpPort;
     ServerType serverType;
     std::atomic<bool> running;
-    std::function<uint8_t()> getRaidModeCallback;
 
 public:
     /**
@@ -29,8 +28,7 @@ public:
     ServerDiscoveryPoint(const std::string& name, 
                        const std::string& ip, 
                        int udp_port,
-                       ServerType type,
-                       std::function<uint8_t()> raidModeGetter = nullptr)
+                       ServerType type)
         : serverName(name), 
           serverIP(ip), 
           udpPort(udp_port),
@@ -134,12 +132,6 @@ private:
         }
 
         resData.serverType = static_cast<uint8_t>(serverType);
-
-        if (getRaidModeCallback) {
-            resData.raidMode = getRaidModeCallback();
-        } else {
-            resData.raidMode = 0;
-        }
         
         response.content = resData;
         

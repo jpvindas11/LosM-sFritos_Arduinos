@@ -172,44 +172,10 @@ void MasterServer::handleUserConnection(int client, Socket* socket) {
     case MessageType::DELETE_SENSOR:
     case MessageType::MODIFY_SENSOR: 
     {
-        ServerDiscover discoverer(DISC_STORAGE);
-        auto storages = discoverer.discoverServers(2);
-        
-        std::string primaryIP;
-        std::string backupIP;
-        
-        // Clasificar servidores por rol
-        for (const auto& storage : storages) {
-            std::cout << "[ROUTING] Found storage: " << storage.name 
-                      << " at " << storage.ip 
-                      << " (RAID: " << (storage.raidMode == 1 ? "PRIMARY" : 
-                                        storage.raidMode == 2 ? "BACKUP" : "STANDALONE") 
-                      << ")" << std::endl;
-            
-            if (storage.raidMode == 1) {  // PRIMARY
-                primaryIP = storage.ip;
-            } else if (storage.raidMode == 2) {  // BACKUP
-                backupIP = storage.ip;
-            } else if (storage.raidMode == 0 && primaryIP.empty()) {  // STANDALONE
-                primaryIP = storage.ip;
-            }
-        }
-        
-        // PRIORIDAD: PRIMARY > BACKUP > ERROR
-        if (!primaryIP.empty() && checkServerConnection(primaryIP, PORT_MASTER_STORAGE)) {
-            targetIP = primaryIP;
-            targetPort = PORT_MASTER_STORAGE;
-            std::cout << "[ROUTING] Using PRIMARY: " << targetIP << std::endl;
-        } else if (!backupIP.empty() && checkServerConnection(backupIP, PORT_MASTER_STORAGE)) {
-            targetIP = backupIP;
-            targetPort = PORT_MASTER_STORAGE;
-            std::cout << "[ROUTING] PRIMARY down, using BACKUP: " << targetIP << std::endl;
-        } else {
-            targetIP = "NOSERVER";
-            std::cout << "[ROUTING] No storage available!" << std::endl;
-        }
-        
-        break;
+      ServerDiscover discoverer(DISC_STORAGE);
+      targetIP = discoverer.lookForServer();
+      targetPort = PORT_MASTER_STORAGE;
+      break;
     }
     
     case MessageType::LOG_USER_REQUEST: {
@@ -288,8 +254,6 @@ void MasterServer::handleArduinoConnection(int client, Socket* socket) {
 }
 
 void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
-    std::cout << "\n========== SERVER STATUS REQUEST ==========" << std::endl;
-    std::cout << "Realizando broadcast para descubrir TODOS los servidores..." << std::endl;
     
     genMessage response;
     response.MID = static_cast<uint8_t>(MessageType::SERVER_STATUS_RES);
@@ -297,50 +261,45 @@ void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
     serverStatusRes statusRes;
     statusRes.id_token = 0;
     
-    // ⭐ PUERTOS DE DISCOVERY PARA TODOS LOS SERVIDORES
     std::vector<std::pair<int, std::string>> discoveryPorts = {
         {DISC_AUTH, "AUTH"},
         {DISC_STORAGE, "STORAGE"},
         {DISC_USER_LOGS, "USER_LOGS"},
-        {DISC_SENSOR_PROXY, "PROXY"}  // ⭐ NUEVO - Agregado el Proxy
+        {DISC_SENSOR_PROXY, "PROXY"}
     };
     
     time_t currentTime = time(nullptr);
     int totalServersFound = 0;
-    
-    // 🔍 Hacer broadcast en cada puerto de discovery
+
     for (const auto& [port, serverTypeName] : discoveryPorts) {
         std::cout << "\n🔍 Buscando servidores " << serverTypeName 
                   << " en puerto " << port << "..." << std::endl;
         
         ServerDiscover discoverer(port);
-        
-        // ⚡ Descubrir servidores (timeout de 2 segundos)
+
         std::vector<ServerDiscover::DiscoveredServer> discovered = 
             discoverer.discoverServers(2);
         
         if (discovered.empty()) {
             std::cout << "   ⚠️  No se encontraron servidores " << serverTypeName << std::endl;
-            
-            // ⭐ AGREGAR ENTRADA "OFFLINE" PARA QUE EL CLIENTE SEPA QUE NO HAY
+
             serverStatus offlineStatus;
             offlineStatus.serverName = serverTypeName;
             offlineStatus.serverIP = "N/A";
             offlineStatus.serverPort = getServerPortByType(serverTypeName);
-            offlineStatus.isConnected = 0;  // ❌ OFFLINE
+            offlineStatus.isConnected = 0;
             offlineStatus.lastCheck = static_cast<uint32_t>(currentTime);
             
             statusRes.servers.push_back(offlineStatus);
             continue;
         }
-        
-        // 📦 Convertir cada servidor descubierto a formato serverStatus
+    
         for (const auto& server : discovered) {
             serverStatus status;
             status.serverName = server.name;
             status.serverIP = server.ip;
             status.serverPort = getServerPortByDiscovery(port);
-            status.isConnected = 1;  // ✅ Si respondió al broadcast, está ONLINE
+            status.isConnected = 1;
             status.lastCheck = static_cast<uint32_t>(currentTime);
             
             statusRes.servers.push_back(status);
@@ -348,20 +307,12 @@ void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
             
             std::cout << "Encontrado: " << server.name 
                       << " (" << server.ip << ":" << status.serverPort << ")" 
-                      << " - RAID: " << (server.raidMode == 1 ? "PRIMARY" : 
-                                          server.raidMode == 2 ? "BACKUP" : "STANDALONE")
                       << std::endl;
         }
     }
     
-    std::cout << "\n📊 RESUMEN:" << std::endl;
-    std::cout << "   Total servidores ONLINE: " << totalServersFound << std::endl;
-    std::cout << "   Total en respuesta: " << statusRes.servers.size() << std::endl;
-    std::cout << "==========================================\n" << std::endl;
-    
     response.content = statusRes;
     
-    // 📤 Enviar respuesta al cliente
     Socket clientSocket;
     ssize_t sent = clientSocket.bSendData(client, response);
     

@@ -10,7 +10,6 @@ void Handler::signalHandler(int signal) {
   } else if (signal == 15) {
     std::cerr <<"  kill PID  " <<std::endl;
   }
-  SensorServer::getInstance().stopRaidManager();
   return SensorServer::getInstance().closeListeningSocket();
 }
 

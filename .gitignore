@@ -2,6 +2,7 @@
 *.log
 *.tmp
 .vscode
+.mirror
 
 # Prerequisites
 *.d

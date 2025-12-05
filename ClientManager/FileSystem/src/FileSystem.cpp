@@ -4,7 +4,7 @@
 #include <cstring>
 
 FileSystem::FileSystem() 
-: isMounted(false)
+: isMounted(false), disk1Active(false), disk2Active(false)
 {
 
 };
@@ -16,67 +16,72 @@ FileSystem::~FileSystem() {
 };
 
 bool FileSystem::format(const std::string& path) {
-    std::cout << "Formateando disco: " << path << std::endl;
+    std::cout << "Formateando disco RAID 1: " << path << std::endl;
     
-    // Crear archivo nuevo (truncar si existe)
-    std::ofstream newDisk(path, std::ios::binary | std::ios::trunc);
+    // Paths para ambos discos
+    std::string path1 = path;
+    std::string path2 = path + ".mirror";
     
-    if (!newDisk.is_open()) {
-        std::cerr << "No se pudo crear el archivo del disco" << std::endl;
+    // Crear disco primario
+    std::ofstream disk1(path1, std::ios::binary | std::ios::trunc);
+    if (!disk1.is_open()) {
+        std::cerr << "No se pudo crear disco primario" << std::endl;
+        return false;
+    }
+    
+    // Crear disco espejo
+    std::ofstream disk2(path2, std::ios::binary | std::ios::trunc);
+    if (!disk2.is_open()) {
+        std::cerr << "No se pudo crear disco espejo" << std::endl;
+        disk1.close();
         return false;
     }
     
     // Escribir super bloque
     SuperBlock sb = initSuperBlock();
-
     char superBlockBuffer[BLOCK_SIZE];
     memset(superBlockBuffer, 0, BLOCK_SIZE);
-
-    // Copiar superbloque al buffer
     memcpy(superBlockBuffer, &sb, sizeof(SuperBlock));
     
-    // Escribir el bloque 0 completo
-    newDisk.write(superBlockBuffer, BLOCK_SIZE);
+    // Escribir en ambos discos
+    disk1.write(superBlockBuffer, BLOCK_SIZE);
+    disk2.write(superBlockBuffer, BLOCK_SIZE);
     
     // Bitmap de inodos
     char zeroBitmap[BLOCK_SIZE] = {0};
-    
     for (uint32_t i = 0; i < INODE_BITMAP_BLOCKS; i++) {
-        newDisk.write(zeroBitmap, BLOCK_SIZE);
+        disk1.write(zeroBitmap, BLOCK_SIZE);
+        disk2.write(zeroBitmap, BLOCK_SIZE);
     }
-    
     
     // Bitmap de bloques
     uint32_t systemBlocks = DATA_BLOCKS_START;
-    
-    // Crear bitmap de bloques
     uint8_t blockBitmapTemp[BLOCK_BITMAP_BLOCKS * BLOCK_SIZE];
     memset(blockBitmapTemp, 0, BLOCK_BITMAP_BLOCKS * BLOCK_SIZE);
     
-    // Marcar bloques del sistema como ocupados
     for (uint32_t i = 0; i < systemBlocks; i++) {
         uint32_t byteIndex = i / 8;
         uint8_t bitIndex = i % 8;
         blockBitmapTemp[byteIndex] |= (1 << bitIndex);
     }
-
-    // Escribir bitmap de bloques
-    newDisk.write(reinterpret_cast<char*>(blockBitmapTemp), 
-                  BLOCK_BITMAP_BLOCKS * BLOCK_SIZE);
     
+    disk1.write(reinterpret_cast<char*>(blockBitmapTemp), 
+                BLOCK_BITMAP_BLOCKS * BLOCK_SIZE);
+    disk2.write(reinterpret_cast<char*>(blockBitmapTemp), 
+                BLOCK_BITMAP_BLOCKS * BLOCK_SIZE);
     
     // Tabla de inodos
     iNode emptyInode = initInode();
-
     char inodeBlock[BLOCK_SIZE];
+    
     for (uint32_t block = 0; block < INODE_TABLE_BLOCKS; block++) {
         memset(inodeBlock, 0, BLOCK_SIZE);
-        // Escribir 2 inodos por bloque
         for (int i = 0; i < INODES_PER_BLOCK; i++) {
             uint32_t offset = i * (BLOCK_SIZE / INODES_PER_BLOCK);
             memcpy(inodeBlock + offset, &emptyInode, sizeof(iNode));
         }
-        newDisk.write(inodeBlock, BLOCK_SIZE);
+        disk1.write(inodeBlock, BLOCK_SIZE);
+        disk2.write(inodeBlock, BLOCK_SIZE);
     }
     
     // Directorio
@@ -87,45 +92,35 @@ bool FileSystem::format(const std::string& path) {
     emptyFile.type = 0;
     
     char directoryBlock[BLOCK_SIZE];
-    memset(directoryBlock, 0, BLOCK_SIZE);
     int filesPerBlock = BLOCK_SIZE / sizeof(File);
     
     for (uint32_t block = 0; block < FILE_DIRECTORY_BLOCKS; block++) {
+        memset(directoryBlock, 0, BLOCK_SIZE);
         char* ptr = directoryBlock;
         for (int i = 0; i < filesPerBlock; i++) {
             memcpy(ptr, &emptyFile, sizeof(File));
             ptr += sizeof(File);
         }
-        newDisk.write(directoryBlock, BLOCK_SIZE);
+        disk1.write(directoryBlock, BLOCK_SIZE);
+        disk2.write(directoryBlock, BLOCK_SIZE);
     }
     
-    
-    // El resto del espacio se llena de 0
+    // Bloques de datos
     char zeroBlock[BLOCK_SIZE] = {0};
-    
     for (uint32_t i = 0; i < TOTAL_DATA_BLOCKS; i++) {
-        newDisk.write(zeroBlock, BLOCK_SIZE);
-    }
-
-    newDisk.flush();
-    newDisk.close();
-    
-    // Verificar tamaño final
-    std::ifstream checkFile(path, std::ios::binary | std::ios::ate);
-    std::streamsize fileSize = checkFile.tellg();
-    checkFile.close();
-    
-    if (fileSize != DISK_SIZE) {
-        std::cerr << "Advertencia: Tamaño del disco no coincide" << std::endl;
-        std::cerr << "Esperado: " << DISK_SIZE << " bytes" << std::endl;
-        std::cerr << "Obtenido: " << fileSize << " bytes" << std::endl;
+        disk1.write(zeroBlock, BLOCK_SIZE);
+        disk2.write(zeroBlock, BLOCK_SIZE);
     }
     
-    std::cout << "Disco formateado exitosamente" << std::endl;
-    std::cout << "Tamaño: " << DISK_SIZE / (1024 * 1024) << " MB" << std::endl;
-    std::cout << "Bloques totales: " << TOTAL_BLOCK << std::endl;
-    std::cout << "Bloques de datos: " << TOTAL_DATA_BLOCKS << std::endl;
-    std::cout << "Inodos disponibles: " << TOTAL_I_NODES << std::endl;
+    disk1.flush();
+    disk2.flush();
+    disk1.close();
+    disk2.close();
+    
+    std::cout << "Discos RAID 1 formateados exitosamente" << std::endl;
+    std::cout << "  Primario: " << path1 << std::endl;
+    std::cout << "  Espejo:   " << path2 << std::endl;
+    std::cout << "Tamaño: " << DISK_SIZE / (1024 * 1024) << " MB (cada disco)" << std::endl;
     
     return true;
 }
@@ -135,57 +130,79 @@ bool FileSystem::mount(const std::string& path) {
         std::cerr << "Ya hay un disco montado" << std::endl;
         return false;
     }
-    this->diskPath = path;
-
-    this->superBlock = initSuperBlock();
-
-    // Asumimos temporalmente para manejar lecturas
-    this->isMounted = true;
- 
-    // Abrir en modo binario, lectura y escritura
-    diskFile.open(path, std::ios::in | std::ios::out | std::ios::binary);
     
-    if (!diskFile.is_open()) {
-        std::cerr << "Disco no existe, intentando crear uno nuevo: " << path << std::endl;
-
-        if (!this->format(path)) {
-            std::cerr << "No se pudo crear el disco: " << path << std::endl;
+    this->diskPath = path;
+    this->diskPath2 = path + ".mirror";
+    this->superBlock = initSuperBlock();
+    this->isMounted = true;
+    
+    // Intentar abrir disco primario
+    diskFile.open(diskPath, std::ios::in | std::ios::out | std::ios::binary);
+    disk1Active = diskFile.is_open();
+    
+    // Intentar abrir disco espejo
+    diskFile2.open(diskPath2, std::ios::in | std::ios::out | std::ios::binary);
+    disk2Active = diskFile2.is_open();
+    
+    // Si ninguno existe, crear ambos
+    if (!disk1Active && !disk2Active) {
+        std::cout << "Discos no existen, creando RAID 1..." << std::endl;
+        if (!this->format(diskPath)) {
             this->isMounted = false;
             return false;
         }
-
-        diskFile.clear();
-
-        diskFile.open(path, std::ios::in | std::ios::out | std::ios::binary);
+        
+        diskFile.open(diskPath, std::ios::in | std::ios::out | std::ios::binary);
+        diskFile2.open(diskPath2, std::ios::in | std::ios::out | std::ios::binary);
+        disk1Active = diskFile.is_open();
+        disk2Active = diskFile2.is_open();
     }
-
+    
+    // Verificar que al menos uno esté disponible
+    if (!disk1Active && !disk2Active) {
+        std::cerr << "ERROR: No se pudieron abrir los discos RAID" << std::endl;
+        this->isMounted = false;
+        return false;
+    }
+    
+    // Leer superbloque
     char superBlockBuffer[BLOCK_SIZE];
     if (!readBlock(0, superBlockBuffer)) {
         std::cerr << "Error al leer superbloque" << std::endl;
-        diskFile.close();
+        if (diskFile.is_open()) diskFile.close();
+        if (diskFile2.is_open()) diskFile2.close();
         this->isMounted = false;
         return false;
     }
-
-    // Copiar solo lo necesario
+    
     memcpy(&superBlock, superBlockBuffer, sizeof(SuperBlock));
-
-    // Verificar magic number
+    
     if (superBlock.magicNumber != 0xAA55) {
         std::cerr << "Disco inválido (magic number incorrecto)" << std::endl;
-        diskFile.close();
+        if (diskFile.is_open()) diskFile.close();
+        if (diskFile2.is_open()) diskFile2.close();
         this->isMounted = false;
         return false;
     }
-
-    // Cargar bitmaps a memoria
+    
+    // Cargar bitmaps
     if (!loadBitmaps()) {
         std::cerr << "Error al cargar bitmaps" << std::endl;
-        diskFile.close();
+        if (diskFile.is_open()) diskFile.close();
+        if (diskFile2.is_open()) diskFile2.close();
         this->isMounted = false;
         return false;
     }
-
+    
+    std::cout << "RAID 1 montado: ";
+    if (disk1Active && disk2Active) {
+        std::cout << "SALUDABLE (ambos discos activos)" << std::endl;
+    } else if (disk1Active) {
+        std::cout << "DEGRADADO (solo primario activo)" << std::endl;
+    } else {
+        std::cout << "DEGRADADO (solo espejo activo)" << std::endl;
+    }
+    
     return true;
 }
 
@@ -195,13 +212,10 @@ bool FileSystem::unmount() {
         return false;
     }
     
-    // Crear un buffer de bloque completo para el superbloque
+    // Guardar superbloque
     char superBlockBuffer[BLOCK_SIZE] = {0};
-    
-    // Copiar el superbloque al inicio del buffer
     memcpy(superBlockBuffer, &superBlock, sizeof(SuperBlock));
     
-    // Guardar el bloque completo
     if (!writeBlock(0, superBlockBuffer)) {
         std::cerr << "Error al guardar superbloque" << std::endl;
         return false;
@@ -213,14 +227,25 @@ bool FileSystem::unmount() {
         return false;
     }
     
-    diskFile.flush();
+    // Cerrar ambos discos
+    if (diskFile.is_open()) {
+        diskFile.flush();
+        diskFile.close();
+    }
     
-    diskFile.close();
+    if (diskFile2.is_open()) {
+        diskFile2.flush();
+        diskFile2.close();
+    }
+    
     isMounted = false;
+    disk1Active = false;
+    disk2Active = false;
     
-    std::cout << "Disco desmontado exitosamente" << std::endl;
+    std::cout << "RAID 1 desmontado exitosamente" << std::endl;
     return true;
 }
+
 
 bool FileSystem::isBitSet(uint8_t* bitmap, uint32_t index) {
     uint32_t byteIndex = index / 8;
@@ -735,37 +760,22 @@ bool FileSystem::readBlock(uint32_t blockNum, void* buffer) {
         return false;
     }
     
-    if (!diskFile.is_open()) {
-        std::cerr << "    ERROR: diskFile NO está abierto!" << std::endl;
-        return false;
+    // Intentar leer del disco primario
+    if (disk1Active && readBlockFromDisk(diskFile, blockNum, buffer)) {
+        return true;
     }
     
-    // Calcular posición en el archivo
-    std::streampos position = static_cast<std::streampos>(blockNum) * BLOCK_SIZE;
-    // Mover puntero de lectura
-    diskFile.seekg(position);
-    
-    if (diskFile.fail()) {
-        std::cerr << "    ERROR: Error al posicionar puntero de lectura" << std::endl;
-        diskFile.clear(); // Limpiar flags de error
-        return false;
+    // Si falla, intentar del disco espejo
+    if (disk2Active && readBlockFromDisk(diskFile2, blockNum, buffer)) {
+        std::cerr << "    WARNING: Lectura desde disco espejo (primario falló)" << std::endl;
+        disk1Active = false; // Marcar primario como inactivo
+        return true;
     }
     
-    // Obtener posición actual para verificar
-    std::streampos actualPos = diskFile.tellg();
-    
-    // Leer bloque completo
-    diskFile.read(static_cast<char*>(buffer), BLOCK_SIZE);
-
-    if (diskFile.fail()) {
-        std::cerr << "    ERROR: Error al leer bloque " << blockNum << std::endl;
-        diskFile.clear(); // Limpiar flags de error
-        return false;
-    }
-
-    return true;
+    std::cerr << "    ERROR: No se pudo leer bloque " << blockNum 
+              << " de ningún disco" << std::endl;
+    return false;
 }
-
 
 bool FileSystem::writeBlock(uint32_t blockNum, const void* buffer) {
     if (!isMounted && blockNum != 0) {
@@ -777,31 +787,89 @@ bool FileSystem::writeBlock(uint32_t blockNum, const void* buffer) {
         std::cerr << "Número de bloque inválido: " << blockNum << std::endl;
         return false;
     }
+    
+    bool success1 = false;
+    bool success2 = false;
+    
+    // Escribir en disco primario
+    if (disk1Active) {
+        success1 = writeBlockToDisk(diskFile, blockNum, buffer);
+        if (!success1) {
+            std::cerr << "WARNING: Fallo escritura en disco primario" << std::endl;
+            disk1Active = false;
+        }
+    }
+    
+    // Escribir en disco espejo
+    if (disk2Active) {
+        success2 = writeBlockToDisk(diskFile2, blockNum, buffer);
+        if (!success2) {
+            std::cerr << "WARNING: Fallo escritura en disco espejo" << std::endl;
+            disk2Active = false;
+        }
+    }
+    
+    // Si al menos uno tuvo éxito, consideramos la operación exitosa
+    if (success1 || success2) {
+        if (!disk1Active || !disk2Active) {
+            std::cerr << "WARNING: RAID degradado - solo " 
+                      << (disk1Active ? "primario" : "espejo") 
+                      << " activo" << std::endl;
+        }
+        return true;
+    }
+    
+    std::cerr << "ERROR: Escritura falló en ambos discos" << std::endl;
+    return false;
+}
 
-    // Calcular posición en el archivo
+bool FileSystem::writeBlockToDisk(std::fstream& disk, uint32_t blockNum, const void* buffer) {
+    if (!disk.is_open()) {
+        return false;
+    }
+    
     std::streampos position = static_cast<std::streampos>(blockNum) * BLOCK_SIZE;
+    disk.seekp(position);
+    
+    if (disk.fail()) {
+        disk.clear();
+        return false;
+    }
+    
+    disk.write(static_cast<const char*>(buffer), BLOCK_SIZE);
+    
+    if (disk.fail()) {
+        disk.clear();
+        return false;
+    }
+    
+    disk.flush();
+    return true;
+}
 
-    // Mover puntero de escritura
-    diskFile.seekp(position);
-    
-    if (diskFile.fail()) {
-        std::cerr << "Error al posicionar puntero de escritura" << std::endl;
+bool FileSystem::readBlockFromDisk(std::fstream& disk, uint32_t blockNum, void* buffer) {
+    if (!disk.is_open()) {
         return false;
     }
     
-    // Escribir bloque completo
-    diskFile.write(static_cast<const char*>(buffer), BLOCK_SIZE);
+    std::streampos position = static_cast<std::streampos>(blockNum) * BLOCK_SIZE;
+    disk.seekg(position);
     
-    if (diskFile.fail()) {
-        std::cerr << "Error al escribir bloque " << blockNum << std::endl;
+    if (disk.fail()) {
+        disk.clear();
         return false;
     }
     
-    // Flush para asegurar escritura (opcional, pero recomendado)
-    diskFile.flush();
+    disk.read(static_cast<char*>(buffer), BLOCK_SIZE);
+    
+    if (disk.fail()) {
+        disk.clear();
+        return false;
+    }
     
     return true;
 }
+
 
 bool FileSystem::loadBitmaps() {
     char* inodeBitmapPtr = reinterpret_cast<char*>(inodeBitmap);
@@ -1579,5 +1647,68 @@ bool FileSystem::changePermissions(const std::string& fileName, uint16_t permiss
         return false;
     }
 
+    return true;
+}
+
+bool FileSystem::rebuildMirror() {
+    if (!isMounted) {
+        std::cerr << "Disco no montado" << std::endl;
+        return false;
+    }
+    
+    if (!disk1Active) {
+        std::cerr << "ERROR: Disco primario no activo, no se puede reconstruir" << std::endl;
+        return false;
+    }
+    
+    std::cout << "Reconstruyendo disco espejo desde primario..." << std::endl;
+    
+    // Cerrar espejo si está abierto
+    if (diskFile2.is_open()) {
+        diskFile2.close();
+    }
+    
+    // Crear nuevo espejo
+    std::ofstream newMirror(diskPath2, std::ios::binary | std::ios::trunc);
+    if (!newMirror.is_open()) {
+        std::cerr << "No se pudo crear nuevo disco espejo" << std::endl;
+        return false;
+    }
+    newMirror.close();
+    
+    // Reabrir espejo en modo lectura/escritura
+    diskFile2.open(diskPath2, std::ios::in | std::ios::out | std::ios::binary);
+    if (!diskFile2.is_open()) {
+        std::cerr << "No se pudo abrir nuevo disco espejo" << std::endl;
+        return false;
+    }
+    
+    disk2Active = true;
+    
+    // Copiar todos los bloques del primario al espejo
+    char buffer[BLOCK_SIZE];
+    for (uint32_t i = 0; i < TOTAL_BLOCK; i++) {
+        if (!readBlockFromDisk(diskFile, i, buffer)) {
+            std::cerr << "Error leyendo bloque " << i << " del primario" << std::endl;
+            disk2Active = false;
+            return false;
+        }
+        
+        if (!writeBlockToDisk(diskFile2, i, buffer)) {
+            std::cerr << "Error escribiendo bloque " << i << " al espejo" << std::endl;
+            disk2Active = false;
+            return false;
+        }
+        
+        if (i % 1000 == 0) {
+            std::cout << "  Progreso: " << (i * 100 / TOTAL_BLOCK) << "%" << std::endl;
+        }
+    }
+    
+    diskFile2.flush();
+    
+    std::cout << "Espejo reconstruido exitosamente" << std::endl;
+    std::cout << "RAID 1 ahora SALUDABLE" << std::endl;
+    
     return true;
 }
