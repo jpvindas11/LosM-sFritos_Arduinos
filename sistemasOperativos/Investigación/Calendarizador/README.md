@@ -23,6 +23,9 @@ sudo apt-get install -y mtools
 
 # nasm para ensamblar el bootloader
 sudo apt-get install -y nasm
+
+# Para trabajar con ISOs
+sudo apt install -y xorriso
 ```
 
 
