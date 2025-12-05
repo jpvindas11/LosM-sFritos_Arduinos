@@ -38,6 +38,9 @@ class MasterServer {
   void handleServerStatusRequest(int client, genMessage& request);
   uint8_t checkServerConnection(const std::string& ip, int port);
 
+  uint16_t getServerPortByDiscovery(int discoveryPort);
+  uint16_t getServerPortByType(const std::string& serverType);
+
  public:
   MasterServer();
   ~MasterServer();

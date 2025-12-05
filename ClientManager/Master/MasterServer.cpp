@@ -288,59 +288,88 @@ void MasterServer::handleArduinoConnection(int client, Socket* socket) {
 }
 
 void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
+    std::cout << "\n========== SERVER STATUS REQUEST ==========" << std::endl;
+    std::cout << "Realizando broadcast para descubrir TODOS los servidores..." << std::endl;
+    
     genMessage response;
     response.MID = static_cast<uint8_t>(MessageType::SERVER_STATUS_RES);
     
     serverStatusRes statusRes;
     statusRes.id_token = 0;
     
-    // AUTH
-    serverStatus authStatus;
-    ServerDiscover discovererA(DISC_AUTH);
-    authStatus.serverName = "AUTH";
-    authStatus.serverIP = discovererA.lookForServer();
-    authStatus.serverPort = PORT_MASTER_AUTH;
-    authStatus.isConnected = checkServerConnection(authStatus.serverIP, PORT_MASTER_AUTH);
-    authStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
-    statusRes.servers.push_back(authStatus);
-    std::cout << "Added AUTH server: " << authStatus.serverIP << ":" 
-              << authStatus.serverPort << " - " 
-              << (authStatus.isConnected ? "ONLINE" : "OFFLINE") << std::endl;
+    // ⭐ PUERTOS DE DISCOVERY PARA TODOS LOS SERVIDORES
+    std::vector<std::pair<int, std::string>> discoveryPorts = {
+        {DISC_AUTH, "AUTH"},
+        {DISC_STORAGE, "STORAGE"},
+        {DISC_USER_LOGS, "USER_LOGS"},
+        {DISC_SENSOR_PROXY, "PROXY"}  // ⭐ NUEVO - Agregado el Proxy
+    };
     
-    // STORAGE
-    serverStatus storageStatus;
-    ServerDiscover discovererS(DISC_STORAGE);
-    storageStatus.serverName = "STORAGE";
-    storageStatus.serverIP = discovererS.lookForServer();
-    storageStatus.serverPort = PORT_MASTER_STORAGE;
-    storageStatus.isConnected = checkServerConnection(storageStatus.serverIP, PORT_MASTER_STORAGE);
-    storageStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
-    statusRes.servers.push_back(storageStatus);
-    std::cout << "Added STORAGE server: " << storageStatus.serverIP << ":" 
-              << storageStatus.serverPort << " - " 
-              << (storageStatus.isConnected ? "ONLINE" : "OFFLINE") << std::endl;
+    time_t currentTime = time(nullptr);
+    int totalServersFound = 0;
     
-    // LOGS
-    serverStatus logsStatus;
-    ServerDiscover discovererL(DISC_STORAGE);
-    logsStatus.serverName = "LOGS";
-    logsStatus.serverIP = discovererL.lookForServer();
-    logsStatus.serverPort = PORT_MASTER_LOGS;
-    logsStatus.isConnected = checkServerConnection(logsStatus.serverIP, PORT_MASTER_LOGS);
-    logsStatus.lastCheck = static_cast<uint32_t>(time(nullptr));
-    statusRes.servers.push_back(logsStatus);
-    std::cout << "Added LOGS server: " << logsStatus.serverIP << ":" 
-              << logsStatus.serverPort << " - " 
-              << (logsStatus.isConnected ? "ONLINE" : "OFFLINE") << std::endl;
+    // 🔍 Hacer broadcast en cada puerto de discovery
+    for (const auto& [port, serverTypeName] : discoveryPorts) {
+        std::cout << "\n🔍 Buscando servidores " << serverTypeName 
+                  << " en puerto " << port << "..." << std::endl;
+        
+        ServerDiscover discoverer(port);
+        
+        // ⚡ Descubrir servidores (timeout de 2 segundos)
+        std::vector<ServerDiscover::DiscoveredServer> discovered = 
+            discoverer.discoverServers(2);
+        
+        if (discovered.empty()) {
+            std::cout << "   ⚠️  No se encontraron servidores " << serverTypeName << std::endl;
+            
+            // ⭐ AGREGAR ENTRADA "OFFLINE" PARA QUE EL CLIENTE SEPA QUE NO HAY
+            serverStatus offlineStatus;
+            offlineStatus.serverName = serverTypeName;
+            offlineStatus.serverIP = "N/A";
+            offlineStatus.serverPort = getServerPortByType(serverTypeName);
+            offlineStatus.isConnected = 0;  // ❌ OFFLINE
+            offlineStatus.lastCheck = static_cast<uint32_t>(currentTime);
+            
+            statusRes.servers.push_back(offlineStatus);
+            continue;
+        }
+        
+        // 📦 Convertir cada servidor descubierto a formato serverStatus
+        for (const auto& server : discovered) {
+            serverStatus status;
+            status.serverName = server.name;
+            status.serverIP = server.ip;
+            status.serverPort = getServerPortByDiscovery(port);
+            status.isConnected = 1;  // ✅ Si respondió al broadcast, está ONLINE
+            status.lastCheck = static_cast<uint32_t>(currentTime);
+            
+            statusRes.servers.push_back(status);
+            totalServersFound++;
+            
+            std::cout << "Encontrado: " << server.name 
+                      << " (" << server.ip << ":" << status.serverPort << ")" 
+                      << " - RAID: " << (server.raidMode == 1 ? "PRIMARY" : 
+                                          server.raidMode == 2 ? "BACKUP" : "STANDALONE")
+                      << std::endl;
+        }
+    }
     
-    std::cout << "Total servers in response: " << statusRes.servers.size() << std::endl;
+    std::cout << "\n📊 RESUMEN:" << std::endl;
+    std::cout << "   Total servidores ONLINE: " << totalServersFound << std::endl;
+    std::cout << "   Total en respuesta: " << statusRes.servers.size() << std::endl;
+    std::cout << "==========================================\n" << std::endl;
     
     response.content = statusRes;
     
+    // 📤 Enviar respuesta al cliente
     Socket clientSocket;
     ssize_t sent = clientSocket.bSendData(client, response);
-    std::cout << "Response sent: " << sent << " bytes" << std::endl;
-    std::cout << "==========================================\n" << std::endl;
+    
+    if (sent > 0) {
+        std::cout << "Respuesta enviada: " << sent << " bytes" << std::endl;
+    } else {
+        std::cerr << "Error al enviar respuesta" << std::endl;
+    }
     
     close(client);
 }
@@ -352,6 +381,57 @@ uint8_t MasterServer::checkServerConnection(const std::string& ip, int port) {
         return 0;
     }
     
+    struct timeval tv;
+    tv.tv_sec = 2;
+    tv.tv_usec = 0;
+    setsockopt(testSocket.getSocketFD(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(testSocket.getSocketFD(), SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    
+    bool connected = testSocket.connectToServer(ip, port);
+    
+    if (connected) {
+        close(testSocket.getSocketFD());
+    }
+    
+    return connected ? 1 : 0;
+}
+
+uint16_t MasterServer::getServerPortByDiscovery(int discoveryPort) {
+    switch (discoveryPort) {
+        case DISC_AUTH:
+            return PORT_MASTER_AUTH;
+        case DISC_STORAGE:
+            return PORT_MASTER_STORAGE;
+        case DISC_USER_LOGS:
+            return PORT_MASTER_LOGS;
+        case DISC_SENSOR_PROXY:
+            return PORT_PROXY_LISTENER;
+        default:
+            std::cerr << "⚠️  Puerto de discovery desconocido: " << discoveryPort << std::endl;
+            return 0;
+    }
+}
+
+uint16_t MasterServer::getServerPortByType(const std::string& serverType) {
+    if (serverType == "AUTH") return PORT_MASTER_AUTH;
+    if (serverType == "STORAGE") return PORT_MASTER_STORAGE;
+    if (serverType == "USER_LOGS") return PORT_MASTER_LOGS;
+    if (serverType == "PROXY") return PORT_PROXY_LISTENER;
+    return 0;
+}
+
+uint8_t MasterServer::checkServerConnection(const std::string& ip, int port) {
+    if (ip == "N/A" || ip.empty()) {
+        return 0;
+    }
+    
+    Socket testSocket;
+    
+    if (!testSocket.create()) {
+        return 0;
+    }
+    
+    // Timeout de 2 segundos para la prueba de conexión
     struct timeval tv;
     tv.tv_sec = 2;
     tv.tv_usec = 0;
