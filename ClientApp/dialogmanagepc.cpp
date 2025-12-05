@@ -2,17 +2,57 @@
 #include "ui_dialogmanagepc.h"
 #include <chrono>
 #include <thread>
+#include <QFile>
+#include <QTextStream>
 
 DialogManagePC::DialogManagePC(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::DialogManagePC)
 {
     ui->setupUi(this);
+    loadIPsFromFile();
 }
 
 DialogManagePC::~DialogManagePC()
 {
     delete ui;
+}
+
+void DialogManagePC::loadIPsFromFile() {
+    QString exePath = QCoreApplication::applicationDirPath();
+    QString configFile = exePath + "/ips.txt";
+
+    QFile file(configFile);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        pcIPs = {"10.1.35.11", "10.1.35.12", "10.1.35.9", "10.1.35.10"};
+
+        // Crear el archivo con las IPs por defecto
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << "10.1.35.11\n";
+            out << "10.1.35.12\n";
+            out << "10.1.35.9\n";
+            out << "10.1.35.10\n";
+            file.close();
+        }
+        return;
+    }
+
+    QTextStream in(&file);
+    pcIPs.clear();
+
+    while (!in.atEnd()) {
+        QString line = in.readLine().trimmed();
+        if (!line.isEmpty()) {
+            pcIPs.push_back(line.toStdString());
+        }
+    }
+
+    file.close();
+
+    while (pcIPs.size() < 4) {
+        pcIPs.push_back("127.0.0.1");
+    }
 }
 
 void DialogManagePC::showStyledMessage(const QString& title, const QString& message, bool isError) {
@@ -329,27 +369,12 @@ void DialogManagePC::on_exit_button_clicked()
 }
 
 void DialogManagePC::setPCIndex(int index) {
-    switch(index) {
-    case 0:
-        this->ui->title->setText("PC 1");
-        this->targetPC = "10.1.35.11";
-        break;
-    case 1:
-        this->ui->title->setText("PC 2");
-        this->targetPC = "10.1.35.12";
-        break;
-    case 2:
-        this->ui->title->setText("PC 3");
-        this->targetPC = "10.1.35.9";
-        break;
-    case 3:
-        this->ui->title->setText("PC 4");
-        this->targetPC = "10.1.35.10";
-        break;
-    default:
+    if (index < 0 || index >= static_cast<int>(pcIPs.size())) {
         this->close();
-        break;
+        return;
     }
 
+    this->targetPC = pcIPs[index];
+    this->ui->title->setText(QString("PC %1").arg(index + 1));
     this->index = index;
 }

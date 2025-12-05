@@ -32,6 +32,9 @@ private:
     const std::string labUser = "lab-3-5";
     const std::string labPass = "Cata2960!";
 
+    std::vector<std::string> pcIPs;
+    void loadIPsFromFile();
+
     // Función helper para mostrar mensajes con estilo
     void showStyledMessage(const QString& title, const QString& message, bool isError = false);
 };

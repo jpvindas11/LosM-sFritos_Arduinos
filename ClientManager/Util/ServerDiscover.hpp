@@ -161,7 +161,8 @@ private:
     // Envía peticiones dirigidas a toda una subred
     void sendToNetwork(const std::string& networkPrefix, const genMessage& request) {
         // Enviar a IPs comunes (Ponemos las de nuestras compus en la isla)
-        std::vector<int> priorityIPs = {9, 10, 11, 12};
+        std::vector<int> priorityIPs = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+            18, 19, 20, 21, 22, 23, 24};
         
         for (int lastOctet : priorityIPs) {
             std::string targetIP = networkPrefix + "." + std::to_string(lastOctet);
