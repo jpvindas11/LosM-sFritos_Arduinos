@@ -374,28 +374,6 @@ void MasterServer::handleServerStatusRequest(int client, genMessage& request) {
     close(client);
 }
 
-uint8_t MasterServer::checkServerConnection(const std::string& ip, int port) {
-    Socket testSocket;
-    
-    if (!testSocket.create()) {
-        return 0;
-    }
-    
-    struct timeval tv;
-    tv.tv_sec = 2;
-    tv.tv_usec = 0;
-    setsockopt(testSocket.getSocketFD(), SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    setsockopt(testSocket.getSocketFD(), SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-    
-    bool connected = testSocket.connectToServer(ip, port);
-    
-    if (connected) {
-        close(testSocket.getSocketFD());
-    }
-    
-    return connected ? 1 : 0;
-}
-
 uint16_t MasterServer::getServerPortByDiscovery(int discoveryPort) {
     switch (discoveryPort) {
         case DISC_AUTH:
