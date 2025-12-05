@@ -1,6 +1,5 @@
 #include "dialogmanagepc.h"
 #include "ui_dialogmanagepc.h"
-#include <QDebug>
 #include <chrono>
 #include <thread>
 
@@ -78,7 +77,6 @@ void DialogManagePC::on_on_button_clicked()
         return;
     }
 
-    // 🔥 NUEVO: Obtener el HOME directory real
     ssh_channel homeChannel = ssh.createChannel();
     std::string getHomeCmd = "echo $HOME";
     std::string homeDir;
@@ -86,7 +84,6 @@ void DialogManagePC::on_on_button_clicked()
     if (homeChannel && ssh.executeCommand(homeChannel, getHomeCmd, false)) {
         homeDir = ssh.getCommandOutput();
         homeDir.erase(homeDir.find_last_not_of(" \n\r\t") + 1);
-        qDebug() << "✓ Home directory:" << QString::fromStdString(homeDir);
     } else {
         showStyledMessage("Error", "No se pudo obtener el directorio home", true);
         ssh.disconnect();
@@ -98,7 +95,6 @@ void DialogManagePC::on_on_button_clicked()
     std::string serverDir;
     std::string serverName = selectedServer.toStdString();
 
-    // 🔥 MODIFICADO: Usar homeDir en lugar de $HOME
     if (serverName == "Autenticacion") {
         processName = "authServer";
         serverDir = homeDir + "/servers/authenticacion/bin";
@@ -117,7 +113,6 @@ void DialogManagePC::on_on_button_clicked()
         serverPath = serverDir + "/proxy";
     }
 
-    // 🔥 NUEVO: Validar que las variables no estén vacías
     if (processName.empty() || serverDir.empty()) {
         showStyledMessage("Error de Configuración",
                           QString("Servidor '%1' no reconocido").arg(selectedServer),
@@ -126,12 +121,6 @@ void DialogManagePC::on_on_button_clicked()
         return;
     }
 
-    qDebug() << "📋 Configuración:";
-    qDebug() << "  Process:" << QString::fromStdString(processName);
-    qDebug() << "  Dir:" << QString::fromStdString(serverDir);
-    qDebug() << "  Path:" << QString::fromStdString(serverPath);
-
-    // PASO 1: Verificar si ya está corriendo
     std::string checkCmd = "pgrep -x " + processName + " > /dev/null && echo 'running' || echo 'stopped'";
     ssh_channel checkChannel = ssh.createChannel();
 
@@ -150,7 +139,6 @@ void DialogManagePC::on_on_button_clicked()
 
     QString debugInfo;
 
-    // 🔥 NUEVO: Verificar que el archivo existe y es ejecutable
     std::string verifyCmd = "ls -la " + serverPath + " 2>&1";
     ssh_channel verifyChannel = ssh.createChannel();
 
@@ -158,13 +146,9 @@ void DialogManagePC::on_on_button_clicked()
         std::string verifyOutput = ssh.getCommandOutput();
         debugInfo += "=== VERIFICACIÓN DEL EJECUTABLE ===\n";
         debugInfo += QString::fromStdString(verifyOutput) + "\n\n";
-        qDebug() << "File info:" << QString::fromStdString(verifyOutput);
     }
 
-    // PASO 5: Ejecutar directamente con PATH ABSOLUTO
     std::string testRunCmd = "timeout 2 " + serverPath + " 2>&1 || echo \"Exit code: $?\"";
-
-    qDebug() << "🚀 Executing:" << QString::fromStdString(testRunCmd);
 
     ssh_channel testChannel = ssh.createChannel();
 
@@ -172,8 +156,6 @@ void DialogManagePC::on_on_button_clicked()
         std::string testOutput = ssh.getCommandOutput();
         debugInfo += "=== PRUEBA DE EJECUCIÓN DIRECTA ===\n";
         debugInfo += QString::fromStdString(testOutput) + "\n";
-
-        qDebug() << "Test output:" << QString::fromStdString(testOutput);
 
         // Si hay error obvio, mostrarlo
         if (testOutput.find("Permission denied") != std::string::npos ||
@@ -190,10 +172,7 @@ void DialogManagePC::on_on_button_clicked()
         }
     }
 
-    // PASO 6: Iniciar en background
     std::string startCmd = "nohup " + serverPath + " > /dev/null 2>&1 & echo $!";
-
-    qDebug() << "🚀 Starting with:" << QString::fromStdString(startCmd);
 
     ssh_channel startChannel = ssh.createChannel();
 
@@ -205,8 +184,6 @@ void DialogManagePC::on_on_button_clicked()
         debugInfo += "\n=== INICIO DEL PROCESO ===\n";
         debugInfo += "PID: " + QString::fromStdString(pidStr) + "\n";
 
-        qDebug() << "✓ Started with PID:" << QString::fromStdString(pidStr);
-
         // Esperar un momento
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
@@ -217,7 +194,7 @@ void DialogManagePC::on_on_button_clicked()
             status.erase(status.find_last_not_of(" \n\r\t") + 1);
 
             if (status == "running") {
-                showStyledMessage("✓ Éxito",
+                showStyledMessage("Éxito",
                                   QString("Servidor %1 iniciado correctamente en %2")
                                       .arg(selectedServer)
                                       .arg(QString::fromStdString(targetPC)),
@@ -322,7 +299,7 @@ void DialogManagePC::on_off_button_clicked()
                 status.erase(status.find_last_not_of(" \n\r\t") + 1);
 
                 if (status == "stopped") {
-                    showStyledMessage("✓ Éxito",
+                    showStyledMessage("Éxito",
                                       QString("Servidor %1 detenido correctamente").arg(selectedServer),
                                       false);
                 } else {

@@ -1205,9 +1205,6 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
 
     std::cout << "Connecting to Master: " << IP << ":" << port << std::endl;
 
-    // ========================================
-    // PASO 1: Obtener lista de archivos
-    // ========================================
     Socket* tempSocket = new Socket();
 
     if (!tempSocket->create()) {
@@ -1310,9 +1307,6 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
 
     std::cout << "\n✓ Found " << sensorLogFiles.size() << " log files for this sensor" << std::endl;
 
-    // ========================================
-    // PASO 2: Obtener contenido de cada archivo
-    // ========================================
     QString allLogs;
     int totalEntries = 0;
     int filesProcessed = 0;

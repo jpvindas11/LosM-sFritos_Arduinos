@@ -284,7 +284,7 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
   
   if (!this->storage.fileExists(fileName)) {
     this->storageMutex.unlock();
-    std::cerr << "✗ File not found: " << fileName << std::endl;
+    std::cerr << "File not found: " << fileName << std::endl;
     
     genMessage reply;
     errorCommonMsg err;
@@ -299,7 +299,7 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
   
   if (fileSize == 0) {
     this->storageMutex.unlock();
-    std::cerr << "✗ File is empty" << std::endl;
+    std::cerr << "File is empty" << std::endl;
     
     genMessage reply;
     errorCommonMsg err;
@@ -316,7 +316,7 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
   iNode file;
   if (!this->storage.getFileInfo(fileName, &file)) {
     this->storageMutex.unlock();
-    std::cerr << "✗ Could not get file info" << std::endl;
+    std::cerr << "Could not get file info" << std::endl;
     
     genMessage reply;
     errorCommonMsg err;
@@ -384,7 +384,7 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
     std::cout << "  Block 1 read from physical block " << blockNum 
               << " (logical block " << startBlock << ")" << std::endl;
   } else {
-    std::cerr << "  ✗ Invalid block number for block " << startBlock << std::endl;
+    std::cerr << "Invalid block number for block " << startBlock << std::endl;
     free(buffer1);
     free(buffer2);
     this->storageMutex.unlock();
@@ -419,18 +419,18 @@ void SensorServer::sendFileBlock(int clientSocket, genSenFileReq& messageContent
   this->storageMutex.unlock();
   
   if (!this->listeningSocket.bSendData(clientSocket, response)) {
-    std::cerr << "✗ Failed to send page" << std::endl;
+    std::cerr << "Failed to send page" << std::endl;
     free(buffer1);
     free(buffer2);
     return;
   }
   
-  std::cout << "✓ Page sent successfully" << std::endl;
+  std::cout << "Page sent successfully" << std::endl;
   
   free(buffer1);
   free(buffer2);
   
-  std::cout << "✓ Sent last " << blocksToSend << " blocks for file: " 
+  std::cout << "Sent last " << blocksToSend << " blocks for file: " 
             << fileName << std::endl;
   std::cout << "====================================\n" << std::endl;
 }
@@ -668,7 +668,7 @@ void SensorServer::updateRecentSensorData(const std::string& sensorIP,
     
     if (ipMatch && typeMatch) {
       // Actualizar datos existentes
-      std::cout << "  ✓ MATCH FOUND! Updating sensor at index " << idx << std::endl;
+      std::cout << "    MATCH FOUND! Updating sensor at index " << idx << std::endl;
       std::cout << "    Old data: '" << sensor.data << "'" << std::endl;
       std::cout << "    New data: '" << data << "'" << std::endl;
       
@@ -676,14 +676,14 @@ void SensorServer::updateRecentSensorData(const std::string& sensorIP,
       sensor.lastModified = static_cast<uint32_t>(currentTime);
       found = true;
       
-      std::cout << "  ✓ Updated successfully!" << std::endl;
+      std::cout << "  Updated successfully!" << std::endl;
       break;
     }
   }
   
   // Si no existe, agregar nuevo registro
   if (!found) {
-    std::cout << "\n✓ NO MATCH FOUND - Adding NEW sensor" << std::endl;
+    std::cout << "\nNO MATCH FOUND - Adding NEW sensor" << std::endl;
     
     sensorRecentData newSensor;
     newSensor.ip = sensorIP;
@@ -709,7 +709,7 @@ void SensorServer::updateRecentSensorData(const std::string& sensorIP,
     double elapsedTime = difftime(currentTime, it->lastModified);
     
     if (elapsedTime > SENSOR_FORGET_TIME) {
-      std::cout << "  ✗ Removing expired sensor: IP=" << it->ip 
+      std::cout << "  Removing expired sensor: IP=" << it->ip 
                 << ", Type='" << it->sensorType << "'"
                 << " (inactive for " << elapsedTime << " seconds)" << std::endl;
       it = this->recentData.erase(it);
@@ -777,7 +777,7 @@ void SensorServer::addToSensorLog(senAddLog& messageContent) {
   
   // Calcular nuevo tamaño
   uint32_t newSize = sizeBeforeWrite + dataSize + newline.size();
-  std::cout << "✓ Added " << (dataSize + newline.size()) << " bytes to " << fileName 
+  std::cout << "Added " << (dataSize + newline.size()) << " bytes to " << fileName 
             << " (size: " << sizeBeforeWrite << " → " << newSize << ")" << std::endl;
   
   // Leer últimas líneas del archivo para mostrar
