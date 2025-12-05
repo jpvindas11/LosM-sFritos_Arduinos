@@ -80,11 +80,11 @@ UserInfo* userMenuManager::getSelectedUserInfo(const std::vector<UserInfo>* user
     // Buscar en el vector
     for (auto& userInfo : *const_cast<std::vector<UserInfo>*>(users)) {
         if (userInfo.user == username) {
-            std::cout << "✓ Usuario encontrado: " << userInfo.user << std::endl;
+            std::cout << "Usuario encontrado: " << userInfo.user << std::endl;
             return &userInfo;
         }
     }
 
-    std::cout << "✗ Usuario no encontrado en la lista" << std::endl;
+    std::cout << "Usuario no encontrado en la lista" << std::endl;
     return nullptr;
 }

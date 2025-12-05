@@ -154,7 +154,6 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText,
         sensorUpdateTimer->stop();
     }
 
-    // ⭐ PRIMERO: Ocultar TODOS los widgets
     hideMenuWidgets();
 
     // Cambiar título
@@ -172,7 +171,6 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText,
     // Cambiar a la página correcta del StackedWidget
     ui->stackedWidget->setCurrentIndex(pageIndex);
 
-    // ⭐ MOSTRAR widgets específicos según la página
     switch(pageIndex) {
     case 0: // Usuarios
         ui->user_list->setVisible(true);
@@ -181,17 +179,17 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText,
         ui->label_cambios->setVisible(true);
         ui->user_change_pass->setVisible(true);
         ui->user_change_rank->setVisible(true);
-        std::cout << "✓ Usuarios widgets shown" << std::endl;
+        std::cout << "Usuarios widgets shown" << std::endl;
         break;
 
     case 1: // Nodos
         ui->arduino_list->setVisible(true);
-        std::cout << "✓ Nodos widgets shown" << std::endl;
+        std::cout << "Nodos widgets shown" << std::endl;
         break;
 
     case 2: // Consulta
         ui->data_list->setVisible(true);
-        std::cout << "✓ Consulta widgets shown" << std::endl;
+        std::cout << "Consulta widgets shown" << std::endl;
         break;
 
     case 3: // Computadoras
@@ -199,7 +197,7 @@ void MenuWindow::setActiveMenu(QPushButton *activeBtn, const QString &labelText,
         ui->pc2_button->setVisible(true);
         ui->pc3_button->setVisible(true);
         ui->pc4_button->setVisible(true);
-        std::cout << "✓ Computadoras widgets shown" << std::endl;
+        std::cout << "Computadoras widgets shown" << std::endl;
         break;
     }
 }
@@ -302,7 +300,7 @@ void MenuWindow::askForSensorData() {
             return;
         }
 
-        std::cout << "✓ Connected to server" << std::endl;
+        std::cout << "Connected to server" << std::endl;
 
         genMessage sensorsMsg;
         sensorsMsg.MID = static_cast<uint8_t>(MessageType::SEN_RECENT_DATA_REQ);
@@ -319,7 +317,7 @@ void MenuWindow::askForSensorData() {
             return;
         }
 
-        std::cout << "✓ Request sent (" << sent << " bytes)" << std::endl;
+        std::cout << "Request sent (" << sent << " bytes)" << std::endl;
         std::cout << "Waiting for response..." << std::endl;
 
         genMessage response;
@@ -331,7 +329,7 @@ void MenuWindow::askForSensorData() {
             return;
         }
 
-        std::cout << "✓ Response received (" << received << " bytes)" << std::endl;
+        std::cout << "Response received (" << received << " bytes)" << std::endl;
         std::cout << "Response MID: " << static_cast<int>(response.MID) << std::endl;
 
         if (response.MID == static_cast<uint8_t>(MessageType::SEN_RECENT_DATA_RES)) {
@@ -371,24 +369,24 @@ void MenuWindow::askForSensorData() {
                 std::cout << "\nCalling updateList..." << std::endl;
                 this->dataMenu.updateList(this->ui->data_list, &this->sensorsData);
 
-                std::cout << "✓ List updated successfully" << std::endl;
+                std::cout << "List updated successfully" << std::endl;
                 std::cout << "==========================================\n" << std::endl;
 
             } catch (const std::runtime_error& e) {
-                std::cerr << "✗ Error processing response: " << e.what() << std::endl;
+                std::cerr << "Error processing response: " << e.what() << std::endl;
                 QMessageBox::critical(this, "Error", "Error al procesar respuesta del servidor");
             }
         }
         else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
             errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
             delete tempSocket;
-            std::cerr << "✗ Server error: " << errorMsg.message << std::endl;
+            std::cerr << "Server error: " << errorMsg.message << std::endl;
             QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
         }
 
     } catch (const std::exception& e) {
         if (tempSocket) delete tempSocket;
-        std::cerr << "✗ Exception: " << e.what() << std::endl;
+        std::cerr << "Exception: " << e.what() << std::endl;
         QMessageBox::critical(this, "Error de conexión",
                               QString("No se pudo conectar al servidor: %1").arg(e.what()));
     }
@@ -785,7 +783,7 @@ void MenuWindow::hideMenuWidgets() {
         sensorUpdateTimer->stop();
     }
 
-    std::cout << "✓ All menu widgets hidden" << std::endl;
+    std::cout << "All menu widgets hidden" << std::endl;
 }
 
 void MenuWindow::on_user_change_pass_clicked()
@@ -936,7 +934,7 @@ void MenuWindow::on_data_list_itemClicked(QListWidgetItem *item)
 {
     // Verificar si es un header o separador (no seleccionable)
     if (!(item->flags() & Qt::ItemIsSelectable)) {
-        std::cout << "✗ Clicked on non-selectable item (header/separator)" << std::endl;
+        std::cout << "Clicked on non-selectable item (header/separator)" << std::endl;
         return;
     }
 
@@ -1029,7 +1027,7 @@ void MenuWindow::askForUserLogs(const std::string& username) {
             return;
         }
 
-        std::cout << "✓ Connected to logs server" << std::endl;
+        std::cout << "Connected to logs server" << std::endl;
 
         // Crear mensaje de solicitud
         genMessage logsRequest;
@@ -1050,7 +1048,7 @@ void MenuWindow::askForUserLogs(const std::string& username) {
             return;
         }
 
-        std::cout << "✓ Request sent (" << sent << " bytes)" << std::endl;
+        std::cout << "Request sent (" << sent << " bytes)" << std::endl;
 
         // Recibir todas las páginas de logs
         QString allLogs;
@@ -1063,7 +1061,7 @@ void MenuWindow::askForUserLogs(const std::string& username) {
             ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
 
             if (received <= 0) {
-                std::cerr << "✗ Error receiving response or connection closed" << std::endl;
+                std::cerr << "Error receiving response or connection closed" << std::endl;
                 break;
             }
 
@@ -1102,13 +1100,13 @@ void MenuWindow::askForUserLogs(const std::string& username) {
 
                     // Verificar si es la última página
                     if (logsResponse.page >= logsResponse.totalPages) {
-                        std::cout << "✓ All pages received (" << pagesReceived
+                        std::cout << "All pages received (" << pagesReceived
                                   << " pages)" << std::endl;
                         receivingPages = false;
                     }
 
                 } catch (const std::runtime_error& e) {
-                    std::cerr << "✗ Error processing response: " << e.what() << std::endl;
+                    std::cerr << "Error processing response: " << e.what() << std::endl;
                     QMessageBox::critical(this, "Error",
                                           "Error al procesar respuesta del servidor de logs");
                     break;
@@ -1116,7 +1114,7 @@ void MenuWindow::askForUserLogs(const std::string& username) {
             }
             else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
                 errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
-                std::cerr << "✗ Server error: " << errorMsg.message << std::endl;
+                std::cerr << "Server error: " << errorMsg.message << std::endl;
 
                 delete tempSocket;
 
@@ -1183,7 +1181,7 @@ void MenuWindow::askForUserLogs(const std::string& username) {
 
     } catch (const std::exception& e) {
         if (tempSocket) delete tempSocket;
-        std::cerr << "✗ Exception: " << e.what() << std::endl;
+        std::cerr << "Exception: " << e.what() << std::endl;
         QMessageBox::critical(this, "Error de conexión",
                               QString("No se pudo conectar al servidor de logs: %1").arg(e.what()));
     }
@@ -1219,7 +1217,7 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
         return;
     }
 
-    std::cout << "✓ Connected to Master server" << std::endl;
+    std::cout << "Connected to Master server" << std::endl;
 
     genMessage fileNamesRequest;
     fileNamesRequest.MID = static_cast<uint8_t>(MessageType::SEN_FILE_NAMES_REQ);
@@ -1236,7 +1234,7 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
         return;
     }
 
-    std::cout << "✓ Request sent, waiting for response..." << std::endl;
+    std::cout << "Request sent, waiting for response..." << std::endl;
 
     // Recibir todos los nombres de archivos
     std::vector<std::string> allLogFiles;
@@ -1248,7 +1246,7 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
         ssize_t received = tempSocket->bReceiveData(tempSocket->getSocketFD(), response);
 
         if (received <= 0) {
-            std::cerr << "✗ Error receiving file names" << std::endl;
+            std::cerr << "Error receiving file names" << std::endl;
             break;
         }
 
@@ -1256,7 +1254,7 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
             senFileNamesRes fileNamesRes = getMessageContent<senFileNamesRes>(response);
             pagesReceived++;
 
-            std::cout << "✓ Received page " << (fileNamesRes.page + 1)
+            std::cout << "Received page " << (fileNamesRes.page + 1)
                       << " of " << fileNamesRes.totalPages << std::endl;
 
             for (const auto& fileReq : fileNamesRes.fileNames.names) {
@@ -1305,7 +1303,7 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
         return;
     }
 
-    std::cout << "\n✓ Found " << sensorLogFiles.size() << " log files for this sensor" << std::endl;
+    std::cout << "\nFound " << sensorLogFiles.size() << " log files for this sensor" << std::endl;
 
     QString allLogs;
     int totalEntries = 0;
@@ -1315,17 +1313,16 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
         std::cout << "\n[" << (filesProcessed + 1) << "/" << sensorLogFiles.size()
         << "] Requesting: " << logFile << std::endl;
 
-        // 🟢 CREAR NUEVA CONEXIÓN PARA CADA ARCHIVO
         Socket* fileSocket = new Socket();
 
         if (!fileSocket->create()) {
-            std::cerr << "✗ Could not create socket for file: " << logFile << std::endl;
+            std::cerr << "Could not create socket for file: " << logFile << std::endl;
             delete fileSocket;
             continue;
         }
 
         if (!fileSocket->connectToServer(IP, port)) {
-            std::cerr << "✗ Could not connect for file: " << logFile << std::endl;
+            std::cerr << "Could not connect for file: " << logFile << std::endl;
             delete fileSocket;
             continue;
         }
@@ -1340,7 +1337,7 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
 
         sent = fileSocket->bSendData(fileSocket->getSocketFD(), fileBlockReq);
         if (sent <= 0) {
-            std::cerr << "✗ Could not request file: " << logFile << std::endl;
+            std::cerr << "Could not request file: " << logFile << std::endl;
             delete fileSocket;
             continue;
         }
@@ -1355,7 +1352,7 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
             ssize_t blockReceived = fileSocket->bReceiveData(fileSocket->getSocketFD(), blockResponse);
 
             if (blockReceived <= 0) {
-                std::cerr << "✗ Error receiving blocks" << std::endl;
+                std::cerr << "Error receiving blocks" << std::endl;
                 break;
             }
 
@@ -1363,7 +1360,7 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
                 senFileBlockRes blockRes = getMessageContent<senFileBlockRes>(blockResponse);
                 blocksReceived++;
 
-                std::cout << "  ✓ Block " << (blockRes.page + 1)
+                std::cout << "Block " << (blockRes.page + 1)
                           << "/" << blockRes.totalPages << std::endl;
 
                 if (!blockRes.firstBlock.empty()) {
@@ -1385,17 +1382,16 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
                 }
 
                 if (blockRes.page + 1 >= blockRes.totalPages) {
-                    std::cout << "  ✓ Complete (" << blocksReceived << " blocks)" << std::endl;
+                    std::cout << "Complete (" << blocksReceived << " blocks)" << std::endl;
                     receivingBlocks = false;
                 }
             } else if (blockResponse.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
                 errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(blockResponse);
-                std::cerr << "  ✗ Error: " << errorMsg.message << std::endl;
+                std::cerr << "Error: " << errorMsg.message << std::endl;
                 break;
             }
         }
 
-        // 🔴 IMPORTANTE: Cerrar conexión después de cada archivo
         delete fileSocket;
         fileSocket = nullptr;
 
@@ -1411,9 +1407,9 @@ void MenuWindow::askForSensorLogs(const std::string& sensorIP, const std::string
         }
     }
 
-    std::cout << "\n✓ Total files processed: " << filesProcessed
+    std::cout << "\nTotal files processed: " << filesProcessed
               << "/" << sensorLogFiles.size() << std::endl;
-    std::cout << "✓ Total entries: " << totalEntries << std::endl;
+    std::cout << "Total entries: " << totalEntries << std::endl;
 
     // Mostrar resultados
     if (!allLogs.isEmpty()) {
@@ -1481,7 +1477,7 @@ void MenuWindow::askForServerStatus() {
             return;
         }
 
-        std::cout << "✓ Connected to master server" << std::endl;
+        std::cout << "Connected to master server" << std::endl;
 
         genMessage statusRequest;
         statusRequest.MID = static_cast<uint8_t>(MessageType::SERVER_STATUS_REQ);
@@ -1498,7 +1494,7 @@ void MenuWindow::askForServerStatus() {
             return;
         }
 
-        std::cout << "✓ Request sent (" << sent << " bytes)" << std::endl;
+        std::cout << "Request sent (" << sent << " bytes)" << std::endl;
         std::cout << "Waiting for response..." << std::endl;
 
         genMessage response;
@@ -1510,7 +1506,7 @@ void MenuWindow::askForServerStatus() {
             return;
         }
 
-        std::cout << "✓ Response received (" << received << " bytes)" << std::endl;
+        std::cout << "Response received (" << received << " bytes)" << std::endl;
         std::cout << "Response MID: " << static_cast<int>(response.MID) << std::endl;
 
         if (response.MID == static_cast<uint8_t>(MessageType::SERVER_STATUS_RES)) {
@@ -1551,28 +1547,28 @@ void MenuWindow::askForServerStatus() {
                 }
 
                 delete tempSocket;
-                std::cout << "✓ List updated with " << statusRes.servers.size() << " servers" << std::endl;
+                std::cout << "List updated with " << statusRes.servers.size() << " servers" << std::endl;
                 std::cout << "==========================================\n" << std::endl;
 
             } catch (const std::runtime_error& e) {
                 delete tempSocket;
-                std::cerr << "✗ Error processing response: " << e.what() << std::endl;
+                std::cerr << "Error processing response: " << e.what() << std::endl;
                 QMessageBox::critical(this, "Error", "Error al procesar respuesta del servidor");
             }
         } else if (response.MID == static_cast<uint8_t>(MessageType::ERR_COMMOM_MSG)) {
             errorCommonMsg errorMsg = getMessageContent<errorCommonMsg>(response);
             delete tempSocket;
-            std::cerr << "✗ Server error: " << errorMsg.message << std::endl;
+            std::cerr << "Server error: " << errorMsg.message << std::endl;
             QMessageBox::critical(this, "Error", QString::fromStdString(errorMsg.message));
         } else {
             delete tempSocket;
-            std::cerr << "✗ Unexpected response MID: " << static_cast<int>(response.MID) << std::endl;
+            std::cerr << "Unexpected response MID: " << static_cast<int>(response.MID) << std::endl;
             QMessageBox::critical(this, "Error", "Respuesta inesperada del servidor");
         }
 
     } catch (const std::exception& e) {
         if (tempSocket) delete tempSocket;
-        std::cerr << "✗ Exception: " << e.what() << std::endl;
+        std::cerr << "Exception: " << e.what() << std::endl;
         QMessageBox::critical(this, "Error de conexión",
                               QString("No se pudo conectar al servidor: %1").arg(e.what()));
     }

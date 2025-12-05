@@ -62,3 +62,14 @@ make run
 O directamente:
 
 ./bin/storageVisualizer
+
+# Binarios precompilados
+
+## Si está en la carpeta de release
+
+Puede utilizar los binarios 
+
+./bin/storageVisualizerUsers
+./bin/storageVisualizerSensors
+
+Para extraer respectivamente los datos de el servidor deseado
