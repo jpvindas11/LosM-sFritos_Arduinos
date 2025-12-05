@@ -272,29 +272,29 @@ QPushButton#exit_button:pressed {
     </rect>
    </property>
    <property name="currentText">
-    <string>🔐 Autenticación</string>
+    <string>Autenticacion</string>
    </property>
    <property name="sizeAdjustPolicy">
     <enum>QComboBox::AdjustToMinimumContentsLengthWithIcon</enum>
    </property>
    <item>
     <property name="text">
-     <string>🔐 Autenticación</string>
+     <string>Autenticacion</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>💾 Almacenamiento</string>
+     <string>Almacenamiento</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>📋 Logs Usuarios</string>
+     <string>Logs Usuarios</string>
     </property>
    </item>
    <item>
     <property name="text">
-     <string>🌐 Proxy</string>
+     <string>Proxy</string>
     </property>
    </item>
   </widget>
